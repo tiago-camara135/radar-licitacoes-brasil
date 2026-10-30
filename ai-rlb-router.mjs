@@ -58,22 +58,22 @@ export async function handleAiRlbRoute(req, res, url) {
   if (!url.pathname.startsWith('/api/ai-rlb')) return false;
   const ip = String(req.headers['x-forwarded-for'] || req.socket?.remoteAddress || '').split(',')[0].trim();
   try {
-    if (!pool) { send(res, 503, { error: 'IA RLB requer PostgreSQL.' }); return true; }
-    if (['POST','PATCH','DELETE'].includes(req.method) && APP_ORIGIN && req.headers.origin && req.headers.origin !== APP_ORIGIN) { send(res, 403, { error: 'Origem não autorizada.' }); return true; }
+    if (!pool) { send(res, 503, { error: 'IA RLB requer PostgreSQL.', code: 'database_unavailable' }); return true; }
+    if (['POST','PATCH','DELETE'].includes(req.method) && APP_ORIGIN && req.headers.origin && req.headers.origin !== APP_ORIGIN) { send(res, 403, { error: 'Origem não autorizada.', code: 'origin_denied' }); return true; }
     const user = await authenticatedUser(req);
-    if (!user) { send(res, 401, { error: 'Faça login para usar a IA RLB.' }); return true; }
+    if (!user) { send(res, 401, { error: 'Faça login para usar a IA RLB.', code: 'authentication_required' }); return true; }
 
     if (req.method === 'GET' && url.pathname === '/api/ai-rlb/status') {
       send(res, 200, await aiStatus(pool, user.id)); return true;
     }
     if (url.pathname === '/api/ai-rlb/admin/config') {
-      if (user.role !== 'admin') { send(res, 403, { error: 'Apenas administradores podem configurar a IA RLB.' }); return true; }
+      if (user.role !== 'admin') { send(res, 403, { error: 'Apenas administradores podem configurar a IA RLB.', code: 'admin_required' }); return true; }
       if (req.method === 'GET') { send(res, 200, await aiAdminStatus(pool)); return true; }
       if (req.method === 'POST') {
-        if (!allow(`ai-config:${user.id}`, 5, 600000)) { send(res, 429, { error: 'Muitas tentativas de configuração. Aguarde alguns minutos.' }); return true; }
+        if (!allow(`ai-config:${user.id}`, 5, 600000)) { send(res, 429, { error: 'Muitas tentativas de configuração. Aguarde alguns minutos.', code: 'config_rate_limited' }); return true; }
         const body = await readJson(req, 10000);
         const result = await configureAiKey(pool, user.id, body.api_key);
-        await audit(user.id, 'ai_rlb.configure', { source: result.source, model: result.model }, ip);
+        await audit(user.id, 'ai_rlb.configure', { source: result.source, model: result.model, fallback_model: result.fallback_model, operational: result.operational }, ip);
         send(res, 200, result); return true;
       }
       if (req.method === 'DELETE') {
@@ -95,17 +95,19 @@ export async function handleAiRlbRoute(req, res, url) {
       send(res, 200, { ok: true }); return true;
     }
     if (req.method === 'POST' && url.pathname === '/api/ai-rlb/chat') {
-      if (!allow(`u:${user.id}`)) { send(res, 429, { error: 'Muitas mensagens em pouco tempo. Aguarde alguns instantes.' }); return true; }
+      if (!allow(`u:${user.id}`)) { send(res, 429, { error: 'Muitas mensagens em pouco tempo. Aguarde alguns instantes.', code: 'local_rate_limited' }); return true; }
       const body = await readJson(req);
       const document = body.document_id ? await ownedDocument(user.id, Number(body.document_id)) : null;
-      if (body.document_id && !document) { send(res, 404, { error: 'Documento não encontrado ou sem acesso.' }); return true; }
+      if (body.document_id && !document) { send(res, 404, { error: 'Documento não encontrado ou sem acesso.', code: 'document_not_found' }); return true; }
       const result = await runAiChat({ pool, userId: user.id, body, document });
-      await audit(user.id, 'ai_rlb.chat', { conversation_id: result.conversation_id, document_id: document?.id || null, web_search: body.use_web !== false }, ip);
+      await audit(user.id, 'ai_rlb.chat', { conversation_id: result.conversation_id, document_id: document?.id || null, web_search: body.use_web !== false, model: result.model }, ip);
       send(res, 200, result); return true;
     }
-    send(res, 404, { error: 'Rota da IA RLB não encontrada.' }); return true;
+    send(res, 404, { error: 'Rota da IA RLB não encontrada.', code: 'route_not_found' }); return true;
   } catch (e) {
-    console.error('IA RLB route error:', e?.message || e);
-    send(res, e?.status || 500, { error: e?.status ? e.message : 'Erro interno da IA RLB.' }); return true;
+    const status = e?.status || 500;
+    const code = e?.publicCode || 'internal_error';
+    console.error('IA RLB route error:', JSON.stringify({ status, code, message: e?.message || 'unknown' }));
+    send(res, status, { error: e?.status ? e.message : 'Erro interno da IA RLB.', code }); return true;
   }
 }
