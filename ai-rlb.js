@@ -21,7 +21,7 @@
     return `<div class="rlb-ai-sources"><b>Fontes consultadas</b>${arr.slice(0,8).map(x=>`<a href="${esc(x.url)}" target="_blank" rel="noopener noreferrer">↗ ${esc(x.title||x.url)}</a>`).join('')}</div>`;
   }
   function addMessage(role,text,sources=[]){
-    const box=$('#rlbAiMessages'); if(!box)return;
+    const box=$('#rlbAiMessages');if(!box)return;
     box.querySelector('.rlb-ai-welcome')?.remove();
     const row=document.createElement('div');row.className=`rlb-ai-message ${role}`;
     row.innerHTML=`<div class="rlb-ai-bubble">${markup(text)}${role==='assistant'?sourcesHtml(sources):''}</div>`;
@@ -31,7 +31,7 @@
     const box=$('#rlbAiMessages');const row=document.createElement('div');row.className='rlb-ai-message assistant rlb-ai-thinking-row';row.innerHTML='<div class="rlb-ai-bubble"><span class="rlb-ai-thinking"><i></i><i></i><i></i></span></div>';box.appendChild(row);box.scrollTop=box.scrollHeight;return row;
   }
   function setUsage(){const el=$('#rlbAiUsage');if(!el||!state.status)return;el.textContent=`${state.status.used_today||0}/${state.status.daily_limit||'—'} hoje`}
-  function setStatusVisual(){const dot=document.querySelector('.rlb-ai-status-dot');if(!dot)return;dot.classList.toggle('offline',!state.status?.configured);dot.title=state.status?.configured?'IA RLB ativa':'IA RLB aguardando ativação'}
+  function setStatusVisual(){const dot=document.querySelector('.rlb-ai-status-dot');if(!dot)return;dot.classList.toggle('offline',!state.status?.configured);dot.title=state.status?.configured?'IA RLB configurada':'IA RLB aguardando ativação'}
   function welcome(){
     return `<div class="rlb-ai-welcome"><span class="eyebrow">Assistente especializado</span><h3>Como posso ajudar na sua licitação?</h3><p>Posso explicar a Lei nº 14.133/2021, etapas do processo, habilitação, recursos, contratos e analisar documentos que estejam na sua Central de Documentos.</p><div class="rlb-ai-quick"><button data-q="Qual a diferença entre pregão eletrônico e concorrência eletrônica na Lei 14.133/2021?">Pregão x concorrência</button><button data-q="Explique de forma prática as fases de uma licitação pela Lei 14.133/2021.">Fases da licitação</button><button data-q="Quais são os principais documentos de habilitação previstos na Lei 14.133/2021?">Habilitação</button><button data-q="Como funcionam intenção de recurso e recurso administrativo em licitações?">Recursos</button></div></div>`;
   }
@@ -62,28 +62,32 @@
     setStatusVisual();
     if(!state.status?.configured){
       if(state.me?.role==='admin')showAdminSetup();
-      else addMessage('assistant','A IA RLB está instalada, mas aguarda ativação pelo administrador da plataforma.');
+      else addMessage('assistant','A IA RLB está temporariamente indisponível. O administrador da plataforma já foi notificado.');
     }
   }
   async function loadMe(){try{const d=await api('/api/me');state.me=d.user||null}catch{state.me=null}}
   async function loadStatus(){try{state.status=await api('/api/ai-rlb/status');setUsage();setStatusVisual()}catch(e){addMessage('assistant',e.message)}}
   function showAdminSetup(){
-    if($('#rlbAiSetup'))return;
+    if($('#rlbAiSetup')||state.status?.configured)return;
     const box=$('#rlbAiMessages');if(!box)return;
     box.querySelector('.rlb-ai-welcome')?.remove();
     const card=document.createElement('div');card.id='rlbAiSetup';card.className='rlb-ai-setup';
-    card.innerHTML=`<span class="eyebrow">Ativação do administrador</span><h3>Conectar a IA RLB à OpenAI</h3><p>Cole abaixo a chave de projeto criada no fluxo seguro da OpenAI. A chave será validada em uma chamada real ao ${esc(state.status?.model||'GPT-6.1 Sol')} e armazenada criptografada no banco.</p><label for="rlbAiKeyInput">Chave da API</label><div class="rlb-ai-keyrow"><input id="rlbAiKeyInput" type="password" autocomplete="off" spellcheck="false" placeholder="sk-proj-…"><button id="rlbAiActivate" type="button">Validar e ativar</button></div><span class="rlb-ai-setup-status" id="rlbAiSetupStatus">A chave não será exibida depois de salva.</span>`;
+    card.innerHTML=`<span class="eyebrow">Ativação exclusiva do administrador</span><h3>Conectar a IA RLB à OpenAI</h3><p>Esta chave será cadastrada uma única vez e servirá globalmente para todos os usuários da plataforma. Depois de salva, o campo não será exibido novamente.</p><label for="rlbAiKeyInput">Chave da API</label><div class="rlb-ai-keyrow"><input id="rlbAiKeyInput" type="password" autocomplete="off" spellcheck="false" placeholder="sk-proj-…"><button id="rlbAiActivate" type="button">Salvar e ativar</button></div><span class="rlb-ai-setup-status" id="rlbAiSetupStatus">A chave será armazenada criptografada e não será exibida depois de salva.</span>`;
     box.appendChild(card);box.scrollTop=box.scrollHeight;
     $('#rlbAiActivate').addEventListener('click',activateAi);
   }
   async function activateAi(){
     const input=$('#rlbAiKeyInput'),btn=$('#rlbAiActivate'),status=$('#rlbAiSetupStatus');
     const key=input?.value.trim();if(!key){status.textContent='Cole a chave criada pela OpenAI para continuar.';return}
-    btn.disabled=true;status.textContent='Validando chave e acesso ao modelo…';
+    btn.disabled=true;status.textContent='Validando e salvando a configuração global…';
     try{
       const d=await api('/api/ai-rlb/admin/config',{method:'POST',body:JSON.stringify({api_key:key})});
-      input.value='';state.status={...(state.status||{}),configured:true,model:d.model||state.status?.model};setStatusVisual();
-      $('#rlbAiSetup')?.remove();addMessage('assistant','IA RLB ativada e validada com sucesso. Já posso responder dúvidas, pesquisar fontes atuais e analisar documentos.');await loadStatus();
+      input.value='';
+      state.status={...(state.status||{}),configured:true,model:d.model||state.status?.model};
+      setStatusVisual();
+      $('#rlbAiSetup')?.remove();
+      addMessage('assistant',d.message||'IA RLB configurada globalmente. A mesma credencial será usada por todos os usuários da plataforma.');
+      await loadStatus();
     }catch(e){status.textContent=e.message}finally{btn.disabled=false}
   }
   async function loadDocs(selected){
@@ -101,7 +105,7 @@
   }
   async function send(){
     if(state.busy)return;const input=$('#rlbAiInput');const message=input.value.trim();if(!message)return;
-    if(!state.status?.configured){if(state.me?.role==='admin')showAdminSetup();else addMessage('assistant','A IA RLB ainda aguarda ativação pelo administrador.');return}
+    if(!state.status?.configured){if(state.me?.role==='admin')showAdminSetup();else addMessage('assistant','A IA RLB está temporariamente indisponível.');return}
     state.busy=true;$('#rlbAiSend').disabled=true;input.value='';addMessage('user',message);const wait=thinking();
     try{
       const data=await api('/api/ai-rlb/chat',{method:'POST',body:JSON.stringify({message,conversation_id:state.conversationId,document_id:Number($('#rlbAiDoc').value)||null,use_web:$('#rlbAiWeb').checked})});
