@@ -6,6 +6,7 @@ import { runGeminiDiagnostics } from './ai-rlb-gemini-force-v2.mjs';
 const PORT = Number(process.env.PORT || 10000);
 const DATABASE_URL = process.env.DATABASE_URL || '';
 const APP_ORIGIN = process.env.APP_ORIGIN || '';
+const BOOT_DIAGNOSTICS = String(process.env.AI_RLB_BOOT_DIAGNOSTICS || 'false').toLowerCase() === 'true';
 const pool = DATABASE_URL ? new Pool({ connectionString: DATABASE_URL, ssl: { rejectUnauthorized: false }, max: 2, idleTimeoutMillis: 30000 }) : null;
 const rate = new Map();
 
@@ -55,9 +56,13 @@ export async function initAiRlb() {
   if (!pool) { console.log('IA RLB router ready: no database'); return; }
   await initAiTables(pool);
   await initHybridTables(pool);
-  setTimeout(() => {
-    runGeminiDiagnostics(pool).catch(e => console.error('IA RLB diagnostics boot error:', e?.message || e));
-  }, 2500);
+  if (BOOT_DIAGNOSTICS) {
+    setTimeout(() => {
+      runGeminiDiagnostics(pool).catch(e => console.error('IA RLB diagnostics boot error:', e?.message || e));
+    }, 2500);
+  } else {
+    console.log('IA RLB boot diagnostics disabled: preserving external free-tier quota');
+  }
 }
 
 export async function handleAiRlbRoute(req, res, url) {
