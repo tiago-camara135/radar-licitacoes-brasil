@@ -1,5 +1,5 @@
 import { Pool } from 'pg';
-import { aiStatus, listAiConversations, listAiMessages, deleteAiConversation, runAiChat } from './ai-rlb-core.mjs';
+import { initAiTables, aiStatus, listAiConversations, listAiMessages, deleteAiConversation, runAiChat } from './ai-rlb-core.mjs';
 
 const PORT = Number(process.env.PORT || 10000);
 const DATABASE_URL = process.env.DATABASE_URL || '';
@@ -47,6 +47,11 @@ async function ownedDocument(userId, id) {
 }
 async function audit(userId, action, metadata, ip) {
   try { await pool.query('INSERT INTO audit_logs(user_id,action,metadata,ip) VALUES($1,$2,$3,$4)', [userId, action, metadata || {}, ip || null]); } catch {}
+}
+
+export async function initAiRlb() {
+  if (!pool) { console.log('IA RLB router ready: no database'); return; }
+  await initAiTables(pool);
 }
 
 export async function handleAiRlbRoute(req, res, url) {
