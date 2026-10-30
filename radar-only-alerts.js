@@ -1,56 +1,60 @@
 (()=>{
-  let scheduled=false;
+  let lastActive=null;
 
   function radarActive(){
     const app=document.querySelector('#app');
     if(!app||app.classList.contains('hidden'))return false;
-    const radarBtn=document.querySelector('.nav button[data-view="radar"]');
-    return !!radarBtn?.classList.contains('active');
+    return !!document.querySelector('.nav button[data-view="radar"].active');
   }
 
   function syncAlertVisibility(){
-    scheduled=false;
     const active=radarActive();
-    const center=document.querySelector('#auto-notifications');
-    const popup=document.querySelector('#rlbFloatingAlert');
+    if(active===lastActive)return;
+    lastActive=active;
 
+    document.body.classList.toggle('rlb-radar-active',active);
+
+    const center=document.querySelector('#auto-notifications');
     if(center){
-      center.style.display=active?'':'none';
+      center.hidden=!active;
       center.setAttribute('aria-hidden',active?'false':'true');
     }
 
-    if(!active&&popup){
+    const popup=document.querySelector('#rlbFloatingAlert');
+    if(popup){
       popup.classList.remove('show');
-      popup.setAttribute('aria-hidden','true');
-    }else if(active&&popup){
-      popup.setAttribute('aria-hidden','false');
+      popup.setAttribute('aria-hidden',active?'false':'true');
     }
   }
 
-  function scheduleSync(){
-    if(scheduled)return;
-    scheduled=true;
-    queueMicrotask(syncAlertVisibility);
-  }
-
-  function start(){
-    syncAlertVisibility();
-
-    document.addEventListener('click',e=>{
-      if(e.target.closest('.nav button[data-view]'))setTimeout(syncAlertVisibility,0);
-    },true);
+  function install(){
+    if(!document.querySelector('#rlb-radar-only-style')){
+      const style=document.createElement('style');
+      style.id='rlb-radar-only-style';
+      style.textContent='body:not(.rlb-radar-active) #auto-notifications,body:not(.rlb-radar-active) #rlbFloatingAlert{display:none!important}';
+      document.head.appendChild(style);
+    }
 
     const nav=document.querySelector('.nav');
-    if(nav)new MutationObserver(scheduleSync).observe(nav,{subtree:true,attributes:true,attributeFilter:['class']});
+    if(nav){
+      nav.addEventListener('click',e=>{
+        if(e.target.closest('button[data-view]'))requestAnimationFrame(()=>{lastActive=null;syncAlertVisibility()});
+      });
 
-    new MutationObserver(scheduleSync).observe(document.body,{
-      subtree:true,
-      childList:true,
-      attributes:true,
-      attributeFilter:['class']
-    });
+      nav.querySelectorAll('button[data-view]').forEach(btn=>{
+        new MutationObserver(()=>{lastActive=null;syncAlertVisibility()}).observe(btn,{attributes:true,attributeFilter:['class']});
+      });
+    }
+
+    const app=document.querySelector('#app');
+    if(app){
+      new MutationObserver(()=>{lastActive=null;syncAlertVisibility()}).observe(app,{attributes:true,attributeFilter:['class']});
+      new MutationObserver(()=>{lastActive=null;syncAlertVisibility()}).observe(app,{childList:true});
+    }
+
+    syncAlertVisibility();
   }
 
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});
-  else start();
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});
+  else install();
 })();
