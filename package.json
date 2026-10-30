@@ -8,6 +8,7 @@
     "start": "node launcher.mjs"
   },
   "dependencies": {
+    "openai": "^6.8.1",
     "pg": "^8.13.1"
   }
 }
