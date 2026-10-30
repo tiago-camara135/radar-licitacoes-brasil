@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import { syncBuiltinESMExports } from 'node:module';
+import { initAdminSelfHeal } from './admin-selfheal.mjs';
 
 const nativeReadFileSync = fs.readFileSync.bind(fs);
 const notificationCss = nativeReadFileSync(new URL('./notifications-v1.css', import.meta.url), 'utf8');
@@ -21,3 +22,4 @@ fs.readFileSync = function rlbV8ReadFileSync(path, ...args) {
 
 syncBuiltinESMExports();
 await import('./launcher-v7.mjs');
+await initAdminSelfHeal();
