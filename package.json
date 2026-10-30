@@ -8,8 +8,6 @@
     "start": "node launcher.mjs"
   },
   "dependencies": {
-    "exceljs": "^4.4.0",
-    "mammoth": "^1.9.1",
     "pg": "^8.13.1"
   }
 }
