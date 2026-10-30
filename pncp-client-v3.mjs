@@ -1,6 +1,7 @@
 const PNCP_BASE_URL = process.env.PNCP_BASE_URL || 'https://pncp.gov.br/api/consulta';
 export const PNCP_MODALITY_CODES = Array.from({length:14},(_,i)=>i+1);
-const PAGE_SIZE = 500;
+const PREFERRED_PAGE_SIZE = Math.min(Math.max(Number(process.env.PNCP_PAGE_SIZE || 500),50),500);
+let effectivePageSize = PREFERRED_PAGE_SIZE;
 const REQUEST_SPACING_MS = Math.max(180, Number(process.env.PNCP_REQUEST_SPACING_MS || 320));
 const MAX_RETRIES = 3;
 let gate = Promise.resolve();
@@ -47,11 +48,12 @@ async function fetchJsonWithRetry(url){
     const controller=new AbortController();
     const timeout=setTimeout(()=>controller.abort(),18000);
     try{
-      const r=await fetch(url,{headers:{accept:'application/json','user-agent':'RadarLicitacoesBrasil/3.0'},signal:controller.signal});
+      const r=await fetch(url,{headers:{accept:'application/json','user-agent':'RadarLicitacoesBrasil/3.1'},signal:controller.signal});
       if(r.status===204)return {response:r,body:{data:[],totalPaginas:0,totalRegistros:0}};
       const body=await r.json().catch(()=>({}));
       if(r.ok)return {response:r,body};
-      const err=Object.assign(new Error(`PNCP HTTP ${r.status}`),{status:r.status,body});
+      const detail=clean(body?.message||body?.error||body?.detail||body?.title||'',240);
+      const err=Object.assign(new Error(`PNCP HTTP ${r.status}${detail?`: ${detail}`:''}`),{status:r.status,body});
       last=err;
       if(r.status===429||r.status>=500){
         const wait=retryAfterMs(r,attempt);
@@ -122,21 +124,34 @@ export function applySearchFilters(items,filters={}){
   return all;
 }
 
-async function fetchPage({code,startDate,endDate,filters,page}){
-  const params=new URLSearchParams({dataInicial:ymd(startDate),dataFinal:ymd(endDate),codigoModalidadeContratacao:String(code),pagina:String(page),tamanhoPagina:String(PAGE_SIZE),...serverFilterParams(filters)});
+async function fetchPageOnce({code,startDate,endDate,filters,page,pageSize}){
+  const params=new URLSearchParams({dataInicial:ymd(startDate),dataFinal:ymd(endDate),codigoModalidadeContratacao:String(code),pagina:String(page),tamanhoPagina:String(pageSize),...serverFilterParams(filters)});
   const {body}=await fetchJsonWithRetry(`${PNCP_BASE_URL}/v1/contratacoes/publicacao?${params}`);
   const data=Array.isArray(body?.data)?body.data:Array.isArray(body)?body:[];
   return {
     items:data.map(x=>({...x,_modalidadeConsultada:code})),
     totalPages:Math.max(0,Number(body?.totalPaginas||body?.totalPages||body?.totalDePaginas||0)||0),
-    totalRecords:Math.max(0,Number(body?.totalRegistros||body?.totalRecords||0)||0)
+    totalRecords:Math.max(0,Number(body?.totalRegistros||body?.totalRecords||0)||0),
+    pageSize
   };
 }
+async function fetchPage(args){
+  try{return await fetchPageOnce({...args,pageSize:effectivePageSize})}
+  catch(e){
+    if(e?.status===400&&effectivePageSize>50){
+      effectivePageSize=50;
+      console.warn('PNCP page-size fallback activated: API rejected larger page; using 50 records/page');
+      return fetchPageOnce({...args,pageSize:effectivePageSize});
+    }
+    throw e;
+  }
+}
 function pagePlan(totalPages,budget){
-  if(totalPages<=1)return [1];
+  const max=Math.max(1,Math.min(totalPages,Number(budget)||1));
+  if(totalPages<=1||max===1)return [1];
   const set=new Set([1,totalPages]);
   let left=2,right=totalPages-1;
-  while(set.size<Math.min(totalPages,budget)&&left<=right){set.add(left++);if(set.size<Math.min(totalPages,budget)&&right>=left)set.add(right--)}
+  while(set.size<max&&left<=right){set.add(left++);if(set.size<max&&right>=left)set.add(right--)}
   return [...set].sort((a,b)=>a-b);
 }
 async function mapLimit(values,limit,worker){
@@ -155,12 +170,13 @@ export async function fetchPncpRange({startDate,endDate,filters={},codes=PNCP_MO
       const extra=await fetchPage({code,startDate,endDate,filters,page});
       items.push(...extra.items);
     }
-    return {code,items,totalPages:first.totalPages||1,totalRecords:first.totalRecords,pagesFetched:pages.length,partial:(first.totalPages||1)>pages.length};
+    return {code,items,totalPages:first.totalPages||1,totalRecords:first.totalRecords,pagesFetched:pages.length,pageSize:first.pageSize,partial:(first.totalPages||1)>pages.length};
   });
   const errors=[],meta=[];let items=[];
-  for(const r of results){
-    if(r.ok){items.push(...r.value.items);meta.push({code:r.value.code,total_pages:r.value.totalPages,pages_fetched:r.value.pagesFetched,total_records:r.value.totalRecords,partial:r.value.partial})}
-    else errors.push({code:codes[results.indexOf(r)],status:r.error?.status||null,message:clean(r.error?.message||'falha PNCP',180)});
+  for(let i=0;i<results.length;i++){
+    const r=results[i];
+    if(r.ok){items.push(...r.value.items);meta.push({code:r.value.code,total_pages:r.value.totalPages,pages_fetched:r.value.pagesFetched,page_size:r.value.pageSize,total_records:r.value.totalRecords,partial:r.value.partial})}
+    else errors.push({code:codes[i],status:r.error?.status||null,message:clean(r.error?.message||'falha PNCP',240)});
   }
   const seen=new Set();items=items.filter(x=>{const k=resultKey(x);if(!k||seen.has(k))return false;seen.add(k);return true});
   return {items,errors,meta,partial:errors.length>0||meta.some(x=>x.partial),successfulModalities:meta.length,failedModalities:errors.length};
@@ -170,9 +186,9 @@ export async function fetchPncpSearch(filters={}){
   const f=normalizeSearchFilters(filters),end=new Date(),start=new Date(end.getTime()-f.days*86400000),codes=f.modality?[f.modality]:PNCP_MODALITY_CODES;
   const restrictive=Boolean(f.uf||f.municipalityIbge||f.cnpj||f.modality);
   const localText=Boolean(f.keyword||f.org||f.municipality);
-  const budget=restrictive?(localText?6:4):(localText?3:2);
-  const r=await fetchPncpRange({startDate:start,endDate:end,filters:f,codes,maxPagesPerModality:budget,concurrency:3});
+  const budget=restrictive?(localText?8:6):(localText?4:3);
+  const r=await fetchPncpRange({startDate:start,endDate:end,filters:f,codes,maxPagesPerModality:budget,concurrency:2});
   return {...r,items:applySearchFilters(r.items,f),filters:f};
 }
 
-export function pncpClientHealth(){return {page_size:PAGE_SIZE,request_spacing_ms:REQUEST_SPACING_MS,cooldown_until:cooldownUntil?new Date(cooldownUntil).toISOString():null,base_url:PNCP_BASE_URL};}
+export function pncpClientHealth(){return {preferred_page_size:PREFERRED_PAGE_SIZE,effective_page_size:effectivePageSize,request_spacing_ms:REQUEST_SPACING_MS,cooldown_until:cooldownUntil?new Date(cooldownUntil).toISOString():null,base_url:PNCP_BASE_URL};}
