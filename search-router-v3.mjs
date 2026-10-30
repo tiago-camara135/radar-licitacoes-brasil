@@ -46,10 +46,18 @@ async function init(){
 async function auth(req){
   try{
     const r=await fetch(`http://127.0.0.1:${PORT}/api/me`,{headers:{cookie:String(req.headers.cookie||'')},signal:AbortSignal.timeout(5000)});
-    if(!r.ok)return null;const d=await r.json().catch(()=>({}));return d.user||null;
+    if(!r.ok)return null;
+    const d=await r.json().catch(()=>({}));
+    return d.user||null;
   }catch{return null}
 }
-function send(res,status,data){res.statusCode=status;res.setHeader('Content-Type','application/json; charset=utf-8');res.setHeader('Cache-Control','no-store');res.setHeader('X-Content-Type-Options','nosniff');res.end(JSON.stringify(data))}
+function send(res,status,data){
+  res.statusCode=status;
+  res.setHeader('Content-Type','application/json; charset=utf-8');
+  res.setHeader('Cache-Control','no-store');
+  res.setHeader('X-Content-Type-Options','nosniff');
+  res.end(JSON.stringify(data));
+}
 function filtersFromUrl(url){return normalizeSearchFilters({
   keyword:url.searchParams.get('keyword')||'',uf:url.searchParams.get('uf')||'',municipality:url.searchParams.get('municipality')||'',municipalityIbge:url.searchParams.get('municipalityIbge')||'',
   modality:url.searchParams.get('modalidade')||'',org:url.searchParams.get('org')||'',cnpj:url.searchParams.get('cnpj')||'',minValue:url.searchParams.get('minValue'),maxValue:url.searchParams.get('maxValue'),
@@ -59,16 +67,24 @@ function filtersFromUrl(url){return normalizeSearchFilters({
 async function localSearch(filters,limit=900){
   if(!pool)return [];
   await init();
-  const f=normalizeSearchFilters(filters),where=['published_at >= NOW() - ($1::int * INTERVAL \'1 day\')'],params=[f.days];let n=2;
+  const f=normalizeSearchFilters(filters),where=['published_at >= NOW() - ($1::int * INTERVAL \'1 day\')'],params=[f.days];
+  let n=2;
   const add=(sql,val)=>{where.push(sql.replace('?',`$${n++}`));params.push(val)};
   if(f.uf)add('uf=?',f.uf);
   if(f.modality)add('modality_code=?',f.modality);
   if(f.cnpj.length===14)add('org_cnpj=?',f.cnpj);
   if(f.municipalityIbge.length===7)add("COALESCE(raw->'unidadeOrgao'->>'codigoIbge','')=?",f.municipalityIbge);
   if(f.municipality)add('municipality ILIKE ?',`%${f.municipality}%`);
-  if(f.org)add('(org_name ILIKE ? OR unit_name ILIKE ?)'.replace('?',`$${n}`).replace('?',`$${n+1}`),null);
-  if(f.org){where.pop();where.push(`(org_name ILIKE $${n} OR unit_name ILIKE $${n+1})`);params.push(`%${f.org}%`,`%${f.org}%`);n+=2}
-  if(f.keyword){where.push(`(object_text ILIKE $${n} OR org_name ILIKE $${n} OR unit_name ILIKE $${n})`);params.push(`%${f.keyword}%`);n++}
+  if(f.org){
+    where.push(`(org_name ILIKE $${n} OR unit_name ILIKE $${n+1})`);
+    params.push(`%${f.org}%`,`%${f.org}%`);
+    n+=2;
+  }
+  if(f.keyword){
+    where.push(`(object_text ILIKE $${n} OR org_name ILIKE $${n} OR unit_name ILIKE $${n})`);
+    params.push(`%${f.keyword}%`);
+    n++;
+  }
   if(f.minValue!==null){where.push(`estimated_value >= $${n++}`);params.push(f.minValue)}
   if(f.maxValue!==null){where.push(`estimated_value <= $${n++}`);params.push(f.maxValue)}
   if(f.openOnly)where.push('closes_at IS NOT NULL AND closes_at >= NOW()');
@@ -95,26 +111,33 @@ async function persistRemote(items){
       ON CONFLICT(pncp_id) DO UPDATE SET modality_code=EXCLUDED.modality_code,modality_name=EXCLUDED.modality_name,object_text=EXCLUDED.object_text,org_name=EXCLUDED.org_name,unit_name=EXCLUDED.unit_name,municipality=EXCLUDED.municipality,uf=EXCLUDED.uf,estimated_value=EXCLUDED.estimated_value,published_at=EXCLUDED.published_at,closes_at=EXCLUDED.closes_at,pncp_url=EXCLUDED.pncp_url,origin_url=EXCLUDED.origin_url,raw=EXCLUDED.raw,last_seen_at=NOW()`,v).catch(()=>{});
   }
 }
-function mergeItems(a,b,filters){const map=new Map();for(const x of [...a,...b]){const k=resultKey(x);if(k)map.set(k,x)}return applySearchFilters([...map.values()],filters).slice(0,500)}
+function mergeItems(a,b,filters){
+  const map=new Map();
+  for(const x of [...a,...b]){const k=resultKey(x);if(k)map.set(k,x)}
+  return applySearchFilters([...map.values()],filters).slice(0,500);
+}
 
 async function searchCore(filters){
   const f=normalizeSearchFilters(filters),key=JSON.stringify(f),hit=cache.get(key);
   if(hit&&Date.now()-hit.at<90000)return hit.data;
-  const local=await localSearch(f,900).catch(()=>[]);
+  const local=await localSearch(f,900).catch(e=>{console.warn('search router local cache error:',e?.message||e);return []});
   let remote=null,remoteError=null;
   try{
     remote=await fetchPncpSearch(f);
     lastRemote={at:new Date().toISOString(),ok:true,errors:remote.errors.length,partial:remote.partial,count:remote.items.length};
-    persistRemote(remote.items).catch(()=>{});
+    persistRemote(remote.items).catch(e=>console.warn('search router persist warning:',e?.message||e));
   }catch(e){
-    remoteError=e;lastRemote={at:new Date().toISOString(),ok:false,errors:1,partial:true,count:0,message:clean(e?.message||'PNCP indisponível',180)};
+    remoteError=e;
+    lastRemote={at:new Date().toISOString(),ok:false,errors:1,partial:true,count:0,message:clean(e?.message||'PNCP indisponível',180)};
   }
   const items=mergeItems(local,remote?.items||[],f);
   if(!items.length&&(!remote||remote.successfulModalities===0)){
-    const err=Object.assign(new Error('O PNCP está temporariamente limitando as consultas. Tente novamente em instantes; o Radar não irá exibir zero resultados como se a pesquisa tivesse sido concluída.'),{status:503,code:'pncp_temporarily_unavailable'});throw err;
+    const err=Object.assign(new Error('O PNCP está temporariamente limitando as consultas. Tente novamente em instantes; o Radar não irá exibir zero resultados como se a pesquisa tivesse sido concluída.'),{status:503,code:'pncp_temporarily_unavailable'});
+    throw err;
   }
   const data={items,source:remote?.successfulModalities?'PNCP + base do Radar':'base do Radar',partial:Boolean(remote?.partial||remoteError),remote_errors:remote?.errors||[],local_count:local.length,remote_count:remote?.items?.length||0,fetched_at:new Date().toISOString()};
-  cache.set(key,{at:Date.now(),data});return data;
+  cache.set(key,{at:Date.now(),data});
+  return data;
 }
 
 async function alertFeed(userId){
@@ -127,33 +150,49 @@ async function alertFeed(userId){
     const items=await localSearch(filters,120).catch(()=>[]);
     for(const item of items.slice(0,60))matches.push({alert:{id:alert.id,name:alert.name},item});
   }
-  const seen=new Set();return matches.filter(m=>{const k=`${m.alert.id}:${resultKey(m.item)}`;if(seen.has(k))return false;seen.add(k);return true}).sort((a,b)=>(Date.parse(b.item?.dataPublicacaoPncp||0)||0)-(Date.parse(a.item?.dataPublicacaoPncp||0)||0)).slice(0,180);
+  const seen=new Set();
+  return matches.filter(m=>{const k=`${m.alert.id}:${resultKey(m.item)}`;if(seen.has(k))return false;seen.add(k);return true}).sort((a,b)=>(Date.parse(b.item?.dataPublicacaoPncp||0)||0)-(Date.parse(a.item?.dataPublicacaoPncp||0)||0)).slice(0,180);
 }
 
 async function status(){
   let db={total:0,last_seen_at:null,states:[]};
   if(pool){
     await init();
-    const [t,s]=await Promise.all([pool.query('SELECT COUNT(*)::int total,MAX(last_seen_at) last_seen_at FROM monitored_procurements'),pool.query('SELECT uf,COUNT(*)::int count FROM monitored_procurements WHERE published_at>=NOW()-INTERVAL \'7 days\' GROUP BY uf ORDER BY count DESC LIMIT 27')]);
+    const [t,s]=await Promise.all([
+      pool.query('SELECT COUNT(*)::int total,MAX(last_seen_at) last_seen_at FROM monitored_procurements'),
+      pool.query('SELECT uf,COUNT(*)::int count FROM monitored_procurements WHERE published_at>=NOW()-INTERVAL \'7 days\' GROUP BY uf ORDER BY count DESC LIMIT 27')
+    ]);
     db={total:t.rows[0]?.total||0,last_seen_at:t.rows[0]?.last_seen_at||null,states:s.rows};
   }
   return {ok:true,database:db,pncp:pncpClientHealth(),last_remote:lastRemote};
 }
 
-export async function initSearchRouterV3(){await init();console.log('search router v3 ready: resilient PNCP + local PostgreSQL cache')}
+export async function initSearchRouterV3(){
+  await init();
+  console.log('search router v3 ready: resilient PNCP + local PostgreSQL cache');
+}
 export async function handleSearchV3Route(req,res,url){
   if(!['/api/licitacoes','/api/alerts/feed','/api/search-status'].includes(url.pathname))return false;
-  const user=await auth(req);if(!user){send(res,401,{error:'Faça login para continuar.'});return true}
+  const user=await auth(req);
+  if(!user){send(res,401,{error:'Faça login para continuar.'});return true}
   try{
     if(req.method==='GET'&&url.pathname==='/api/licitacoes'){
-      const result=await searchCore(filtersFromUrl(url));send(res,200,result);return true;
+      const result=await searchCore(filtersFromUrl(url));
+      send(res,200,result);
+      return true;
     }
     if(req.method==='GET'&&url.pathname==='/api/alerts/feed'){
-      send(res,200,{items:await alertFeed(user.id),source:'base monitorada do Radar',fetched_at:new Date().toISOString()});return true;
+      send(res,200,{items:await alertFeed(user.id),source:'base monitorada do Radar',fetched_at:new Date().toISOString()});
+      return true;
     }
     if(req.method==='GET'&&url.pathname==='/api/search-status'){
-      send(res,200,{status:await status()});return true;
+      send(res,200,{status:await status()});
+      return true;
     }
     return false;
-  }catch(e){console.error('search router v3 error:',e?.message||e);send(res,e?.status||500,{error:e?.status?e.message:'Falha temporária na pesquisa.',code:e?.code||'search_error'});return true}
+  }catch(e){
+    console.error('search router v3 error:',e?.message||e);
+    send(res,e?.status||500,{error:e?.status?e.message:'Falha temporária na pesquisa.',code:e?.code||'search_error'});
+    return true;
+  }
 }
