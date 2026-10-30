@@ -30,27 +30,25 @@
     return box;
   }
 
-  function revealAdminNavigation(){
+  function setAdminNavigation(isAdmin){
     const admin=$('#adminTab');
-    if(admin){
-      admin.classList.remove('hidden');
-      admin.hidden=false;
-      admin.removeAttribute('aria-hidden');
-      admin.style.removeProperty('display');
-    }
     const group=$('#rlbAdminNavGroup');
-    if(group){
-      group.classList.remove('hidden');
-      group.hidden=false;
-      group.style.removeProperty('display');
-    }
     const quick=$('#rlbQuickAdmin');
-    if(quick)quick.hidden=false;
+    for(const el of [admin,group]){
+      if(!el)continue;
+      el.hidden=!isAdmin;
+      el.classList.toggle('hidden',!isAdmin);
+      if(isAdmin){el.removeAttribute('aria-hidden');el.style.removeProperty('display')}
+      else el.setAttribute('aria-hidden','true');
+    }
+    if(quick)quick.hidden=!isAdmin;
   }
 
-  function ensureNotificationsAccess(){
+  function setNotificationAccess(isAdmin){
+    // The management shortcut in the top bar is administrator-only.
+    // Standard users still receive in-app notifications automatically.
     const quick=$('#rlbQuickNotifications');
-    if(quick)quick.hidden=false;
+    if(quick)quick.hidden=!isAdmin;
     const nav=$('#rlbNotificationsNav');
     const group=$('#rlbNotificationsGroup');
     if(nav){nav.hidden=false;nav.classList.remove('hidden');nav.style.removeProperty('display')}
@@ -77,16 +75,19 @@
         updateBoxVisibility();
         return;
       }
-      const r=await fetch('/api/me',{credentials:'same-origin',headers:{accept:'application/json'}});
+      const r=await fetch('/api/me',{credentials:'same-origin',headers:{accept:'application/json'},cache:'no-store'});
       if(!r.ok)return;
       const d=await r.json().catch(()=>({}));
       const user=d?.user;
       if(!user)return;
-      if(user.role==='admin')revealAdminNavigation();
-      ensureNotificationsAccess();
+      const isAdmin=user.role==='admin';
+      setAdminNavigation(isAdmin);
+      setNotificationAccess(isAdmin);
       updateBoxVisibility();
       const who=$('#who');
-      if(who&&user.role==='admin'&&!/ADMIN/i.test(who.textContent||''))who.textContent=`${user.email} • ADMIN`;
+      if(who)who.textContent=isAdmin?`${user.email} • ADMIN`:user.email;
+      document.body?.classList.toggle('rlb-role-admin',isAdmin);
+      document.body?.classList.toggle('rlb-role-user',!isAdmin);
     }catch(e){
       console.warn('navigation recovery:',e?.message||e);
     }finally{busy=false}
