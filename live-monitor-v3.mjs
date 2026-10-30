@@ -5,6 +5,8 @@ const DATABASE_URL=process.env.DATABASE_URL||'';
 const NORMAL_INTERVAL_MS=Math.max(90000,Number(process.env.PNCP_MONITOR_INTERVAL_MS||120000));
 const BACKOFF_INTERVAL_MS=300000;
 const BACKFILL_DAYS=Math.min(Math.max(Number(process.env.PNCP_BACKFILL_DAYS||7),1),14);
+const LIVE_PAGE_BUDGET=Math.min(Math.max(Number(process.env.PNCP_LIVE_PAGE_BUDGET||4),2),8);
+const BACKFILL_PAGE_BUDGET=Math.min(Math.max(Number(process.env.PNCP_BACKFILL_PAGE_BUDGET||3),2),6);
 const pool=DATABASE_URL?new Pool({connectionString:DATABASE_URL,ssl:{rejectUnauthorized:false},max:3,idleTimeoutMillis:30000}):null;
 const memory=new Map(),subscribers=new Set();
 let timer=null,backfillTimer=null,running=false,backfillRunning=false,ready=false,firstScan=true,totalStored=0,lastScanAt=null,lastSuccessAt=null,lastDetectedAt=null,lastNewCount=0,consecutiveFailures=0,lastError=null;
@@ -29,7 +31,7 @@ async function initStorage(){
   }
   const today=new Date();backfillQueue=[];
   for(let d=1;d<BACKFILL_DAYS;d++)backfillQueue.push(new Date(today.getTime()-d*86400000));
-  ready=true;console.log(`live monitor v3 storage ready: ${pool?'postgresql':'memory'} (${totalStored} stored; backfill ${BACKFILL_DAYS}d)`);
+  ready=true;console.log(`live monitor v3 storage ready: ${pool?'postgresql':'memory'} (${totalStored} stored; backfill ${BACKFILL_DAYS}d; live pages ${LIVE_PAGE_BUDGET})`);
 }
 
 function values(x,historical){
@@ -57,21 +59,21 @@ async function latest(limit=40){
   const r=await pool.query('SELECT raw,detected_at,pncp_url,origin_url FROM monitored_procurements ORDER BY COALESCE(published_at,detected_at) DESC LIMIT $1',[n]);
   return r.rows.map(row=>({...row.raw,_detectedAt:new Date(row.detected_at).toISOString(),_pncpUrl:row.pncp_url||pncpUrl(row.raw||{}),_originUrl:row.origin_url||originUrl(row.raw||{}),_liveMonitor:true}));
 }
-function status(){return {enabled:true,version:'3.0',storage:pool?'postgresql':'temporary-memory',interval_seconds:Math.round((consecutiveFailures?BACKOFF_INTERVAL_MS:NORMAL_INTERVAL_MS)/1000),running,baseline_completed:!firstScan,last_scan_at:lastScanAt,last_success_at:lastSuccessAt,last_detected_at:lastDetectedAt,last_new_count:lastNewCount,total_stored:totalStored,subscribers:subscribers.size,consecutive_failures:consecutiveFailures,last_error:lastError,backfill:{days:BACKFILL_DAYS,pending:backfillQueue.length,completed:backfillCompleted,running:backfillRunning,last_error:backfillLastError}}}
+function status(){return {enabled:true,version:'3.1',storage:pool?'postgresql':'temporary-memory',interval_seconds:Math.round((consecutiveFailures?BACKOFF_INTERVAL_MS:NORMAL_INTERVAL_MS)/1000),running,baseline_completed:!firstScan,last_scan_at:lastScanAt,last_success_at:lastSuccessAt,last_detected_at:lastDetectedAt,last_new_count:lastNewCount,total_stored:totalStored,subscribers:subscribers.size,consecutive_failures:consecutiveFailures,last_error:lastError,page_budget:LIVE_PAGE_BUDGET,backfill:{days:BACKFILL_DAYS,pending:backfillQueue.length,completed:backfillCompleted,running:backfillRunning,page_budget:BACKFILL_PAGE_BUDGET,last_error:backfillLastError}}}
 function broadcast(event,data){const packet=`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;for(const res of [...subscribers]){try{res.write(packet)}catch{subscribers.delete(res)}}}
 
 async function scan(){
   if(running)return;running=true;lastScanAt=new Date().toISOString();
   try{
     await initStorage();const today=new Date();
-    const result=await fetchPncpRange({startDate:today,endDate:today,filters:{},codes:PNCP_MODALITY_CODES,maxPagesPerModality:20,concurrency:2});
+    const result=await fetchPncpRange({startDate:today,endDate:today,filters:{},codes:PNCP_MODALITY_CODES,maxPagesPerModality:LIVE_PAGE_BUDGET,concurrency:2});
     if(result.successfulModalities===0)throw new Error(`PNCP indisponível em todas as modalidades (${result.errors.slice(0,3).map(x=>x.message).join(' | ')})`);
     const warmup=firstScan;const fresh=await persist(result.items,{historical:warmup});
     lastSuccessAt=new Date().toISOString();consecutiveFailures=0;lastError=result.errors.length?`${result.errors.length} modalidade(s) com falha parcial`:null;lastNewCount=warmup?0:fresh.length;
     if(warmup){firstScan=false;console.log(`live monitor v3 baseline ready: ${result.items.length} scanned, ${fresh.length} cache gaps filled, partial=${result.partial}`)}
     else if(fresh.length){lastDetectedAt=new Date().toISOString();console.log(`live monitor v3 detected ${fresh.length} new procurement(s)`);broadcast('procurement',{items:fresh.slice(0,100),detected_at:lastDetectedAt})}
     if(result.partial)console.warn(`live monitor v3 partial scan: ${result.errors.map(x=>`${x.code}:${x.status||'err'}`).join(', ')||'page budget reached'}`);
-    broadcast('status',status());scheduleBackfill(15000);
+    broadcast('status',status());scheduleBackfill(20000);
   }catch(e){consecutiveFailures++;lastError=clean(e?.message||'falha no monitor',500);console.error('live monitor v3 error:',lastError);broadcast('status',status())}
   finally{running=false;schedule()}
 }
@@ -81,12 +83,12 @@ async function backfill(){
   if(backfillRunning||running||!backfillQueue.length){if(backfillQueue.length)scheduleBackfill(30000);return}
   backfillRunning=true;const date=backfillQueue.shift();
   try{
-    const result=await fetchPncpRange({startDate:date,endDate:date,filters:{},codes:PNCP_MODALITY_CODES,maxPagesPerModality:20,concurrency:2});
+    const result=await fetchPncpRange({startDate:date,endDate:date,filters:{},codes:PNCP_MODALITY_CODES,maxPagesPerModality:BACKFILL_PAGE_BUDGET,concurrency:2});
     if(result.successfulModalities===0)throw new Error('PNCP indisponível durante preenchimento histórico');
     const fresh=await persist(result.items,{historical:true});backfillCompleted++;backfillLastError=result.partial?`Parcial: ${result.errors.length} modalidade(s)`:null;
     console.log(`live monitor v3 backfill ${date.toISOString().slice(0,10)}: ${result.items.length} scanned, ${fresh.length} inserted, partial=${result.partial}`);
   }catch(e){backfillLastError=clean(e?.message||'falha',300);backfillQueue.push(date);console.warn('live monitor v3 backfill error:',backfillLastError)}
-  finally{backfillRunning=false;if(backfillQueue.length)scheduleBackfill(backfillLastError?90000:30000)}
+  finally{backfillRunning=false;if(backfillQueue.length)scheduleBackfill(backfillLastError?90000:45000)}
 }
 function scheduleBackfill(ms=30000){if(!backfillQueue.length)return;if(backfillTimer)clearTimeout(backfillTimer);backfillTimer=setTimeout(backfill,ms);backfillTimer.unref?.()}
 
