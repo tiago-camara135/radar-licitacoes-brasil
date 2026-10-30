@@ -1,102 +1,77 @@
 (()=>{
   'use strict';
-  if(window.__RLB_THEME_FUNCTIONAL_V14__)return;
-  window.__RLB_THEME_FUNCTIONAL_V14__=true;
+  if(window.__RLB_NOTIFICATION_ENTRY_V15__)return;
+  window.__RLB_NOTIFICATION_ENTRY_V15__=true;
 
-  const STORAGE_KEY='rlb-theme';
   const $=(s,r=document)=>r.querySelector(s);
   const $$=(s,r=document)=>Array.from(r.querySelectorAll(s));
-  const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  const norm=v=>String(v??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/\s+/g,' ').trim();
 
-  const icons={
-    radar:'<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="1.5"/><path d="M12 12 18.2 6.7"/><circle cx="18.2" cy="6.7" r="1.2" fill="currentColor" stroke="none"/></svg>',
-    search:'<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.2"/><path d="m15.2 15.2 4.3 4.3"/><path d="M8 8.5h5M8 11.2h3.6"/></svg>',
-    source:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3.5h9l3 3V20H6z"/><path d="M15 3.5v4h3M9 11h6M9 14.5h4.5"/><path d="m9 18 1.7 1.5 3.3-3.5"/></svg>',
-    external:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 5h5v5M19 5l-8 8"/><path d="M18 13v6H5V6h6"/></svg>',
-    close:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>'
-  };
+  function installStyle(){
+    let st=$('#rlbNotificationEntryStyle');
+    if(st)st.remove();
+    st=document.createElement('style');
+    st.id='rlbNotificationEntryStyle';
+    st.textContent=`
+      #rlbPlatformValue.rlb-notification-entry{display:grid!important;grid-template-columns:minmax(0,1fr) auto!important;gap:20px!important;align-items:center!important;margin:0 0 18px!important;padding:20px 22px!important;border:1px solid var(--rlb3-line,#d9e4eb)!important;border-radius:16px!important;background:linear-gradient(135deg,var(--rlb3-surface,#fff),var(--rlb3-surface-soft,#f8fbfd))!important;box-shadow:0 10px 28px rgba(17,49,74,.07)!important;position:relative!important;overflow:hidden!important;z-index:5!important}
+      #rlbPlatformValue.rlb-notification-entry:after{content:'';position:absolute;right:-70px;top:-95px;width:220px;height:220px;border-radius:50%;background:radial-gradient(circle,rgba(37,99,235,.12),transparent 68%);pointer-events:none}
+      .rlb-notification-entry-main{display:grid!important;grid-template-columns:54px minmax(0,1fr)!important;gap:15px!important;align-items:center!important;min-width:0!important}
+      .rlb-notification-entry-icon{width:54px!important;height:54px!important;display:grid!important;place-items:center!important;border-radius:14px!important;background:rgba(37,99,235,.09)!important;border:1px solid rgba(37,99,235,.18)!important;color:#2563eb!important}
+      .rlb-notification-entry-icon svg{width:26px!important;height:26px!important;fill:none!important;stroke:currentColor!important;stroke-width:1.8!important;stroke-linecap:round!important;stroke-linejoin:round!important}
+      .rlb-notification-entry-copy{min-width:0!important}.rlb-notification-entry-copy>span{display:block!important;margin-bottom:4px!important;color:#2563eb!important;font-size:8.5px!important;font-weight:900!important;text-transform:uppercase!important;letter-spacing:.1em!important}.rlb-notification-entry-copy h3{margin:0!important;color:var(--rlb3-text,#102f4b)!important;font-size:16px!important;line-height:1.25!important;font-weight:850!important}.rlb-notification-entry-copy p{margin:6px 0 0!important;color:var(--rlb3-muted,#718596)!important;font-size:10px!important;line-height:1.55!important;max-width:780px!important}
+      .rlb-notification-entry-channels{display:flex!important;gap:7px!important;flex-wrap:wrap!important;margin-top:10px!important}.rlb-notification-entry-channels span{display:inline-flex!important;align-items:center!important;gap:5px!important;padding:5px 8px!important;border-radius:999px!important;border:1px solid var(--rlb3-line,#d9e4eb)!important;background:var(--rlb3-surface,#fff)!important;color:var(--rlb3-text-2,#35556b)!important;font-size:8.5px!important;font-weight:750!important}.rlb-notification-entry-channels i{width:6px!important;height:6px!important;border-radius:50%!important;background:#10b981!important}
+      .rlb-notification-entry-action{position:relative!important;z-index:2!important;min-width:190px!important;min-height:46px!important;padding:0 16px!important;border:0!important;border-radius:11px!important;background:linear-gradient(135deg,#075fc7,#0b74de)!important;color:#fff!important;font-size:10px!important;font-weight:850!important;cursor:pointer!important;box-shadow:0 8px 20px rgba(7,95,199,.22)!important;transition:transform .16s ease,box-shadow .16s ease!important}.rlb-notification-entry-action:hover{transform:translateY(-1px)!important;box-shadow:0 11px 25px rgba(7,95,199,.28)!important}.rlb-notification-entry-action:focus-visible{outline:3px solid rgba(37,99,235,.25)!important;outline-offset:2px!important}.rlb-notification-entry-note{display:block!important;margin-top:6px!important;color:var(--rlb3-muted,#718596)!important;font-size:8px!important;text-align:center!important;position:relative!important;z-index:2!important}
+      html[data-theme="dark"] #rlbPlatformValue.rlb-notification-entry{background:linear-gradient(135deg,#0f1d29,#122330)!important;border-color:#243746!important}html[data-theme="dark"] .rlb-notification-entry-copy h3{color:#edf6fb!important}html[data-theme="dark"] .rlb-notification-entry-copy p,html[data-theme="dark"] .rlb-notification-entry-note{color:#8fa5b4!important}html[data-theme="dark"] .rlb-notification-entry-channels span{background:#0f1d29!important;border-color:#243746!important;color:#c6d7e1!important}
+      @media(max-width:850px){#rlbPlatformValue.rlb-notification-entry{grid-template-columns:1fr!important}.rlb-notification-entry-action{width:100%!important}.rlb-notification-entry-note{text-align:left!important}}
+      @media(max-width:600px){#rlbPlatformValue.rlb-notification-entry{padding:16px!important}.rlb-notification-entry-main{grid-template-columns:44px minmax(0,1fr)!important}.rlb-notification-entry-icon{width:44px!important;height:44px!important}.rlb-notification-entry-copy h3{font-size:14px!important}}
+    `;
+    document.head.appendChild(st);
+  }
 
-  function safeTheme(){
-    try{const saved=localStorage.getItem(STORAGE_KEY);if(saved==='light'||saved==='dark')return saved}catch{}
-    return window.matchMedia?.('(prefers-color-scheme: dark)').matches?'dark':'light';
-  }
-  function setTheme(theme,persist=true){
-    if(theme!=='light'&&theme!=='dark')theme='light';
-    document.documentElement.dataset.theme=theme;
-    document.body?.setAttribute('data-theme',theme);
-    $$('[data-rlb-theme]').forEach(btn=>btn.setAttribute('aria-pressed',String(btn.dataset.rlbTheme===theme)));
-    const meta=$('meta[name="theme-color"]');if(meta)meta.setAttribute('content',theme==='dark'?'#08131E':'#102F4B');
-    if(persist){try{localStorage.setItem(STORAGE_KEY,theme)}catch{}}
-  }
-  function installThemeControl(){
-    const top=$('.top'),who=$('#who');if(!top)return;
-    let control=$('#rlbThemeControl');
-    if(!control){
-      control=document.createElement('div');control.id='rlbThemeControl';control.className='rlb-theme-control';control.setAttribute('role','group');control.setAttribute('aria-label','Tema da interface');
-      control.innerHTML='<button type="button" data-rlb-theme="light" aria-pressed="false"><span class="rlb-theme-icon">☀</span> Claro</button><button type="button" data-rlb-theme="dark" aria-pressed="false"><span class="rlb-theme-icon">◐</span> Escuro</button>';
-      control.addEventListener('click',e=>{const btn=e.target.closest('[data-rlb-theme]');if(btn)setTheme(btn.dataset.rlbTheme,true)});
-      if(who)top.insertBefore(control,who);else top.appendChild(control);
+  function openNotifications(){
+    try{if(typeof window.RLBNotificationsOpen==='function'){window.RLBNotificationsOpen();return true}}catch{}
+    const nav=$('#rlbNotificationsNav')||$('#rlbQuickNotifications')||$('[data-view="notifications"]');
+    if(nav){nav.click();return true}
+    const view=$('#view-notifications');
+    if(view){
+      $$('section[id^="view-"]').forEach(s=>{if(s!==view){s.hidden=true;s.classList.add('hidden')}});
+      view.hidden=false;view.classList.remove('hidden');view.style.display='';
+      view.scrollIntoView({behavior:'smooth',block:'start'});
+      return true;
     }
-    setTheme(safeTheme(),false);
+    return false;
   }
 
-  function openRadar(){const btn=$('.nav [data-view="radar"]');if(btn&&!btn.classList.contains('active'))btn.click()}
-  function focusTarget(el,focus){
-    if(!el)return;
-    el.scrollIntoView({behavior:'smooth',block:'start'});el.classList.remove('rlb-v14-target');void el.offsetWidth;el.classList.add('rlb-v14-target');
-    setTimeout(()=>el.classList.remove('rlb-v14-target'),1400);if(focus)setTimeout(()=>focus.focus?.({preventScroll:true}),380);
+  function openWithRetry(){
+    if(openNotifications())return;
+    let tries=0;
+    const timer=setInterval(()=>{tries+=1;if(openNotifications()||tries>=8)clearInterval(timer)},250);
   }
-  function monitor(){
-    openRadar();
-    const run=()=>{const live=$('#rlbLiveFeed');if(!live)return false;const scope=$('#rlbLiveScope');if(scope){scope.value='all';scope.dispatchEvent(new Event('change',{bubbles:true}))}focusTarget(live);return true};
-    if(!run())setTimeout(()=>{if(!run())focusTarget($('#view-radar .stats'))},350);
-  }
-  function smartSearch(){
-    openRadar();
-    const input=$('#q')||$('#keyword');const searchBtn=$('#search');const panel=searchBtn?.closest('.rlb-search-panel,.card')||input?.closest('.rlb-search-panel,.card')||searchBtn||input;
-    const toggle=$$('#view-radar button').find(b=>norm(b.textContent).includes('mostrar filtros'));
-    if(toggle)toggle.click();focusTarget(panel,input);
-  }
-  function safeUrl(v){try{const u=new URL(String(v||''),location.origin);return /^https?:$/.test(u.protocol)?u.href:''}catch{return''}}
-  function pncpUrl(x){
-    const direct=safeUrl(x?._pncpUrl||x?.pncp_url||'');if(direct)return direct;
-    const cnpj=String(x?.orgaoEntidade?.cnpj||'').replace(/\D/g,'');const year=Number(x?.anoCompra),seq=Number(x?.sequencialCompra);
-    return cnpj.length===14&&Number.isInteger(year)&&Number.isInteger(seq)&&seq>0?`https://pncp.gov.br/app/editais/${cnpj}/${year}/${seq}`:'';
-  }
-  const originUrl=x=>safeUrl(x?._originUrl||x?.linkSistemaOrigem||x?.linkProcessoEletronico||'');
-  const city=x=>x?.unidadeOrgao?.municipioNome||x?.unidadeOrgao?.nomeMunicipio||x?.municipioNome||'';
 
-  async function loadSources(){
-    const list=$('#rlbV14SourceList'),meta=$('#rlbV14SourceMeta');if(!list)return;
-    list.innerHTML='<div class="rlb-v14-empty">Carregando oportunidades monitoradas…</div>';
-    try{
-      const r=await fetch('/api/live-feed?limit=12',{credentials:'same-origin',headers:{accept:'application/json'},cache:'no-store'});const d=await r.json().catch(()=>({}));
-      if(!r.ok)throw new Error(d.error||'Não foi possível carregar as fontes oficiais.');
-      const rows=Array.isArray(d.items)?d.items:[];const total=Number(d?.status?.total_stored||0);if(meta)meta.textContent=total?`${total.toLocaleString('pt-BR')} registros monitorados na base do Radar`:'Últimas oportunidades monitoradas';
-      list.innerHTML=rows.map(x=>{const p=pncpUrl(x),o=originUrl(x),loc=[city(x),String(x?.unidadeOrgao?.ufSigla||x?.ufSigla||'')].filter(Boolean).join(' / ');const mod=String(x?.modalidadeNome||('Modalidade '+(x?._modalidadeConsultada||'não informada')));return `<article class="rlb-v14-source-item"><div class="rlb-v14-source-top"><span>${esc(mod)}</span><small>${esc(loc)}</small></div><strong>${esc(x?.objetoCompra||'Objeto não informado')}</strong><p>${esc(x?.orgaoEntidade?.razaoSocial||'Órgão não informado')}</p><div>${p?`<a href="${esc(p)}" target="_blank" rel="noopener">Validar no PNCP ${icons.external}</a>`:''}${o&&o!==p?`<a class="secondary" href="${esc(o)}" target="_blank" rel="noopener">Portal de origem ${icons.external}</a>`:''}</div></article>`}).join('')||'<div class="rlb-v14-empty">Nenhuma oportunidade monitorada disponível neste momento.</div>';
-    }catch(e){list.innerHTML=`<div class="rlb-v14-empty">${esc(e.message||'Falha temporária ao carregar as fontes oficiais.')}</div>`}
-  }
-  function sources(){openRadar();const panel=$('#rlbV14SourcePanel');if(!panel)return;panel.hidden=false;focusTarget(panel);loadSources()}
-
-  function buildFunctionalCards(){
-    const hero=$('#rlbInstitutionalHero');if(!hero)return false;
-    $('#rlbUsageGuide')?.remove();$('#rlbFunctionalIntelligenceV12')?.remove();$$('.rlb-command-center').forEach(x=>x.remove());
-    let strip=$('#rlbPlatformValue');if(!strip){strip=document.createElement('section');hero.insertAdjacentElement('afterend',strip)}
-    strip.id='rlbPlatformValue';strip.className='rlb-platform-value rlb-v14-value';
-    strip.innerHTML=`
-      <button type="button" class="rlb-v14-card monitor" data-v14-action="monitor"><span class="rlb-v14-icon">${icons.radar}</span><span class="rlb-v14-copy"><strong>Monitoramento ativo</strong><small>O Radar acompanha novas publicações e alimenta o Feed ao Vivo enquanto o serviço está disponível.</small></span><span class="rlb-v14-arrow">→</span></button>
-      <button type="button" class="rlb-v14-card search" data-v14-action="search"><span class="rlb-v14-icon">${icons.search}</span><span class="rlb-v14-copy"><strong>Busca inteligente</strong><small>Localize oportunidades por objeto, localidade, modalidade, órgão, fonte e demais critérios.</small></span><span class="rlb-v14-arrow">→</span></button>
-      <button type="button" class="rlb-v14-card source" data-v14-action="sources"><span class="rlb-v14-icon">${icons.source}</span><span class="rlb-v14-copy"><strong>Fontes oficiais</strong><small>Acesse o PNCP e, quando informado pelo registro oficial, o portal de origem da contratação.</small></span><span class="rlb-v14-arrow">→</span></button>
-      <div id="rlbV14SourcePanel" class="rlb-v14-source-panel" hidden><div class="rlb-v14-panel-head"><div><span>Rastreabilidade oficial</span><strong>Validação das oportunidades monitoradas</strong><small id="rlbV14SourceMeta">Últimos registros do Radar</small></div><div><button type="button" id="rlbV14SourceRefresh">Atualizar</button><button type="button" id="rlbV14SourceClose" aria-label="Fechar">${icons.close}</button></div></div><div id="rlbV14SourceList" class="rlb-v14-source-list"></div></div>`;
-    strip.onclick=e=>{const action=e.target.closest('[data-v14-action]')?.dataset.v14Action;if(action==='monitor')monitor();else if(action==='search')smartSearch();else if(action==='sources')sources()};
-    $('#rlbV14SourceRefresh',strip).onclick=loadSources;$('#rlbV14SourceClose',strip).onclick=()=>{$('#rlbV14SourcePanel').hidden=true};
+  function build(){
+    const hero=$('#rlbInstitutionalHero');
+    if(!hero)return false;
+    $('#rlbUsageGuide')?.remove();
+    $('#rlbFunctionalIntelligenceV12')?.remove();
+    $$('.rlb-command-center').forEach(x=>x.remove());
+    let section=$('#rlbPlatformValue');
+    if(!section){section=document.createElement('section');hero.insertAdjacentElement('afterend',section)}
+    section.id='rlbPlatformValue';
+    section.className='rlb-platform-value rlb-notification-entry';
+    section.innerHTML=`
+      <div class="rlb-notification-entry-main">
+        <span class="rlb-notification-entry-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/><path d="M12 2v2"/></svg></span>
+        <div class="rlb-notification-entry-copy">
+          <span>Central de notificações</span>
+          <h3>Receba novas licitações no Radar e configure seus canais de aviso.</h3>
+          <p>Cadastre e confirme seu e-mail e WhatsApp, escolha os canais de cada alerta e acompanhe as notificações da sua conta em um único lugar.</p>
+          <div class="rlb-notification-entry-channels"><span><i></i> Radar no site</span><span><i></i> E-mail</span><span><i></i> WhatsApp</span></div>
+        </div>
+      </div>
+      <div><button type="button" class="rlb-notification-entry-action" id="rlbOpenNotificationCenter">Configurar notificações →</button><small class="rlb-notification-entry-note">Configuração individual por usuário</small></div>`;
+    $('#rlbOpenNotificationCenter',section)?.addEventListener('click',openWithRetry);
     return true;
   }
 
-  function refineCopy(){const hero=$('#rlbInstitutionalHero');if(!hero)return;const eye=hero.querySelector('.rlb-hero-eyebrow'),h=hero.querySelector('h1'),p=hero.querySelector('p');if(eye)eye.innerHTML='<i></i> inteligência para oportunidades públicas';if(h)h.textContent='Descubra, acompanhe e organize oportunidades de contratação pública em um só ambiente.';if(p)p.textContent='Use dados oficiais para pesquisar licitações, acompanhar novas publicações e chegar mais rápido às oportunidades relevantes para sua atuação.'}
-  function install(){installThemeControl();refineCopy();buildFunctionalCards()}
-
-  const initial=safeTheme();document.documentElement.dataset.theme=initial;
+  function install(){installStyle();build();[300,900,1800].forEach(ms=>setTimeout(build,ms))}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});else install();
 })();
