@@ -3,6 +3,8 @@ import { syncBuiltinESMExports } from 'node:module';
 
 const originalReadFileSync = fs.readFileSync;
 const vividTheme = originalReadFileSync(new URL('./vivid-theme.css', import.meta.url), 'utf8');
+const autoNotifyStyle = originalReadFileSync(new URL('./auto-notifications.css', import.meta.url), 'utf8');
+const autoNotifyScript = originalReadFileSync(new URL('./auto-notifications.js', import.meta.url), 'utf8');
 
 const iconSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" role="img" aria-label="RLB">
 <defs>
@@ -31,7 +33,8 @@ function applyBrand(html) {
   let out = String(html);
   out = out.replace(/<meta name="theme-color" content="[^"]*">/i, '<meta name="theme-color" content="#009C3B">');
   out = out.replace(/<div class="brand-mark" aria-hidden="true"><svg[\s\S]*?<\/svg><\/div>/, `<div class="brand-mark" aria-hidden="true"><img src="${iconData}" alt=""></div>`);
-  out = out.replace('</head>', `<link rel="icon" type="image/svg+xml" href="${iconData}"><style id="vivid-theme">${vividTheme}</style><style id="rlb-icon-style">${iconStyle}</style></head>`);
+  out = out.replace('</head>', `<link rel="icon" type="image/svg+xml" href="${iconData}"><style id="vivid-theme">${vividTheme}</style><style id="rlb-icon-style">${iconStyle}</style><style id="auto-notification-style">${autoNotifyStyle}</style></head>`);
+  out = out.replace('</body>', `<script id="auto-notification-script">${autoNotifyScript}</script></body>`);
   return out;
 }
 
