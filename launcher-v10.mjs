@@ -9,13 +9,19 @@ const movementPanelJs=nativeReadFileSync(new URL('./movement-panel-v2.js',import
 
 fs.readFileSync=function rlbV10ReadFileSync(path,...args){
   const value=path instanceof URL?path.pathname:String(path);
-  const html=nativeReadFileSync(path,...args);
-  if(typeof html!=='string')return html;
-  if(value.endsWith('/app-professional.html')||value.endsWith('\\app-professional.html')){
-    const script=`<script id="rlb-movement-panel-v2-final">${movementPanelJs}</script>`;
-    return html.replace('</body>',`${script}</body>`);
+  const file=nativeReadFileSync(path,...args);
+  if(typeof file!=='string')return file;
+
+  if(value.endsWith('/institutional-v2.js')||value.endsWith('\\institutional-v2.js')){
+    return file.replace(/\n\s*installUsageGuide\(\);/,'');
   }
-  return html;
+
+  if(value.endsWith('/app-professional.html')||value.endsWith('\\app-professional.html')){
+    const hardRemoveStyle='<style id="rlb-remove-usage-guide">#rlbUsageGuide,.rlb-usage-guide{display:none!important;height:0!important;min-height:0!important;margin:0!important;padding:0!important;border:0!important;overflow:hidden!important}</style>';
+    const script=`<script id="rlb-movement-panel-v2-final">${movementPanelJs}</script>`;
+    return file.replace('</head>',`${hardRemoveStyle}</head>`).replace('</body>',`${script}</body>`);
+  }
+  return file;
 };
 
 http.createServer=function rlbV10CreateServer(listener){
