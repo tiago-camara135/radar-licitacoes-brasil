@@ -1,0 +1,13 @@
+/* Recursos exclusivos da área autenticada */
+body:not(.rlb-platform-authenticated) #rlbThemeControl,
+body:not(.rlb-platform-authenticated) #rlbAiLauncher,
+body:not(.rlb-platform-authenticated) #rlbAiPanel{display:none!important}
+
+/* Evita qualquer flash de UI restrita antes da checagem de sessão */
+#rlbThemeControl,#rlbAiLauncher,#rlbAiPanel{visibility:hidden}
+body.rlb-platform-authenticated #rlbThemeControl,
+body.rlb-platform-authenticated #rlbAiLauncher,
+body.rlb-platform-authenticated #rlbAiPanel{visibility:visible}
+
+/* O painel só aparece quando explicitamente aberto pela IA */
+body.rlb-platform-authenticated #rlbAiPanel[hidden]{display:none!important}
