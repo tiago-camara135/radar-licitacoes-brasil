@@ -48,7 +48,7 @@ async function fetchJsonWithRetry(url){
     const controller=new AbortController();
     const timeout=setTimeout(()=>controller.abort(),18000);
     try{
-      const r=await fetch(url,{headers:{accept:'application/json','user-agent':'RadarLicitacoesBrasil/3.2'},signal:controller.signal});
+      const r=await fetch(url,{headers:{accept:'application/json','user-agent':'RadarLicitacoesBrasil/3.3'},signal:controller.signal});
       if(r.status===204)return {response:r,body:{data:[],totalPaginas:0,totalRegistros:0}};
       const body=await r.json().catch(()=>({}));
       if(r.ok)return {response:r,body};
@@ -81,8 +81,12 @@ function serverFilterParams(filters={}){
   if(cnpj.length===14)out.cnpj=cnpj;
   return out;
 }
+function modalityList(value){
+  const raw=Array.isArray(value)?value:String(value??'').split(',');
+  return [...new Set(raw.map(Number).filter(n=>Number.isInteger(n)&&n>=1&&n<=14))];
+}
 export function normalizeSearchFilters(filters={}){
-  const modality=Number(filters.modality||filters.modalidade||0);
+  const modalities=modalityList(filters.modalities?.length?filters.modalities:(filters.modality??filters.modalidade??''));
   const min=filters.minValue===''||filters.minValue==null?null:Number(filters.minValue);
   const max=filters.maxValue===''||filters.maxValue==null?null:Number(filters.maxValue);
   return {
@@ -90,7 +94,8 @@ export function normalizeSearchFilters(filters={}){
     uf:clean(filters.uf,2).toUpperCase(),
     municipality:clean(filters.municipality,120),
     municipalityIbge:digits(filters.municipalityIbge).slice(0,7),
-    modality:Number.isInteger(modality)&&modality>=1&&modality<=14?modality:null,
+    modality:modalities.length===1?modalities[0]:null,
+    modalities,
     org:clean(filters.org,180),
     cnpj:digits(filters.cnpj).slice(0,14),
     minValue:Number.isFinite(min)&&min>=0?min:null,
@@ -105,7 +110,7 @@ export function applySearchFilters(items,filters={}){
   const f=normalizeSearchFilters(filters),q=textNorm(f.keyword),oq=textNorm(f.org),mq=textNorm(f.municipality),now=Date.now();
   let all=[...(items||[])];
   if(f.uf)all=all.filter(x=>String(x?.unidadeOrgao?.ufSigla||x?.ufSigla||'').toUpperCase()===f.uf);
-  if(f.modality)all=all.filter(x=>Number(x?._modalidadeConsultada||x?.modalidadeId)===f.modality);
+  if(f.modalities.length)all=all.filter(x=>f.modalities.includes(Number(x?._modalidadeConsultada||x?.modalidadeId)));
   if(f.cnpj.length===14)all=all.filter(x=>digits(x?.orgaoEntidade?.cnpj)===f.cnpj);
   if(f.municipalityIbge.length===7)all=all.filter(x=>digits(x?.unidadeOrgao?.codigoIbge||x?.codigoMunicipioIbge)===f.municipalityIbge);
   if(q)all=all.filter(x=>textNorm([x?.objetoCompra,x?.informacaoComplementar,x?.orgaoEntidade?.razaoSocial,x?.unidadeOrgao?.nomeUnidade].filter(Boolean).join(' ')).includes(q));
@@ -183,8 +188,8 @@ export async function fetchPncpRange({startDate,endDate,filters={},codes=PNCP_MO
 }
 
 export async function fetchPncpSearch(filters={}){
-  const f=normalizeSearchFilters(filters),end=new Date(),start=new Date(end.getTime()-f.days*86400000),codes=f.modality?[f.modality]:PNCP_MODALITY_CODES;
-  const restrictive=Boolean(f.uf||f.municipalityIbge||f.cnpj||f.modality);
+  const f=normalizeSearchFilters(filters),end=new Date(),start=new Date(end.getTime()-f.days*86400000),codes=f.modalities.length?f.modalities:PNCP_MODALITY_CODES;
+  const restrictive=Boolean(f.uf||f.municipalityIbge||f.cnpj||f.modalities.length);
   const localText=Boolean(f.keyword||f.org||f.municipality);
   const budget=localText?2:1;
   const r=await fetchPncpRange({startDate:start,endDate:end,filters:f,codes,maxPagesPerModality:budget,concurrency:restrictive?1:2});
