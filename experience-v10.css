@@ -1,0 +1,52 @@
+/* Radar de Licitações Brasil — interaction refinements V10 */
+.rlb-quick-choice{
+  position:relative!important;
+  border:1px solid rgba(129,157,184,.28)!important;
+  background:rgba(15,40,61,.28)!important;
+  color:inherit!important;
+  box-shadow:none!important;
+  transition:background .16s ease,border-color .16s ease,color .16s ease,transform .16s ease!important;
+}
+.rlb-quick-choice:hover{
+  border-color:rgba(243,196,67,.56)!important;
+  transform:translateY(-1px);
+}
+.rlb-quick-choice[aria-pressed="true"],
+.rlb-quick-choice.rlb-quick-active,
+.rlb-chamber-btn[aria-pressed="true"]{
+  background:linear-gradient(180deg,#fff8d8,#f6df8a)!important;
+  border-color:#e2bd43!important;
+  color:#684600!important;
+  box-shadow:0 7px 18px rgba(213,171,46,.18)!important;
+}
+.rlb-chamber-btn:not([aria-pressed="true"]){
+  background:rgba(15,40,61,.28)!important;
+  border-color:rgba(129,157,184,.28)!important;
+  color:inherit!important;
+  box-shadow:none!important;
+}
+.rlb-quick-choice:focus-visible{outline:3px solid rgba(246,199,61,.35)!important;outline-offset:2px}
+
+.rlb-regional-toast-stack{
+  position:fixed;right:22px;top:92px;z-index:10020;width:min(390px,calc(100vw - 28px));display:grid;gap:10px;pointer-events:none;
+}
+.rlb-regional-toast{
+  pointer-events:auto;position:relative;padding:14px 42px 14px 15px;border-radius:14px;
+  border:1px solid rgba(94,157,133,.38);background:rgba(7,28,43,.96);color:#edf8f4;
+  box-shadow:0 16px 42px rgba(0,0,0,.28);backdrop-filter:blur(14px);animation:rlbToastIn .22s ease-out;
+}
+.rlb-regional-toast .rlb-toast-kicker{font-size:10px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:#72e0b4;margin-bottom:5px}
+.rlb-regional-toast strong{display:block;font-size:13px;line-height:1.35;margin-bottom:5px;color:#fff}
+.rlb-regional-toast p{margin:0;color:#b9ced8;font-size:11px;line-height:1.45}
+.rlb-regional-toast a{display:inline-flex;margin-top:9px;font-size:11px;font-weight:850;color:#f6d768;text-decoration:none}
+.rlb-regional-toast button{position:absolute;right:9px;top:8px;width:27px;height:27px;border-radius:8px;border:0;background:rgba(255,255,255,.08);color:#d8e5ea;cursor:pointer}
+.rlb-regional-toast.summary{border-color:rgba(246,199,61,.42)}
+.rlb-regional-toast.summary .rlb-toast-kicker{color:#f6d768}
+@keyframes rlbToastIn{from{opacity:0;transform:translateY(-8px) scale(.98)}to{opacity:1;transform:none}}
+
+body:not(.rlb-role-admin) #rlbQuickNotifications,
+body:not(.rlb-role-admin) #rlbQuickAdmin{display:none!important}
+
+@media(max-width:760px){
+  .rlb-regional-toast-stack{right:14px;top:72px;width:calc(100vw - 28px)}
+}
