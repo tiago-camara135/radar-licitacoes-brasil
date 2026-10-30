@@ -1,6 +1,6 @@
 import { Pool } from 'pg';
 import { initAiTables, aiStatus, listAiConversations, listAiMessages, deleteAiConversation, runAiChat } from './ai-rlb-core.mjs';
-import { initHybridTables, hybridAiStatus, hybridAdminStatus, configureHybridProvider, removeHybridProvider, runHybridChat } from './ai-rlb-hybrid.mjs';
+import { initHybridTables, hybridStatus, hybridAdminStatus, configureHybridProvider, removeHybridProvider, runHybridChat } from './ai-rlb-hybrid.mjs';
 
 const PORT = Number(process.env.PORT || 10000);
 const DATABASE_URL = process.env.DATABASE_URL || '';
@@ -66,7 +66,7 @@ export async function handleAiRlbRoute(req, res, url) {
     if (!user) { send(res, 401, { error: 'Faça login para usar a IA RLB.', code: 'authentication_required' }); return true; }
 
     if (req.method === 'GET' && url.pathname === '/api/ai-rlb/status') {
-      send(res, 200, await hybridAiStatus(pool, await aiStatus(pool, user.id))); return true;
+      send(res, 200, await hybridStatus(pool, await aiStatus(pool, user.id))); return true;
     }
     if (url.pathname === '/api/ai-rlb/admin/config') {
       if (user.role !== 'admin') { send(res, 403, { error: 'Apenas administradores podem configurar a IA RLB.', code: 'admin_required' }); return true; }
