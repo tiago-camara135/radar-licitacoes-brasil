@@ -92,6 +92,16 @@ async function resolveApiKey(pool) {
 }
 async function validateApiKey(apiKey) {
   const client = new OpenAI({ apiKey });
+
+  try {
+    await client.models.list();
+  } catch (e) {
+    const status = Number(e?.status || 0);
+    if (status === 401) throw Object.assign(new Error('A chave informada não foi aceita pela OpenAI.'), { status: 400 });
+    if (status === 403) throw Object.assign(new Error('A chave informada não possui permissão de acesso à API da OpenAI.'), { status: 400 });
+    throw Object.assign(new Error('Não foi possível confirmar a credencial da OpenAI agora. Tente novamente.'), { status: 502 });
+  }
+
   try {
     const r = await client.responses.create({
       model: AI_MODEL,
@@ -101,26 +111,55 @@ async function validateApiKey(apiKey) {
       max_output_tokens: 32,
       store: false
     }, { timeout: 30000 });
-    return Boolean(r?.id || r?.output_text);
+    return {
+      operational: Boolean(r?.id || r?.output_text),
+      billing_required: false,
+      message: 'IA RLB ativada e validada com sucesso. A configuração é global para todos os usuários.'
+    };
   } catch (e) {
     const status = Number(e?.status || 0);
-    const code = String(e?.code || e?.error?.code || '');
+    const code = String(e?.code || e?.error?.code || '').toLowerCase();
     if (status === 401) throw Object.assign(new Error('A chave informada não foi aceita pela OpenAI.'), { status: 400 });
-    if (status === 429 || code.includes('quota')) throw Object.assign(new Error('A chave foi reconhecida, mas a conta da API está sem saldo ou limite disponível.'), { status: 400 });
-    if (status === 403) throw Object.assign(new Error(`A chave não possui acesso ao modelo ${AI_MODEL}.`), { status: 400 });
-    throw Object.assign(new Error('Não foi possível validar a chave agora. Verifique a conta da API e tente novamente.'), { status: 502 });
+    if (status === 429 || code.includes('quota') || code.includes('billing')) {
+      return {
+        operational: false,
+        billing_required: true,
+        message: 'Credencial validada e salva para toda a plataforma. A conta da API ainda precisa de saldo ou limite disponível para gerar respostas.'
+      };
+    }
+    if (status === 403 || status === 404) {
+      return {
+        operational: false,
+        billing_required: false,
+        model_access_required: true,
+        message: `Credencial validada e salva para toda a plataforma. O acesso ao modelo ${AI_MODEL} ainda precisa ser liberado na conta da API.`
+      };
+    }
+    return {
+      operational: false,
+      billing_required: false,
+      validation_warning: true,
+      message: 'Credencial validada e salva para toda a plataforma. O teste do modelo não pôde ser concluído agora, mas a chave não precisará ser informada novamente.'
+    };
   }
 }
 export async function configureAiKey(pool, userId, rawKey) {
-  if (process.env.OPENAI_API_KEY) return { configured: true, source: 'environment', model: AI_MODEL, message: 'A IA RLB já usa uma credencial configurada no ambiente do servidor.' };
+  if (process.env.OPENAI_API_KEY) return { configured: true, operational: true, source: 'environment', model: AI_MODEL, message: 'A IA RLB já usa uma credencial global configurada no servidor.' };
   const key = clean(rawKey, 300);
   if (!/^sk-[A-Za-z0-9_\-]{20,}$/.test(key)) throw Object.assign(new Error('Formato de chave da OpenAI inválido.'), { status: 400 });
-  await validateApiKey(key);
+
+  const validation = await validateApiKey(key);
   const encrypted = seal(key);
   await pool.query(`INSERT INTO ai_settings(setting_key,encrypted_value,updated_by,updated_at)
     VALUES('openai_api_key',$1,$2,NOW())
     ON CONFLICT(setting_key) DO UPDATE SET encrypted_value=EXCLUDED.encrypted_value,updated_by=EXCLUDED.updated_by,updated_at=NOW()`, [encrypted, userId]);
-  return { configured: true, source: 'encrypted_database', model: AI_MODEL, message: 'IA RLB ativada e validada com sucesso.' };
+
+  return {
+    configured: true,
+    source: 'encrypted_database',
+    model: AI_MODEL,
+    ...validation
+  };
 }
 export async function aiAdminStatus(pool) {
   const env = Boolean(String(process.env.OPENAI_API_KEY || '').trim());
@@ -180,8 +219,11 @@ async function askModel(apiKey, history, message, document, useWeb) {
     return { answer: clean(response.output_text || 'Não foi possível gerar uma resposta.', 30000), sources: sourcesFrom(response) };
   } catch (e) {
     const status = Number(e?.status || 0);
+    const code = String(e?.code || e?.error?.code || '').toLowerCase();
     console.error('IA RLB model error', status || e?.name || 'unknown');
-    const msg = status === 401 ? 'A credencial da IA RLB precisa ser revisada pelo administrador.' : status === 429 ? 'A IA RLB atingiu um limite temporário ou a conta da API está sem saldo disponível.' : 'O serviço da IA RLB está temporariamente indisponível.';
+    let msg = 'O serviço da IA RLB está temporariamente indisponível.';
+    if (status === 401) msg = 'A credencial da IA RLB precisa ser revisada pelo administrador.';
+    else if (status === 429 || code.includes('quota') || code.includes('billing')) msg = 'A IA RLB está configurada, mas a conta da API da OpenAI está sem saldo ou limite disponível.';
     throw Object.assign(new Error(msg), { status: 503 });
   }
 }
