@@ -191,7 +191,7 @@ export async function aiStatus(pool, userId) {
   return { configured: Boolean(await resolveApiKey(pool)), model: AI_MODEL, web_search: true, document_analysis: true, daily_limit: AI_DAILY_LIMIT, used_today: used };
 }
 export async function listAiConversations(pool, userId) {
-  const r = await pool.query('SELECT id,title,created_at,updated_at FROM ai_conversations WHERE user_id=$1 ORDER BY updated_at DESC LIMIT 40');
+  const r = await pool.query('SELECT id,title,created_at,updated_at FROM ai_conversations WHERE user_id=$1 ORDER BY updated_at DESC LIMIT 40', [userId]);
   return r.rows;
 }
 export async function listAiMessages(pool, userId, conversationId) {
