@@ -6,6 +6,7 @@ import { handleMovementMetrics } from './movement-metrics-v1.mjs';
 const nativeReadFileSync=fs.readFileSync.bind(fs);
 const nativeCreateServer=http.createServer.bind(http);
 const movementPanelJs=nativeReadFileSync(new URL('./movement-panel-v2.js',import.meta.url),'utf8');
+const headerControlsJs=nativeReadFileSync(new URL('./header-controls-v1.js',import.meta.url),'utf8');
 
 fs.readFileSync=function rlbV10ReadFileSync(path,...args){
   const value=path instanceof URL?path.pathname:String(path);
@@ -17,9 +18,9 @@ fs.readFileSync=function rlbV10ReadFileSync(path,...args){
   }
 
   if(value.endsWith('/app-professional.html')||value.endsWith('\\app-professional.html')){
-    const hardRemoveStyle='<style id="rlb-remove-usage-guide">#rlbUsageGuide,.rlb-usage-guide{display:none!important;height:0!important;min-height:0!important;margin:0!important;padding:0!important;border:0!important;overflow:hidden!important}</style>';
-    const script=`<script id="rlb-movement-panel-v2-final">${movementPanelJs}</script>`;
-    return file.replace('</head>',`${hardRemoveStyle}</head>`).replace('</body>',`${script}</body>`);
+    const hardRemoveStyle='<style id="rlb-remove-usage-guide">#rlbUsageGuide,.rlb-usage-guide{display:none!important;height:0!important;min-height:0!important;margin:0!important;padding:0!important;border:0!important;overflow:hidden!important}#rlbQuickAccess,#rlbQuickNotifications,#rlbQuickAdmin{display:none!important}</style>';
+    const scripts=`<script id="rlb-movement-panel-v2-final">${movementPanelJs}</script><script id="rlb-header-controls-v1-final">${headerControlsJs}</script>`;
+    return file.replace('</head>',`${hardRemoveStyle}</head>`).replace('</body>',`${scripts}</body>`);
   }
   return file;
 };
