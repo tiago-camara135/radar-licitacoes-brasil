@@ -7,10 +7,12 @@ const originalReadFileSync = fs.readFileSync;
 const originalCreateServer = http.createServer.bind(http);
 const vividTheme = originalReadFileSync(new URL('./vivid-theme.css', import.meta.url), 'utf8');
 const institutionalTheme = originalReadFileSync(new URL('./institutional-theme.css', import.meta.url), 'utf8');
+const institutionalV2Theme = originalReadFileSync(new URL('./institutional-v2.css', import.meta.url), 'utf8');
 const verifiedPncpScript = originalReadFileSync(new URL('./verified-pncp-links.js', import.meta.url), 'utf8');
 const chamberFilterScript = originalReadFileSync(new URL('./chamber-filter.js', import.meta.url), 'utf8');
 const liveFeedScript = originalReadFileSync(new URL('./live-feed.js', import.meta.url), 'utf8');
 const institutionalLayoutScript = originalReadFileSync(new URL('./institutional-layout.js', import.meta.url), 'utf8');
+const institutionalV2Script = originalReadFileSync(new URL('./institutional-v2.js', import.meta.url), 'utf8');
 
 const iconSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" role="img" aria-label="RLB">
 <defs>
@@ -39,8 +41,8 @@ function applyBrand(html) {
   let out = String(html);
   out = out.replace(/<meta name="theme-color" content="[^"]*">/i, '<meta name="theme-color" content="#102F4B">');
   out = out.replace(/<div class="brand-mark" aria-hidden="true"><svg[\s\S]*?<\/svg><\/div>/, `<div class="brand-mark" aria-hidden="true"><img src="${iconData}" alt=""></div>`);
-  out = out.replace('</head>', `<link rel="icon" type="image/svg+xml" href="${iconData}"><style id="vivid-theme">${vividTheme}</style><style id="institutional-theme">${institutionalTheme}</style><style id="rlb-icon-style">${iconStyle}</style></head>`);
-  out = out.replace('</body>', `<script id="verified-pncp-script">${verifiedPncpScript}</script><script id="chamber-filter-script">${chamberFilterScript}</script><script id="live-feed-script">${liveFeedScript}</script><script id="institutional-layout-script">${institutionalLayoutScript}</script></body>`);
+  out = out.replace('</head>', `<link rel="icon" type="image/svg+xml" href="${iconData}"><style id="vivid-theme">${vividTheme}</style><style id="institutional-theme">${institutionalTheme}</style><style id="institutional-v2-theme">${institutionalV2Theme}</style><style id="rlb-icon-style">${iconStyle}</style></head>`);
+  out = out.replace('</body>', `<script id="verified-pncp-script">${verifiedPncpScript}</script><script id="chamber-filter-script">${chamberFilterScript}</script><script id="live-feed-script">${liveFeedScript}</script><script id="institutional-layout-script">${institutionalLayoutScript}</script><script id="institutional-v2-script">${institutionalV2Script}</script></body>`);
   return out;
 }
 
