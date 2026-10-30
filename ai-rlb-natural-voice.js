@@ -71,6 +71,7 @@
     return String(text||'')
       .replace(/Fontes consultadas[\s\S]*$/i,'')
       .replace(/https?:\/\/\S+/g,'')
+      .replace(/\bLei\s*(?:n[º°]\s*)?14\.133\/2021\b/gi,'Lei número quatorze mil cento e trinta e três, de dois mil e vinte e um')
       .replace(/\bArt\.\s*/gi,'Artigo ')
       .replace(/\bn[º°]\s*/gi,'número ')
       .replace(/\bIA RLB\b/g,'I A R L B')
@@ -85,9 +86,9 @@
     const sentences=t.match(/[^.!?;:]+[.!?;:]?/g)||[t],out=[];
     for(const raw of sentences){
       const s=raw.trim();if(!s)continue;
-      if(s.length<=185){out.push({text:s,pause:/[!?]$/.test(s)?260:/[.;:]$/.test(s)?190:130});continue}
+      if(s.length<=185){out.push({text:s,pause:/[!?]$/.test(s)?270:/[.;:]$/.test(s)?200:135});continue}
       const pieces=s.match(/.{1,165}(?:,\s|\s|$)/g)||[s];
-      for(const p of pieces){const x=p.trim();if(x)out.push({text:x,pause:120})}
+      for(const p of pieces){const x=p.trim();if(x)out.push({text:x,pause:125})}
     }
     return out;
   }
@@ -98,7 +99,12 @@
   }
   function resetButton(){
     if(state.timer){clearTimeout(state.timer);state.timer=null}
-    if(state.button){state.button.classList.remove('active');const sp=state.button.querySelector('span');if(sp)sp.textContent=state.button.id==='rlbAiVoiceTest'?'Testar voz':'Ouvir'}
+    if(state.button){
+      state.button.classList.remove('active');
+      const sp=state.button.querySelector('span');
+      if(sp)sp.textContent='Ouvir';
+      else if(state.button.id==='rlbAiVoiceTest')state.button.textContent='Testar voz';
+    }
     state.speaking=false;state.button=null;state.queue=[];
     const mode=$('#rlbAiModeText');if(mode&&/Lendo|Falando/.test(mode.textContent))mode.textContent='Pronta para ajudar';
   }
@@ -108,7 +114,7 @@
     const item=state.queue.shift();if(!item){resetButton();return}
     const voice=voices().find(v=>v.name===$('#rlbAiNaturalVoiceSelect')?.value)||state.voice||selectedVoice();
     const u=new SpeechSynthesisUtterance(item.text);u.lang='pt-BR';u.voice=voice||null;u.volume=1;
-    if(isHighQuality(voice)){u.rate=.98;u.pitch=1.0}else{u.rate=.91;u.pitch=.98}
+    if(isHighQuality(voice)){u.rate=.96;u.pitch=1.0}else{u.rate=.92;u.pitch=.99}
     u.onend=()=>{state.timer=setTimeout(next,item.pause||140)};
     u.onerror=()=>resetButton();
     try{speech.speak(u)}catch{resetButton()}
