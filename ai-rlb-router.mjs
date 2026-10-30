@@ -1,5 +1,5 @@
 import { Pool } from 'pg';
-import { initAiTables, aiStatus, listAiConversations, listAiMessages, deleteAiConversation, runAiChat } from './ai-rlb-core.mjs';
+import { initAiTables, aiStatus, aiAdminStatus, configureAiKey, removeStoredAiKey, listAiConversations, listAiMessages, deleteAiConversation, runAiChat } from './ai-rlb-core.mjs';
 
 const PORT = Number(process.env.PORT || 10000);
 const DATABASE_URL = process.env.DATABASE_URL || '';
@@ -65,6 +65,22 @@ export async function handleAiRlbRoute(req, res, url) {
 
     if (req.method === 'GET' && url.pathname === '/api/ai-rlb/status') {
       send(res, 200, await aiStatus(pool, user.id)); return true;
+    }
+    if (url.pathname === '/api/ai-rlb/admin/config') {
+      if (user.role !== 'admin') { send(res, 403, { error: 'Apenas administradores podem configurar a IA RLB.' }); return true; }
+      if (req.method === 'GET') { send(res, 200, await aiAdminStatus(pool)); return true; }
+      if (req.method === 'POST') {
+        if (!allow(`ai-config:${user.id}`, 5, 600000)) { send(res, 429, { error: 'Muitas tentativas de configuração. Aguarde alguns minutos.' }); return true; }
+        const body = await readJson(req, 10000);
+        const result = await configureAiKey(pool, user.id, body.api_key);
+        await audit(user.id, 'ai_rlb.configure', { source: result.source, model: result.model }, ip);
+        send(res, 200, result); return true;
+      }
+      if (req.method === 'DELETE') {
+        const result = await removeStoredAiKey(pool);
+        await audit(user.id, 'ai_rlb.remove_key', {}, ip);
+        send(res, 200, result); return true;
+      }
     }
     if (req.method === 'GET' && url.pathname === '/api/ai-rlb/conversations') {
       send(res, 200, { items: await listAiConversations(pool, user.id) }); return true;
