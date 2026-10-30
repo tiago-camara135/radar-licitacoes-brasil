@@ -1,6 +1,7 @@
 import { Pool } from 'pg';
 import { initAiTables, aiStatus, listAiConversations, listAiMessages, deleteAiConversation, runAiChat } from './ai-rlb-core.mjs';
-import { initHybridTables, hybridStatus, hybridAdminStatus, configureHybridProvider, removeHybridProvider, runHybridChat } from './ai-rlb-hybrid.mjs';
+import { initHybridTables, hybridStatus, hybridAdminStatus, configureHybridProvider, removeHybridProvider } from './ai-rlb-hybrid.mjs';
+import { runForcedGeminiChat } from './ai-rlb-gemini-force.mjs';
 
 const PORT = Number(process.env.PORT || 10000);
 const DATABASE_URL = process.env.DATABASE_URL || '';
@@ -101,7 +102,7 @@ export async function handleAiRlbRoute(req, res, url) {
       const body = await readJson(req);
       const document = body.document_id ? await ownedDocument(user.id, Number(body.document_id)) : null;
       if (body.document_id && !document) { send(res, 404, { error: 'Documento não encontrado ou sem acesso.', code: 'document_not_found' }); return true; }
-      const result = await runHybridChat({ pool, userId: user.id, body, document, fallback: runAiChat });
+      const result = await runForcedGeminiChat({ pool, userId: user.id, body, document, fallback: runAiChat });
       await audit(user.id, 'ai_rlb.chat', { conversation_id: result.conversation_id, document_id: document?.id || null, web_search: body.use_web !== false, provider: result.provider || 'local', model: result.model || null }, ip);
       send(res, 200, result); return true;
     }
