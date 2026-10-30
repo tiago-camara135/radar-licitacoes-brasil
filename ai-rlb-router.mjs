@@ -1,5 +1,6 @@
 import { Pool } from 'pg';
-import { initAiTables, aiStatus, aiAdminStatus, configureAiKey, removeStoredAiKey, listAiConversations, listAiMessages, deleteAiConversation, runAiChat } from './ai-rlb-core.mjs';
+import { initAiTables, aiStatus, listAiConversations, listAiMessages, deleteAiConversation, runAiChat } from './ai-rlb-core.mjs';
+import { initHybridTables, hybridAiStatus, hybridAdminStatus, configureHybridProvider, removeHybridProvider, runHybridChat } from './ai-rlb-hybrid.mjs';
 
 const PORT = Number(process.env.PORT || 10000);
 const DATABASE_URL = process.env.DATABASE_URL || '';
@@ -52,6 +53,7 @@ async function audit(userId, action, metadata, ip) {
 export async function initAiRlb() {
   if (!pool) { console.log('IA RLB router ready: no database'); return; }
   await initAiTables(pool);
+  await initHybridTables(pool);
 }
 
 export async function handleAiRlbRoute(req, res, url) {
@@ -64,21 +66,21 @@ export async function handleAiRlbRoute(req, res, url) {
     if (!user) { send(res, 401, { error: 'Faça login para usar a IA RLB.', code: 'authentication_required' }); return true; }
 
     if (req.method === 'GET' && url.pathname === '/api/ai-rlb/status') {
-      send(res, 200, await aiStatus(pool, user.id)); return true;
+      send(res, 200, await hybridAiStatus(pool, await aiStatus(pool, user.id))); return true;
     }
     if (url.pathname === '/api/ai-rlb/admin/config') {
       if (user.role !== 'admin') { send(res, 403, { error: 'Apenas administradores podem configurar a IA RLB.', code: 'admin_required' }); return true; }
-      if (req.method === 'GET') { send(res, 200, await aiAdminStatus(pool)); return true; }
+      if (req.method === 'GET') { send(res, 200, await hybridAdminStatus(pool)); return true; }
       if (req.method === 'POST') {
         if (!allow(`ai-config:${user.id}`, 5, 600000)) { send(res, 429, { error: 'Muitas tentativas de configuração. Aguarde alguns minutos.', code: 'config_rate_limited' }); return true; }
         const body = await readJson(req, 10000);
-        const result = await configureAiKey(pool, user.id, body.api_key);
-        await audit(user.id, 'ai_rlb.configure', { source: result.source, model: result.model, fallback_model: result.fallback_model, operational: result.operational }, ip);
+        const result = await configureHybridProvider(pool, user.id, body);
+        await audit(user.id, 'ai_rlb.configure_free_provider', { provider: result.provider, model: result.model, operational: result.operational }, ip);
         send(res, 200, result); return true;
       }
       if (req.method === 'DELETE') {
-        const result = await removeStoredAiKey(pool);
-        await audit(user.id, 'ai_rlb.remove_key', {}, ip);
+        const result = await removeHybridProvider(pool);
+        await audit(user.id, 'ai_rlb.remove_free_provider', {}, ip);
         send(res, 200, result); return true;
       }
     }
@@ -99,8 +101,8 @@ export async function handleAiRlbRoute(req, res, url) {
       const body = await readJson(req);
       const document = body.document_id ? await ownedDocument(user.id, Number(body.document_id)) : null;
       if (body.document_id && !document) { send(res, 404, { error: 'Documento não encontrado ou sem acesso.', code: 'document_not_found' }); return true; }
-      const result = await runAiChat({ pool, userId: user.id, body, document });
-      await audit(user.id, 'ai_rlb.chat', { conversation_id: result.conversation_id, document_id: document?.id || null, web_search: body.use_web !== false, model: result.model }, ip);
+      const result = await runHybridChat({ pool, userId: user.id, body, document, fallback: runAiChat });
+      await audit(user.id, 'ai_rlb.chat', { conversation_id: result.conversation_id, document_id: document?.id || null, web_search: body.use_web !== false, provider: result.provider || 'local', model: result.model || null }, ip);
       send(res, 200, result); return true;
     }
     send(res, 404, { error: 'Rota da IA RLB não encontrada.', code: 'route_not_found' }); return true;
