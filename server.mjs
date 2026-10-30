@@ -14,118 +14,38 @@ const rate = new Map();
 const mem = { users: [], sessions: new Map(), prefs: new Map(), docs: [], nextUser: 1, nextDoc: 1 };
 let pool = null;
 
-if (DATABASE_URL) {
-  pool = new Pool({ connectionString: DATABASE_URL, ssl: { rejectUnauthorized: false }, max: 8, idleTimeoutMillis: 30000 });
-}
+if (DATABASE_URL) pool = new Pool({ connectionString: DATABASE_URL, ssl: { rejectUnauthorized: false }, max: 8, idleTimeoutMillis: 30000 });
 
-function rateLimit(key, limit = 120, windowMs = 60_000) {
-  const now = Date.now();
-  const item = rate.get(key);
-  if (!item || now - item.start > windowMs) { rate.set(key, { start: now, count: 1 }); return true; }
-  item.count += 1;
-  return item.count <= limit;
-}
-setInterval(() => { const now = Date.now(); for (const [k,v] of rate) if (now - v.start > 120_000) rate.delete(k); }, 60_000).unref();
-
-function headers(res, type = 'application/json; charset=utf-8') {
-  res.setHeader('Content-Type', type);
-  res.setHeader('X-Content-Type-Options', 'nosniff');
-  res.setHeader('X-Frame-Options', 'DENY');
-  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
-  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
-  if (IS_PROD) res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
-  res.setHeader('Content-Security-Policy', "default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; connect-src 'self'; img-src 'self' data:; object-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'");
-}
-function sendJson(res, status, data) { headers(res); res.statusCode = status; res.end(JSON.stringify(data)); }
-function sendText(res, status, body, type='text/html; charset=utf-8') { headers(res,type); res.statusCode=status; res.end(body); }
-function parseCookies(req) { const out={}; for (const p of String(req.headers.cookie||'').split(';')) { const i=p.indexOf('='); if(i>0) out[p.slice(0,i).trim()]=decodeURIComponent(p.slice(i+1).trim()); } return out; }
+function rateLimit(key, limit = 120, windowMs = 60_000) { const now=Date.now(),item=rate.get(key);if(!item||now-item.start>windowMs){rate.set(key,{start:now,count:1});return true}item.count+=1;return item.count<=limit }
+setInterval(()=>{const now=Date.now();for(const[k,v]of rate)if(now-v.start>120_000)rate.delete(k)},60_000).unref();
+function headers(res,type='application/json; charset=utf-8'){res.setHeader('Content-Type',type);res.setHeader('X-Content-Type-Options','nosniff');res.setHeader('X-Frame-Options','DENY');res.setHeader('Referrer-Policy','strict-origin-when-cross-origin');res.setHeader('Permissions-Policy','camera=(), microphone=(), geolocation=()');if(IS_PROD)res.setHeader('Strict-Transport-Security','max-age=31536000; includeSubDomains');res.setHeader('Content-Security-Policy',"default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; connect-src 'self'; img-src 'self' data:; object-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'")}
+function sendJson(res,status,data){headers(res);res.statusCode=status;res.end(JSON.stringify(data))}
+function sendText(res,status,body,type='text/html; charset=utf-8'){headers(res,type);res.statusCode=status;res.end(body)}
+function parseCookies(req){const out={};for(const p of String(req.headers.cookie||'').split(';')){const i=p.indexOf('=');if(i>0)out[p.slice(0,i).trim()]=decodeURIComponent(p.slice(i+1).trim())}return out}
 async function readJson(req,max=2_000_000){let size=0,ch=[];for await(const c of req){size+=c.length;if(size>max)throw Object.assign(new Error('Payload muito grande'),{status:413});ch.push(c)}if(!ch.length)return{};try{return JSON.parse(Buffer.concat(ch).toString('utf8'))}catch{throw Object.assign(new Error('JSON inválido'),{status:400})}}
 function emailOf(v){const e=String(v||'').trim().toLowerCase();return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)&&e.length<=254?e:null}
 function validPassword(v){return typeof v==='string'&&v.length>=10&&v.length<=200}
-function hashPassword(password){const salt=crypto.randomBytes(16);const hash=crypto.scryptSync(password,salt,64);return 'scrypt$'+salt.toString('hex')+'$'+hash.toString('hex')}
-function verifyPassword(password,stored){try{const [kind,saltHex,hashHex]=String(stored).split('$');if(kind!=='scrypt')return false;const a=crypto.scryptSync(password,Buffer.from(saltHex,'hex'),64),b=Buffer.from(hashHex,'hex');return a.length===b.length&&crypto.timingSafeEqual(a,b)}catch{return false}}
+function hashPassword(password){const salt=crypto.randomBytes(16),hash=crypto.scryptSync(password,salt,64);return 'scrypt$'+salt.toString('hex')+'$'+hash.toString('hex')}
+function verifyPassword(password,stored){try{const[kind,saltHex,hashHex]=String(stored).split('$');if(kind!=='scrypt')return false;const a=crypto.scryptSync(password,Buffer.from(saltHex,'hex'),64),b=Buffer.from(hashHex,'hex');return a.length===b.length&&crypto.timingSafeEqual(a,b)}catch{return false}}
 const tokenHash=t=>crypto.createHash('sha256').update(t).digest('hex');
 
-async function initDb(){
-  if(!pool)return;
-  await pool.query(`CREATE TABLE IF NOT EXISTS users(id BIGSERIAL PRIMARY KEY,email TEXT UNIQUE NOT NULL,password_hash TEXT NOT NULL,role TEXT NOT NULL DEFAULT 'user' CHECK(role IN('admin','user')),active BOOLEAN NOT NULL DEFAULT TRUE,created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())`);
-  await pool.query(`CREATE TABLE IF NOT EXISTS sessions(id BIGSERIAL PRIMARY KEY,user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,token_hash TEXT UNIQUE NOT NULL,expires_at TIMESTAMPTZ NOT NULL,created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())`);
-  await pool.query(`CREATE TABLE IF NOT EXISTS alert_preferences(id BIGSERIAL PRIMARY KEY,user_id BIGINT UNIQUE NOT NULL REFERENCES users(id) ON DELETE CASCADE,uf TEXT,keyword TEXT,modality_code INTEGER,enabled BOOLEAN NOT NULL DEFAULT TRUE,created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW())`);
-  await pool.query(`CREATE TABLE IF NOT EXISTS documents(id BIGSERIAL PRIMARY KEY,user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,filename TEXT NOT NULL,mime_type TEXT NOT NULL,content BYTEA NOT NULL,size_bytes INTEGER NOT NULL,created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())`);
-  await pool.query('CREATE INDEX IF NOT EXISTS idx_sessions_token_hash ON sessions(token_hash)');
-  await pool.query('DELETE FROM sessions WHERE expires_at<NOW()');
-}
-
-async function registerUser(email,password){
-  if(pool){
-    const c=await pool.query('SELECT COUNT(*)::int AS n FROM users');
-    const role=c.rows[0].n===0?'admin':'user';
-    const r=await pool.query('INSERT INTO users(email,password_hash,role) VALUES($1,$2,$3) RETURNING id,email,role,active,created_at',[email,hashPassword(password),role]);
-    return r.rows[0];
-  }
-  if(mem.users.some(u=>u.email===email))throw Object.assign(new Error('Este e-mail já está cadastrado.'),{status:409});
-  const user={id:mem.nextUser++,email,password_hash:hashPassword(password),role:mem.users.length===0?'admin':'user',active:true,created_at:new Date().toISOString()};mem.users.push(user);return publicUser(user);
-}
-async function findLogin(email){
-  if(pool){const r=await pool.query('SELECT * FROM users WHERE email=$1 AND active=TRUE LIMIT 1',[email]);return r.rows[0]||null}
-  return mem.users.find(u=>u.email===email&&u.active)||null;
-}
-function publicUser(u){return {id:u.id,email:u.email,role:u.role,active:u.active,created_at:u.created_at}}
-async function createSession(res,userId){
-  const token=crypto.randomBytes(32).toString('base64url'),hash=tokenHash(token),expires=new Date(Date.now()+48*3600_000);
-  if(pool)await pool.query('INSERT INTO sessions(user_id,token_hash,expires_at) VALUES($1,$2,$3)',[userId,hash,expires]);else mem.sessions.set(hash,{userId,expires});
-  res.setHeader('Set-Cookie','radar_session='+encodeURIComponent(token)+'; HttpOnly; SameSite=Lax; Path=/; Max-Age=172800'+(IS_PROD?'; Secure':''));
-}
-async function currentUser(req){
-  const token=parseCookies(req).radar_session;if(!token)return null;const hash=tokenHash(token);
-  if(pool){const r=await pool.query(`SELECT u.id,u.email,u.role,u.active,u.created_at FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=$1 AND s.expires_at>NOW() AND u.active=TRUE LIMIT 1`,[hash]);return r.rows[0]||null}
-  const s=mem.sessions.get(hash);if(!s||s.expires<Date.now()){mem.sessions.delete(hash);return null}const u=mem.users.find(x=>x.id===s.userId&&x.active);return u?publicUser(u):null;
-}
+async function initDb(){if(!pool)return;await pool.query(`CREATE TABLE IF NOT EXISTS users(id BIGSERIAL PRIMARY KEY,email TEXT UNIQUE NOT NULL,password_hash TEXT NOT NULL,role TEXT NOT NULL DEFAULT 'user' CHECK(role IN('admin','user')),active BOOLEAN NOT NULL DEFAULT TRUE,created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())`);await pool.query(`CREATE TABLE IF NOT EXISTS sessions(id BIGSERIAL PRIMARY KEY,user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,token_hash TEXT UNIQUE NOT NULL,expires_at TIMESTAMPTZ NOT NULL,created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())`);await pool.query(`CREATE TABLE IF NOT EXISTS alert_preferences(id BIGSERIAL PRIMARY KEY,user_id BIGINT UNIQUE NOT NULL REFERENCES users(id) ON DELETE CASCADE,uf TEXT,keyword TEXT,modality_code INTEGER,enabled BOOLEAN NOT NULL DEFAULT TRUE,created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW())`);await pool.query(`CREATE TABLE IF NOT EXISTS documents(id BIGSERIAL PRIMARY KEY,user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,filename TEXT NOT NULL,mime_type TEXT NOT NULL,content BYTEA NOT NULL,size_bytes INTEGER NOT NULL,created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())`);await pool.query('CREATE INDEX IF NOT EXISTS idx_sessions_token_hash ON sessions(token_hash)');await pool.query('DELETE FROM sessions WHERE expires_at<NOW()')}
+async function registerUser(email,password){if(pool){const r=await pool.query('INSERT INTO users(email,password_hash,role) VALUES($1,$2,$3) RETURNING id,email,role,active,created_at',[email,hashPassword(password),'user']);return r.rows[0]}if(mem.users.some(u=>u.email===email))throw Object.assign(new Error('Este e-mail já está cadastrado.'),{status:409});const user={id:mem.nextUser++,email,password_hash:hashPassword(password),role:'user',active:true,created_at:new Date().toISOString()};mem.users.push(user);return publicUser(user)}
+async function findLogin(email){if(pool){const r=await pool.query('SELECT * FROM users WHERE email=$1 AND active=TRUE LIMIT 1',[email]);return r.rows[0]||null}return mem.users.find(u=>u.email===email&&u.active)||null}
+function publicUser(u){return{id:u.id,email:u.email,role:u.role,active:u.active,created_at:u.created_at}}
+async function createSession(res,userId){const token=crypto.randomBytes(32).toString('base64url'),hash=tokenHash(token),expires=new Date(Date.now()+48*3600_000);if(pool)await pool.query('INSERT INTO sessions(user_id,token_hash,expires_at) VALUES($1,$2,$3)',[userId,hash,expires]);else mem.sessions.set(hash,{userId,expires});res.setHeader('Set-Cookie','radar_session='+encodeURIComponent(token)+'; HttpOnly; SameSite=Lax; Path=/; Max-Age=172800'+(IS_PROD?'; Secure':''))}
+async function currentUser(req){const token=parseCookies(req).radar_session;if(!token)return null;const hash=tokenHash(token);if(pool){const r=await pool.query(`SELECT u.id,u.email,u.role,u.active,u.created_at FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=$1 AND s.expires_at>NOW() AND u.active=TRUE LIMIT 1`,[hash]);return r.rows[0]||null}const s=mem.sessions.get(hash);if(!s||s.expires<Date.now()){mem.sessions.delete(hash);return null}const u=mem.users.find(x=>x.id===s.userId&&x.active);return u?publicUser(u):null}
 async function logout(req){const token=parseCookies(req).radar_session;if(!token)return;const h=tokenHash(token);if(pool)await pool.query('DELETE FROM sessions WHERE token_hash=$1',[h]);else mem.sessions.delete(h)}
-
 function ymd(d){return d.toISOString().slice(0,10).replaceAll('-','')}
-async function pncpSearch({keyword='',uf='',modality='',days=7}){
-  const end=new Date(),start=new Date(end.getTime()-Math.min(Math.max(Number(days)||7,1),30)*86400000);
-  const codes=modality?[Number(modality)]:Array.from({length:14},(_,i)=>i+1);
-  const groups=await Promise.all(codes.map(async code=>{const p=new URLSearchParams({dataInicial:ymd(start),dataFinal:ymd(end),codigoModalidadeContratacao:String(code),pagina:'1',tamanhoPagina:'50'});if(uf&&/^[A-Z]{2}$/.test(uf))p.set('uf',uf);const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),8000);try{const r=await fetch(PNCP_BASE_URL+'/v1/contratacoes/publicacao?'+p,{headers:{accept:'application/json','user-agent':'RadarLicitacoesBrasil/1.0'},signal:controller.signal});if(!r.ok)return[];const d=await r.json(),items=Array.isArray(d?.data)?d.data:Array.isArray(d)?d:[];return items.map(x=>({...x,_modalidadeConsultada:code}))}catch{return[]}finally{clearTimeout(timer)}}));
-  const q=String(keyword||'').trim().toLocaleLowerCase('pt-BR');let all=groups.flat();if(q)all=all.filter(x=>[x.objetoCompra,x.informacaoComplementar,x.orgaoEntidade?.razaoSocial,x.unidadeOrgao?.nomeUnidade].filter(Boolean).join(' ').toLocaleLowerCase('pt-BR').includes(q));const seen=new Set();return all.filter(x=>{const k=x.numeroControlePNCP||`${x.orgaoEntidade?.cnpj}-${x.anoCompra}-${x.sequencialCompra}-${x._modalidadeConsultada}`;if(seen.has(k))return false;seen.add(k);return true}).slice(0,250)
-}
-
+async function pncpSearch({keyword='',uf='',modality='',days=7}){const end=new Date(),start=new Date(end.getTime()-Math.min(Math.max(Number(days)||7,1),30)*86400000),codes=modality?[Number(modality)]:Array.from({length:14},(_,i)=>i+1);const groups=await Promise.all(codes.map(async code=>{const p=new URLSearchParams({dataInicial:ymd(start),dataFinal:ymd(end),codigoModalidadeContratacao:String(code),pagina:'1',tamanhoPagina:'50'});if(uf&&/^[A-Z]{2}$/.test(uf))p.set('uf',uf);const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),8000);try{const r=await fetch(PNCP_BASE_URL+'/v1/contratacoes/publicacao?'+p,{headers:{accept:'application/json','user-agent':'RadarLicitacoesBrasil/1.0'},signal:controller.signal});if(!r.ok)return[];const d=await r.json(),items=Array.isArray(d?.data)?d.data:Array.isArray(d)?d:[];return items.map(x=>({...x,_modalidadeConsultada:code}))}catch{return[]}finally{clearTimeout(timer)}}));const q=String(keyword||'').trim().toLocaleLowerCase('pt-BR');let all=groups.flat();if(q)all=all.filter(x=>[x.objetoCompra,x.informacaoComplementar,x.orgaoEntidade?.razaoSocial,x.unidadeOrgao?.nomeUnidade].filter(Boolean).join(' ').toLocaleLowerCase('pt-BR').includes(q));const seen=new Set();return all.filter(x=>{const k=x.numeroControlePNCP||`${x.orgaoEntidade?.cnpj}-${x.anoCompra}-${x.sequencialCompra}-${x._modalidadeConsultada}`;if(seen.has(k))return false;seen.add(k);return true}).slice(0,250)}
 async function getPref(userId){if(pool){const r=await pool.query('SELECT uf,keyword,modality_code,enabled FROM alert_preferences WHERE user_id=$1',[userId]);return r.rows[0]||null}return mem.prefs.get(Number(userId))||null}
-async function savePref(userId,p){if(pool){await pool.query(`INSERT INTO alert_preferences(user_id,uf,keyword,modality_code,enabled) VALUES($1,$2,$3,$4,$5) ON CONFLICT(user_id) DO UPDATE SET uf=EXCLUDED.uf,keyword=EXCLUDED.keyword,modality_code=EXCLUDED.modality_code,enabled=EXCLUDED.enabled,updated_at=NOW()`,[userId,p.uf,p.keyword,p.modality_code,p.enabled])}else mem.prefs.set(Number(userId),p)}
+async function savePref(userId,p){if(pool)await pool.query(`INSERT INTO alert_preferences(user_id,uf,keyword,modality_code,enabled) VALUES($1,$2,$3,$4,$5) ON CONFLICT(user_id) DO UPDATE SET uf=EXCLUDED.uf,keyword=EXCLUDED.keyword,modality_code=EXCLUDED.modality_code,enabled=EXCLUDED.enabled,updated_at=NOW()`,[userId,p.uf,p.keyword,p.modality_code,p.enabled]);else mem.prefs.set(Number(userId),p)}
 async function listDocs(userId){if(pool){const r=await pool.query('SELECT id,filename,mime_type,size_bytes,created_at FROM documents WHERE user_id=$1 ORDER BY id DESC LIMIT 100',[userId]);return r.rows}return mem.docs.filter(d=>d.user_id===Number(userId)).sort((a,b)=>b.id-a.id).map(({content,...x})=>x)}
 async function addDoc(userId,filename,mime,content){if(pool){const r=await pool.query('INSERT INTO documents(user_id,filename,mime_type,content,size_bytes) VALUES($1,$2,$3,$4,$5) RETURNING id',[userId,filename,mime,content,content.length]);return r.rows[0].id}const d={id:mem.nextDoc++,user_id:Number(userId),filename,mime_type:mime,content,size_bytes:content.length,created_at:new Date().toISOString()};mem.docs.push(d);return d.id}
 async function getDoc(userId,id){if(pool){const r=await pool.query('SELECT filename,mime_type,content FROM documents WHERE id=$1 AND user_id=$2',[id,userId]);return r.rows[0]||null}return mem.docs.find(d=>d.id===Number(id)&&d.user_id===Number(userId))||null}
 async function delDoc(userId,id){if(pool)await pool.query('DELETE FROM documents WHERE id=$1 AND user_id=$2',[id,userId]);else mem.docs=mem.docs.filter(d=>!(d.id===Number(id)&&d.user_id===Number(userId)))}
 async function listUsers(){if(pool){const r=await pool.query('SELECT id,email,role,active,created_at FROM users ORDER BY id DESC LIMIT 500');return r.rows}return mem.users.map(publicUser).sort((a,b)=>b.id-a.id)}
-
-async function route(req,res){
-  const ip=String(req.headers['x-forwarded-for']||req.socket.remoteAddress||'').split(',')[0].trim();if(!rateLimit(ip))return sendJson(res,429,{error:'Muitas requisições. Tente novamente em instantes.'});
-  if(['POST','PUT','PATCH','DELETE'].includes(req.method)&&APP_ORIGIN&&req.headers.origin&&req.headers.origin!==APP_ORIGIN)return sendJson(res,403,{error:'Origem não autorizada.'});
-  const url=new URL(req.url,'http://localhost');
-  if(req.method==='GET'&&url.pathname==='/')return sendText(res,200,INDEX);
-  if(req.method==='GET'&&url.pathname==='/api/health')return sendJson(res,200,{ok:true,storage:pool?'neon-postgresql':'temporary-memory',pncp:true});
-  if(req.method==='POST'&&url.pathname==='/api/auth/register'){
-    const b=await readJson(req),email=emailOf(b.email);if(!email||!validPassword(b.password))return sendJson(res,400,{error:'Informe e-mail válido e senha com pelo menos 10 caracteres.'});
-    try{const u=await registerUser(email,b.password);await createSession(res,u.id);return sendJson(res,201,{user:publicUser(u)})}catch(e){if(e.code==='23505'||e.status===409)return sendJson(res,409,{error:'Este e-mail já está cadastrado.'});throw e}
-  }
-  if(req.method==='POST'&&url.pathname==='/api/auth/login'){
-    if(!rateLimit('login:'+ip,15,600000))return sendJson(res,429,{error:'Muitas tentativas de login.'});const b=await readJson(req),email=emailOf(b.email),u=email?await findLogin(email):null;if(!u||!verifyPassword(String(b.password||''),u.password_hash))return sendJson(res,401,{error:'E-mail ou senha inválidos.'});await createSession(res,u.id);return sendJson(res,200,{user:publicUser(u)})
-  }
-  if(req.method==='POST'&&url.pathname==='/api/auth/logout'){await logout(req);res.setHeader('Set-Cookie','radar_session=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0');return sendJson(res,200,{ok:true})}
-  const user=await currentUser(req);if(url.pathname.startsWith('/api/')&&!user)return sendJson(res,401,{error:'Faça login para continuar.'});
-  if(req.method==='GET'&&url.pathname==='/api/me')return sendJson(res,200,{user});
-  if(req.method==='GET'&&url.pathname==='/api/licitacoes'){const items=await pncpSearch({keyword:url.searchParams.get('keyword')||'',uf:(url.searchParams.get('uf')||'').toUpperCase(),modality:url.searchParams.get('modalidade')||'',days:url.searchParams.get('days')||'7'});return sendJson(res,200,{source:'PNCP',items})}
-  if(req.method==='GET'&&url.pathname==='/api/preferences')return sendJson(res,200,{preference:await getPref(user.id)});
-  if(req.method==='PUT'&&url.pathname==='/api/preferences'){const b=await readJson(req),uf=String(b.uf||'').trim().toUpperCase();if(uf&&!/^[A-Z]{2}$/.test(uf))return sendJson(res,400,{error:'UF inválida.'});const m=b.modality_code===null||b.modality_code===''?null:Number(b.modality_code);await savePref(user.id,{uf:uf||null,keyword:String(b.keyword||'').trim().slice(0,180)||null,modality_code:Number.isInteger(m)?m:null,enabled:b.enabled!==false});return sendJson(res,200,{ok:true})}
-  if(req.method==='GET'&&url.pathname==='/api/documents')return sendJson(res,200,{items:await listDocs(user.id)});
-  if(req.method==='POST'&&url.pathname==='/api/documents'){const b=await readJson(req,1_600_000),filename=String(b.filename||'').replace(/[\\/\0]/g,'_').slice(0,180),mime=String(b.mime_type||'application/octet-stream').slice(0,120);if(!filename||typeof b.content_base64!=='string')return sendJson(res,400,{error:'Arquivo inválido.'});const content=Buffer.from(b.content_base64,'base64');if(!content.length||content.length>1024*1024)return sendJson(res,400,{error:'Arquivo vazio ou maior que 1 MB.'});return sendJson(res,201,{id:await addDoc(user.id,filename,mime,content)})}
-  let m=url.pathname.match(/^\/api\/documents\/(\d+)\/download$/);if(req.method==='GET'&&m){const d=await getDoc(user.id,m[1]);if(!d)return sendJson(res,404,{error:'Documento não encontrado.'});headers(res,d.mime_type||'application/octet-stream');res.setHeader('Content-Disposition',"attachment; filename*=UTF-8''"+encodeURIComponent(d.filename));res.statusCode=200;return res.end(d.content)}
-  m=url.pathname.match(/^\/api\/documents\/(\d+)$/);if(req.method==='DELETE'&&m){await delDoc(user.id,m[1]);return sendJson(res,200,{ok:true})}
-  if(req.method==='GET'&&url.pathname==='/api/admin/users'){if(user.role!=='admin')return sendJson(res,403,{error:'Acesso restrito ao administrador.'});return sendJson(res,200,{items:await listUsers()})}
-  return sendJson(res,404,{error:'Rota não encontrada.'});
-}
-
+async function route(req,res){const ip=String(req.headers['x-forwarded-for']||req.socket.remoteAddress||'').split(',')[0].trim();if(!rateLimit(ip))return sendJson(res,429,{error:'Muitas requisições. Tente novamente em instantes.'});if(['POST','PUT','PATCH','DELETE'].includes(req.method)&&APP_ORIGIN&&req.headers.origin&&req.headers.origin!==APP_ORIGIN)return sendJson(res,403,{error:'Origem não autorizada.'});const url=new URL(req.url,'http://localhost');if(req.method==='GET'&&url.pathname==='/')return sendText(res,200,INDEX);if(req.method==='GET'&&url.pathname==='/api/health')return sendJson(res,200,{ok:true,storage:pool?'neon-postgresql':'temporary-memory',pncp:true});if(req.method==='POST'&&url.pathname==='/api/auth/register'){const b=await readJson(req),email=emailOf(b.email);if(!email||!validPassword(b.password))return sendJson(res,400,{error:'Informe e-mail válido e senha com pelo menos 10 caracteres.'});try{const u=await registerUser(email,b.password);await createSession(res,u.id);return sendJson(res,201,{user:publicUser(u)})}catch(e){if(e.code==='23505'||e.status===409)return sendJson(res,409,{error:'Este e-mail já está cadastrado.'});throw e}}if(req.method==='POST'&&url.pathname==='/api/auth/login'){if(!rateLimit('login:'+ip,15,600000))return sendJson(res,429,{error:'Muitas tentativas de login.'});const b=await readJson(req),email=emailOf(b.email),u=email?await findLogin(email):null;if(!u||!verifyPassword(String(b.password||''),u.password_hash))return sendJson(res,401,{error:'E-mail ou senha inválidos.'});await createSession(res,u.id);return sendJson(res,200,{user:publicUser(u)})}if(req.method==='POST'&&url.pathname==='/api/auth/logout'){await logout(req);res.setHeader('Set-Cookie','radar_session=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0');return sendJson(res,200,{ok:true})}const user=await currentUser(req);if(url.pathname.startsWith('/api/')&&!user)return sendJson(res,401,{error:'Faça login para continuar.'});if(req.method==='GET'&&url.pathname==='/api/me')return sendJson(res,200,{user});if(req.method==='GET'&&url.pathname==='/api/licitacoes'){const items=await pncpSearch({keyword:url.searchParams.get('keyword')||'',uf:(url.searchParams.get('uf')||'').toUpperCase(),modality:url.searchParams.get('modalidade')||'',days:url.searchParams.get('days')||'7'});return sendJson(res,200,{source:'PNCP',items})}if(req.method==='GET'&&url.pathname==='/api/preferences')return sendJson(res,200,{preference:await getPref(user.id)});if(req.method==='PUT'&&url.pathname==='/api/preferences'){const b=await readJson(req),uf=String(b.uf||'').trim().toUpperCase();if(uf&&!/^[A-Z]{2}$/.test(uf))return sendJson(res,400,{error:'UF inválida.'});const m=b.modality_code===null||b.modality_code===''?null:Number(b.modality_code);await savePref(user.id,{uf:uf||null,keyword:String(b.keyword||'').trim().slice(0,180)||null,modality_code:Number.isInteger(m)?m:null,enabled:b.enabled!==false});return sendJson(res,200,{ok:true})}if(req.method==='GET'&&url.pathname==='/api/documents')return sendJson(res,200,{items:await listDocs(user.id)});if(req.method==='POST'&&url.pathname==='/api/documents'){const b=await readJson(req,1_600_000),filename=String(b.filename||'').replace(/[\\/\0]/g,'_').slice(0,180),mime=String(b.mime_type||'application/octet-stream').slice(0,120);if(!filename||typeof b.content_base64!=='string')return sendJson(res,400,{error:'Arquivo inválido.'});const content=Buffer.from(b.content_base64,'base64');if(!content.length||content.length>1024*1024)return sendJson(res,400,{error:'Arquivo vazio ou maior que 1 MB.'});return sendJson(res,201,{id:await addDoc(user.id,filename,mime,content)})}let m=url.pathname.match(/^\/api\/documents\/(\d+)\/download$/);if(req.method==='GET'&&m){const d=await getDoc(user.id,m[1]);if(!d)return sendJson(res,404,{error:'Documento não encontrado.'});headers(res,d.mime_type||'application/octet-stream');res.setHeader('Content-Disposition',"attachment; filename*=UTF-8''"+encodeURIComponent(d.filename));res.statusCode=200;return res.end(d.content)}m=url.pathname.match(/^\/api\/documents\/(\d+)$/);if(req.method==='DELETE'&&m){await delDoc(user.id,m[1]);return sendJson(res,200,{ok:true})}if(req.method==='GET'&&url.pathname==='/api/admin/users'){if(user.role!=='admin')return sendJson(res,403,{error:'Acesso restrito ao administrador.'});return sendJson(res,200,{items:await listUsers()})}return sendJson(res,404,{error:'Rota não encontrada.'})}
 await initDb();
 const server=http.createServer((req,res)=>route(req,res).catch(err=>{console.error(err);sendJson(res,err.status||500,{error:err.status?err.message:'Erro interno do servidor.'})}));
 server.listen(PORT,'0.0.0.0',()=>console.log('Radar listening on '+PORT+' using '+(pool?'Neon PostgreSQL':'temporary memory')));
