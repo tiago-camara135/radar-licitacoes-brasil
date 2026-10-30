@@ -14,27 +14,7 @@ const validDate=v=>{if(!v)return null;const t=Date.parse(v);return Number.isFini
 async function init(){
   if(ready||!pool)return;
   await pool.query(`CREATE TABLE IF NOT EXISTS monitored_procurements(
-    pncp_id TEXT PRIMARY KEY,
-    org_cnpj TEXT,
-    year INTEGER,
-    sequence INTEGER,
-    modality_code INTEGER,
-    modality_name TEXT,
-    object_text TEXT,
-    org_name TEXT,
-    unit_name TEXT,
-    municipality TEXT,
-    uf TEXT,
-    power_id TEXT,
-    sphere_id TEXT,
-    estimated_value NUMERIC(18,2),
-    published_at TIMESTAMPTZ,
-    closes_at TIMESTAMPTZ,
-    pncp_url TEXT,
-    origin_url TEXT,
-    raw JSONB NOT NULL,
-    detected_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    last_seen_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    pncp_id TEXT PRIMARY KEY,org_cnpj TEXT,year INTEGER,sequence INTEGER,modality_code INTEGER,modality_name TEXT,object_text TEXT,org_name TEXT,unit_name TEXT,municipality TEXT,uf TEXT,power_id TEXT,sphere_id TEXT,estimated_value NUMERIC(18,2),published_at TIMESTAMPTZ,closes_at TIMESTAMPTZ,pncp_url TEXT,origin_url TEXT,raw JSONB NOT NULL,detected_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),last_seen_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
   )`);
   await pool.query('CREATE INDEX IF NOT EXISTS idx_monitored_uf_pub_v3 ON monitored_procurements(uf,published_at DESC)');
   await pool.query('CREATE INDEX IF NOT EXISTS idx_monitored_mod_pub_v3 ON monitored_procurements(modality_code,published_at DESC)');
@@ -64,34 +44,31 @@ function filtersFromUrl(url){return normalizeSearchFilters({
   openOnly:url.searchParams.get('openOnly')==='true',days:url.searchParams.get('days')||'7',order:url.searchParams.get('order')||'newest'
 })}
 
-async function localSearch(filters,limit=900){
+async function localSearch(filters,limit=5000){
   if(!pool)return [];
   await init();
-  const f=normalizeSearchFilters(filters),where=['published_at >= NOW() - ($1::int * INTERVAL \'1 day\')'],params=[f.days];
+  const f=normalizeSearchFilters(filters);
+  const where=['published_at >= NOW() - ($1::int * INTERVAL \'1 day\')'];
+  const params=[f.days];
   let n=2;
   const add=(sql,val)=>{where.push(sql.replace('?',`$${n++}`));params.push(val)};
+
+  // Keep SQL focused on deterministic structured fields. Text fields are filtered below
+  // with applySearchFilters(), which normalizes case/accents consistently for search and alerts.
   if(f.uf)add('uf=?',f.uf);
   if(f.modalities.length){where.push(`modality_code = ANY($${n++}::int[])`);params.push(f.modalities)}
   if(f.cnpj.length===14)add('org_cnpj=?',f.cnpj);
   if(f.municipalityIbge.length===7)add("COALESCE(raw->'unidadeOrgao'->>'codigoIbge','')=?",f.municipalityIbge);
-  if(f.municipality)add('municipality ILIKE ?',`%${f.municipality}%`);
-  if(f.org){
-    where.push(`(org_name ILIKE $${n} OR unit_name ILIKE $${n+1})`);
-    params.push(`%${f.org}%`,`%${f.org}%`);
-    n+=2;
-  }
-  if(f.keyword){
-    where.push(`(object_text ILIKE $${n} OR org_name ILIKE $${n} OR unit_name ILIKE $${n})`);
-    params.push(`%${f.keyword}%`);
-    n++;
-  }
   if(f.minValue!==null){where.push(`estimated_value >= $${n++}`);params.push(f.minValue)}
   if(f.maxValue!==null){where.push(`estimated_value <= $${n++}`);params.push(f.maxValue)}
   if(f.openOnly)where.push('closes_at IS NOT NULL AND closes_at >= NOW()');
-  params.push(Math.min(Math.max(limit,1),1500));
+
+  const maxRows=Math.min(Math.max(Number(limit)||5000,100),5000);
+  params.push(maxRows);
   const order=f.order==='value_desc'?'estimated_value DESC NULLS LAST':f.order==='value_asc'?'estimated_value ASC NULLS LAST':f.order==='deadline'?'closes_at ASC NULLS LAST':'published_at DESC NULLS LAST';
   const r=await pool.query(`SELECT raw,pncp_url,origin_url,detected_at FROM monitored_procurements WHERE ${where.join(' AND ')} ORDER BY ${order} LIMIT $${n}`,params);
-  return r.rows.map(row=>({...row.raw,_pncpUrl:row.pncp_url||pncpUrl(row.raw||{}),_originUrl:row.origin_url||originUrl(row.raw||{}),_detectedAt:row.detected_at?new Date(row.detected_at).toISOString():null,_liveMonitor:true}));
+  const candidates=r.rows.map(row=>({...row.raw,_pncpUrl:row.pncp_url||pncpUrl(row.raw||{}),_originUrl:row.origin_url||originUrl(row.raw||{}),_detectedAt:row.detected_at?new Date(row.detected_at).toISOString():null,_liveMonitor:true}));
+  return applySearchFilters(candidates,f);
 }
 
 function dbValues(x,historical=true){
@@ -119,8 +96,8 @@ function mergeItems(a,b,filters){
 
 async function searchCore(filters){
   const f=normalizeSearchFilters(filters),key=JSON.stringify(f),hit=cache.get(key);
-  if(hit&&Date.now()-hit.at<90000)return hit.data;
-  const local=await localSearch(f,900).catch(e=>{console.warn('search router local cache error:',e?.message||e);return []});
+  if(hit&&Date.now()-hit.at<60000)return hit.data;
+  const local=await localSearch(f,5000).catch(e=>{console.warn('search router local cache error:',e?.message||e);return []});
   let remote=null,remoteError=null;
   try{
     remote=await fetchPncpSearch(f);
@@ -132,10 +109,10 @@ async function searchCore(filters){
   }
   const items=mergeItems(local,remote?.items||[],f);
   if(!items.length&&(!remote||remote.successfulModalities===0)){
-    const err=Object.assign(new Error('O PNCP está temporariamente limitando as consultas. Tente novamente em instantes; o Radar não irá exibir zero resultados como se a pesquisa tivesse sido concluída.'),{status:503,code:'pncp_temporarily_unavailable'});
+    const err=Object.assign(new Error('A fonte oficial está temporariamente limitando esta consulta. Tente novamente em instantes.'),{status:503,code:'pncp_temporarily_unavailable'});
     throw err;
   }
-  const data={items,source:remote?.successfulModalities?'PNCP + base do Radar':'base do Radar',partial:Boolean(remote?.partial||remoteError),remote_errors:remote?.errors||[],local_count:local.length,remote_count:remote?.items?.length||0,fetched_at:new Date().toISOString()};
+  const data={items,source:remote?.successfulModalities?'PNCP + base do Radar':'base do Radar',partial:Boolean(remote?.partial||remoteError),remote_errors:remote?.errors||[],local_count:local.length,remote_count:remote?.items?.length||0,quality:'normalized-exact-filters',fetched_at:new Date().toISOString()};
   cache.set(key,{at:Date.now(),data});
   return data;
 }
@@ -147,11 +124,11 @@ async function alertFeed(userId){
   const matches=[];
   for(const alert of a.rows){
     const filters={keyword:alert.keyword||'',uf:alert.uf||'',municipality:alert.municipality||'',municipalityIbge:alert.municipality_ibge||'',modality:alert.modality_code||'',org:alert.org_name||'',cnpj:alert.org_cnpj||'',minValue:alert.min_value,maxValue:alert.max_value,days:7,openOnly:false,order:'newest'};
-    const items=await localSearch(filters,120).catch(()=>[]);
-    for(const item of items.slice(0,60))matches.push({alert:{id:alert.id,name:alert.name},item});
+    const items=await localSearch(filters,5000).catch(()=>[]);
+    for(const item of items.slice(0,100))matches.push({alert:{id:alert.id,name:alert.name},item});
   }
   const seen=new Set();
-  return matches.filter(m=>{const k=`${m.alert.id}:${resultKey(m.item)}`;if(seen.has(k))return false;seen.add(k);return true}).sort((a,b)=>(Date.parse(b.item?.dataPublicacaoPncp||0)||0)-(Date.parse(a.item?.dataPublicacaoPncp||0)||0)).slice(0,180);
+  return matches.filter(m=>{const k=`${m.alert.id}:${resultKey(m.item)}`;if(seen.has(k))return false;seen.add(k);return true}).sort((a,b)=>(Date.parse(b.item?._detectedAt||b.item?.dataPublicacaoPncp||0)||0)-(Date.parse(a.item?._detectedAt||a.item?.dataPublicacaoPncp||0)||0)).slice(0,250);
 }
 
 async function status(){
@@ -167,28 +144,15 @@ async function status(){
   return {ok:true,database:db,pncp:pncpClientHealth(),last_remote:lastRemote};
 }
 
-export async function initSearchRouterV3(){
-  await init();
-  console.log('search router v3 ready: resilient PNCP + local PostgreSQL cache');
-}
+export async function initSearchRouterV3(){await init();console.log('search router v3 ready: normalized exact filters + resilient PNCP + local PostgreSQL cache')}
 export async function handleSearchV3Route(req,res,url){
   if(!['/api/licitacoes','/api/alerts/feed','/api/search-status'].includes(url.pathname))return false;
   const user=await auth(req);
   if(!user){send(res,401,{error:'Faça login para continuar.'});return true}
   try{
-    if(req.method==='GET'&&url.pathname==='/api/licitacoes'){
-      const result=await searchCore(filtersFromUrl(url));
-      send(res,200,result);
-      return true;
-    }
-    if(req.method==='GET'&&url.pathname==='/api/alerts/feed'){
-      send(res,200,{items:await alertFeed(user.id),source:'base monitorada do Radar',fetched_at:new Date().toISOString()});
-      return true;
-    }
-    if(req.method==='GET'&&url.pathname==='/api/search-status'){
-      send(res,200,{status:await status()});
-      return true;
-    }
+    if(req.method==='GET'&&url.pathname==='/api/licitacoes'){send(res,200,await searchCore(filtersFromUrl(url)));return true}
+    if(req.method==='GET'&&url.pathname==='/api/alerts/feed'){send(res,200,{items:await alertFeed(user.id),source:'base monitorada do Radar',fetched_at:new Date().toISOString()});return true}
+    if(req.method==='GET'&&url.pathname==='/api/search-status'){send(res,200,{status:await status()});return true}
     return false;
   }catch(e){
     console.error('search router v3 error:',e?.message||e);
