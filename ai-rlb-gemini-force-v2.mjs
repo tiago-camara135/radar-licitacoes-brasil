@@ -1,6 +1,4 @@
 import crypto from 'node:crypto';
-import mammoth from 'mammoth';
-import ExcelJS from 'exceljs';
 
 const SECRET = process.env.AI_RLB_SECRET || process.env.ADMIN_PASSWORD || process.env.DATABASE_URL || '';
 const CACHE = new Map();
@@ -154,14 +152,14 @@ function inferMime(document) {
   if (mime) return mime;
   const name = String(document?.filename || '').toLowerCase();
   if (name.endsWith('.pdf')) return 'application/pdf';
-  if (name.endsWith('.docx')) return 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
-  if (name.endsWith('.xlsx')) return 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
-  if (name.endsWith('.xls')) return 'application/vnd.ms-excel';
   if (name.endsWith('.csv')) return 'text/csv';
   if (name.endsWith('.json')) return 'application/json';
   if (name.endsWith('.html') || name.endsWith('.htm')) return 'text/html';
   if (name.endsWith('.md')) return 'text/markdown';
   if (name.endsWith('.txt')) return 'text/plain';
+  if (name.endsWith('.png')) return 'image/png';
+  if (name.endsWith('.jpg') || name.endsWith('.jpeg')) return 'image/jpeg';
+  if (name.endsWith('.webp')) return 'image/webp';
   return 'application/octet-stream';
 }
 function asBuffer(content) {
@@ -169,16 +167,6 @@ function asBuffer(content) {
   if (content?.type === 'Buffer' && Array.isArray(content.data)) return Buffer.from(content.data);
   if (typeof content === 'string') return Buffer.from(content, 'utf8');
   return Buffer.from(content || '');
-}
-function cellText(value) {
-  if (value == null) return '';
-  if (typeof value === 'object') {
-    if (Array.isArray(value.richText)) return value.richText.map(x => x.text || '').join('');
-    if (value.text != null) return String(value.text);
-    if (value.result != null) return String(value.result);
-    if (value.formula != null) return String(value.result ?? value.formula);
-  }
-  return String(value);
 }
 async function prepareDocument(document) {
   if (!document) return { parts: [], searchText: '' };
@@ -197,38 +185,12 @@ async function prepareDocument(document) {
     };
   }
 
-  if (mime.includes('wordprocessingml') || filename.toLowerCase().endsWith('.docx')) {
-    const out = await mammoth.extractRawText({ buffer });
-    const text = clean(out.value, 60000);
-    return { parts: [{ text: `CONTEÚDO EXTRAÍDO DO DOCX ${filename}:\n${text}` }], searchText: text.slice(0, 8000) };
-  }
-
-  if (mime.includes('spreadsheetml') || filename.toLowerCase().endsWith('.xlsx')) {
-    const workbook = new ExcelJS.Workbook();
-    await workbook.xlsx.load(buffer);
-    const sheets = [];
-    for (const ws of workbook.worksheets) {
-      const rows = [];
-      ws.eachRow({ includeEmpty: false }, row => {
-        const values = Array.isArray(row.values) ? row.values.slice(1).map(cellText) : [];
-        rows.push(values.join('\t'));
-      });
-      sheets.push(`PLANILHA: ${ws.name}\n${rows.join('\n')}`);
-    }
-    const text = clean(sheets.join('\n\n'), 60000);
-    return { parts: [{ text: `CONTEÚDO EXTRAÍDO DA PLANILHA ${filename}:\n${text}` }], searchText: text.slice(0, 8000) };
-  }
-
-  if (mime.includes('ms-excel') || filename.toLowerCase().endsWith('.xls')) {
-    throw Object.assign(new Error('Para manter a análise 100% Gemini com processamento seguro, converta o arquivo .XLS para .XLSX, CSV ou PDF.'), { status: 415, publicCode: 'legacy_xls_unsupported' });
-  }
-
   if (mime.startsWith('text/') || ['application/json', 'application/xml'].includes(mime) || /\.(txt|md|csv|json|html?|xml)$/i.test(filename)) {
     const text = clean(buffer.toString('utf8'), 60000);
     return { parts: [{ text: `CONTEÚDO DO ARQUIVO ${filename}:\n${text}` }], searchText: text.slice(0, 8000) };
   }
 
-  throw Object.assign(new Error('Para análise 100% Gemini, este formato ainda não é compatível. Converta o arquivo para PDF, DOCX, XLSX, CSV, TXT ou imagem.'), { status: 415, publicCode: 'unsupported_document_type' });
+  throw Object.assign(new Error('Para manter toda a análise no Gemini, envie o documento em PDF, TXT, CSV, JSON, HTML/XML ou imagem. Para DOC/DOCX/XLS/XLSX, converta primeiro para PDF.'), { status: 415, publicCode: 'gemini_document_format_required' });
 }
 
 async function callModel(apiKey, model, contents, evidenceText) {
