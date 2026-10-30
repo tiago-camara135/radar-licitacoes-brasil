@@ -3,67 +3,22 @@ services:
     name: radar-licitacoes-brasil
     runtime: node
     region: virginia
-    plan: 0.5c-512mb
-    buildCommand: rm -rf app && mkdir -p app && tar -xzf radar-app.tar.gz -C app
-    startCommand: node app/server.mjs
+    plan: free
+    buildCommand: npm install --omit=dev
+    startCommand: npm start
     healthCheckPath: /api/health
     envVars:
       - key: NODE_VERSION
         value: 22
       - key: NODE_ENV
         value: production
-      - key: DATA_DIR
-        value: /var/data
       - key: PNCP_BASE_URL
         value: https://pncp.gov.br/api/consulta
-      - key: PNCP_SERVICE_BASE_URL
-        value: https://pncp.gov.br/api/pncp
-      - key: APP_ORIGIN
-        fromService:
-          type: web
-          name: radar-licitacoes-brasil
-          envVarKey: RENDER_EXTERNAL_URL
-      - key: CRON_SECRET
-        generateValue: true
-      - key: MFA_ENCRYPTION_KEY
-        generateValue: true
-      - key: ADMIN_SESSION_HOURS
-        value: 12
-      - key: USER_SESSION_HOURS
-        value: 48
-      - key: PCP_PUBLIC_KEY
-        sync: false
-      - key: RESEND_API_KEY
-        sync: false
-      - key: ALERT_FROM
+      - key: DATABASE_URL
         sync: false
       - key: ADMIN_EMAIL
         sync: false
       - key: ADMIN_PASSWORD
         sync: false
-    disk:
-      name: radar-data
-      mountPath: /var/data
-      sizeGB: 1
-
-  - type: cron
-    name: radar-alertas-diarios
-    runtime: node
-    region: virginia
-    plan: 0.5c-512mb
-    schedule: "0 11 * * *"
-    buildCommand: rm -rf app && mkdir -p app && tar -xzf radar-app.tar.gz -C app
-    startCommand: node app/cron-trigger.mjs
-    envVars:
-      - key: NODE_VERSION
-        value: 22
       - key: APP_ORIGIN
-        fromService:
-          type: web
-          name: radar-licitacoes-brasil
-          envVarKey: RENDER_EXTERNAL_URL
-      - key: CRON_SECRET
-        fromService:
-          type: web
-          name: radar-licitacoes-brasil
-          envVarKey: CRON_SECRET
+        sync: false
