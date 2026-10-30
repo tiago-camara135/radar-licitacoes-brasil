@@ -1,7 +1,8 @@
 import OpenAI from 'openai';
 import crypto from 'node:crypto';
 
-const AI_MODEL = String(process.env.OPENAI_MODEL || 'gpt-6.1-sol').trim();
+const AI_MODEL = String(process.env.OPENAI_MODEL || 'gpt-6-luna').trim();
+const AI_FALLBACK_MODEL = String(process.env.OPENAI_FALLBACK_MODEL || 'gpt-6.1-sol').trim();
 const AI_DAILY_LIMIT = Math.max(1, Math.min(Number(process.env.AI_DAILY_LIMIT || 50), 500));
 const SETTINGS_SECRET = String(process.env.AI_RLB_SECRET || process.env.ADMIN_PASSWORD || '');
 const SUPPORTED = new Set([
@@ -51,6 +52,41 @@ function unseal(payload) {
   } catch { return null; }
 }
 
+function errorMeta(e) {
+  const status = Number(e?.status || e?.response?.status || 0);
+  const code = String(e?.code || e?.error?.code || e?.body?.error?.code || '').toLowerCase();
+  const type = String(e?.type || e?.error?.type || e?.body?.error?.type || '').toLowerCase();
+  const message = String(e?.message || e?.error?.message || e?.body?.error?.message || '').toLowerCase();
+  return { status, code, type, message };
+}
+function isBillingError(meta) {
+  const hay = `${meta.code} ${meta.type} ${meta.message}`;
+  return [
+    'insufficient_quota',
+    'credit_balance_exhausted',
+    'organization_usage_limit_exceeded',
+    'organization_spend_limit_exceeded',
+    'project_spend_limit_exceeded',
+    'billing',
+    'quota',
+    'credit balance',
+    'spend limit'
+  ].some(x => hay.includes(x));
+}
+function isRateLimitError(meta) {
+  if (isBillingError(meta)) return false;
+  const hay = `${meta.code} ${meta.type} ${meta.message}`;
+  return meta.status === 429 || hay.includes('rate_limit') || hay.includes('rate limit');
+}
+function reasoningFor(model) {
+  return model === 'gpt-6-luna' ? { effort: 'medium' } : { effort: 'medium' };
+}
+function safeLogError(prefix, e, model) {
+  const meta = errorMeta(e);
+  console.error(prefix, JSON.stringify({ status: meta.status || null, code: meta.code || null, type: meta.type || null, model }));
+  return meta;
+}
+
 export async function initAiTables(pool) {
   if (!pool) return;
   await pool.query(`CREATE TABLE IF NOT EXISTS ai_conversations(
@@ -79,7 +115,7 @@ export async function initAiTables(pool) {
   await pool.query('CREATE INDEX IF NOT EXISTS idx_ai_conv_user ON ai_conversations(user_id,updated_at DESC)');
   await pool.query('CREATE INDEX IF NOT EXISTS idx_ai_msg_conv ON ai_messages(conversation_id,id)');
   const configured = Boolean(await resolveApiKey(pool));
-  console.log(`IA RLB core ready: ${configured ? 'configured' : 'waiting for API configuration'} (${AI_MODEL})`);
+  console.log(`IA RLB core ready: ${configured ? 'configured' : 'waiting for API configuration'} (${AI_MODEL}; fallback ${AI_FALLBACK_MODEL})`);
 }
 
 async function storedApiKey(pool) {
@@ -90,63 +126,73 @@ async function storedApiKey(pool) {
 async function resolveApiKey(pool) {
   return String(process.env.OPENAI_API_KEY || '').trim() || await storedApiKey(pool);
 }
+async function testModel(client, model) {
+  const r = await client.responses.create({
+    model,
+    instructions: 'Teste técnico de configuração. Responda somente OK.',
+    input: 'OK',
+    reasoning: { effort: 'low' },
+    max_output_tokens: 24,
+    store: false
+  }, { timeout: 30000 });
+  return Boolean(r?.id || r?.output_text);
+}
 async function validateApiKey(apiKey) {
   const client = new OpenAI({ apiKey });
 
   try {
     await client.models.list();
   } catch (e) {
-    const status = Number(e?.status || 0);
-    if (status === 401) throw Object.assign(new Error('A chave informada não foi aceita pela OpenAI.'), { status: 400 });
-    if (status === 403) throw Object.assign(new Error('A chave informada não possui permissão de acesso à API da OpenAI.'), { status: 400 });
-    throw Object.assign(new Error('Não foi possível confirmar a credencial da OpenAI agora. Tente novamente.'), { status: 502 });
+    const meta = errorMeta(e);
+    if (meta.status === 401) throw Object.assign(new Error('A chave informada não foi aceita pela OpenAI.'), { status: 400, publicCode: 'invalid_key' });
+    if (meta.status === 403) throw Object.assign(new Error('A chave informada não possui permissão de acesso à API da OpenAI.'), { status: 400, publicCode: 'permission_denied' });
+    throw Object.assign(new Error('Não foi possível confirmar a credencial da OpenAI agora. Tente novamente.'), { status: 502, publicCode: 'credential_check_failed' });
   }
 
-  try {
-    const r = await client.responses.create({
-      model: AI_MODEL,
-      instructions: 'Teste técnico de configuração. Responda somente OK.',
-      input: 'OK',
-      reasoning: { effort: 'low' },
-      max_output_tokens: 32,
-      store: false
-    }, { timeout: 30000 });
-    return {
-      operational: Boolean(r?.id || r?.output_text),
-      billing_required: false,
-      message: 'IA RLB ativada e validada com sucesso. A configuração é global para todos os usuários.'
-    };
-  } catch (e) {
-    const status = Number(e?.status || 0);
-    const code = String(e?.code || e?.error?.code || '').toLowerCase();
-    if (status === 401) throw Object.assign(new Error('A chave informada não foi aceita pela OpenAI.'), { status: 400 });
-    if (status === 429 || code.includes('quota') || code.includes('billing')) {
-      return {
-        operational: false,
-        billing_required: true,
-        message: 'Credencial validada e salva para toda a plataforma. A conta da API ainda precisa de saldo ou limite disponível para gerar respostas.'
+  for (const model of [...new Set([AI_MODEL, AI_FALLBACK_MODEL].filter(Boolean))]) {
+    try {
+      const ok = await testModel(client, model);
+      if (ok) return {
+        operational: true,
+        billing_required: false,
+        active_model: model,
+        message: `IA RLB ativada e validada com sucesso usando ${model}. A configuração é global para todos os usuários.`
       };
-    }
-    if (status === 403 || status === 404) {
+    } catch (e) {
+      const meta = safeLogError('IA RLB validation error', e, model);
+      if (meta.status === 401) throw Object.assign(new Error('A chave informada não foi aceita pela OpenAI.'), { status: 400, publicCode: 'invalid_key' });
+      if (isBillingError(meta)) {
+        return {
+          operational: false,
+          billing_required: true,
+          error_code: meta.code || meta.type || 'insufficient_quota',
+          active_model: model,
+          message: 'Credencial validada e salva para toda a plataforma. A organização da API precisa de saldo ou limite de gasto disponível para gerar respostas.'
+        };
+      }
+      if (isRateLimitError(meta)) continue;
+      if (meta.status === 403 || meta.status === 404) continue;
       return {
         operational: false,
         billing_required: false,
-        model_access_required: true,
-        message: `Credencial validada e salva para toda a plataforma. O acesso ao modelo ${AI_MODEL} ainda precisa ser liberado na conta da API.`
+        validation_warning: true,
+        active_model: model,
+        message: 'Credencial validada e salva para toda a plataforma. O teste do modelo não pôde ser concluído agora, mas a chave não precisará ser informada novamente.'
       };
     }
-    return {
-      operational: false,
-      billing_required: false,
-      validation_warning: true,
-      message: 'Credencial validada e salva para toda a plataforma. O teste do modelo não pôde ser concluído agora, mas a chave não precisará ser informada novamente.'
-    };
   }
+
+  return {
+    operational: false,
+    billing_required: false,
+    rate_limited: true,
+    message: 'Credencial validada. A OpenAI aplicou um limite temporário de requisições; tente novamente em alguns instantes.'
+  };
 }
 export async function configureAiKey(pool, userId, rawKey) {
-  if (process.env.OPENAI_API_KEY) return { configured: true, operational: true, source: 'environment', model: AI_MODEL, message: 'A IA RLB já usa uma credencial global configurada no servidor.' };
+  if (process.env.OPENAI_API_KEY) return { configured: true, operational: true, source: 'environment', model: AI_MODEL, fallback_model: AI_FALLBACK_MODEL, message: 'A IA RLB já usa uma credencial global configurada no servidor.' };
   const key = clean(rawKey, 300);
-  if (!/^sk-[A-Za-z0-9_\-]{20,}$/.test(key)) throw Object.assign(new Error('Formato de chave da OpenAI inválido.'), { status: 400 });
+  if (!/^sk-[A-Za-z0-9_\-]{20,}$/.test(key)) throw Object.assign(new Error('Formato de chave da OpenAI inválido.'), { status: 400, publicCode: 'invalid_key_format' });
 
   const validation = await validateApiKey(key);
   const encrypted = seal(key);
@@ -158,18 +204,19 @@ export async function configureAiKey(pool, userId, rawKey) {
     configured: true,
     source: 'encrypted_database',
     model: AI_MODEL,
+    fallback_model: AI_FALLBACK_MODEL,
     ...validation
   };
 }
 export async function aiAdminStatus(pool) {
   const env = Boolean(String(process.env.OPENAI_API_KEY || '').trim());
   const stored = env ? false : Boolean(await storedApiKey(pool));
-  return { configured: env || stored, source: env ? 'environment' : stored ? 'encrypted_database' : 'none', model: AI_MODEL, secure_storage_available: Boolean(settingsKey()) };
+  return { configured: env || stored, source: env ? 'environment' : stored ? 'encrypted_database' : 'none', model: AI_MODEL, fallback_model: AI_FALLBACK_MODEL, secure_storage_available: Boolean(settingsKey()) };
 }
 export async function removeStoredAiKey(pool) {
   if (process.env.OPENAI_API_KEY) throw Object.assign(new Error('A credencial está configurada no ambiente do servidor e não pode ser removida por esta tela.'), { status: 400 });
   await pool.query("DELETE FROM ai_settings WHERE setting_key='openai_api_key'");
-  return { configured: false, source: 'none', model: AI_MODEL };
+  return { configured: false, source: 'none', model: AI_MODEL, fallback_model: AI_FALLBACK_MODEL };
 }
 
 async function usageToday(pool, userId) {
@@ -201,36 +248,63 @@ function sourcesFrom(response) {
   }
   return sources.slice(0, 12);
 }
+async function createResponse(openai, model, input, useWeb) {
+  const options = {
+    model,
+    instructions: INSTRUCTIONS,
+    input,
+    reasoning: reasoningFor(model),
+    max_output_tokens: 2200,
+    store: false
+  };
+  if (useWeb) options.tools = [{ type: 'web_search' }];
+  return openai.responses.create(options, { timeout: 90000 });
+}
 async function askModel(apiKey, history, message, document, useWeb) {
   const openai = new OpenAI({ apiKey });
   const input = history.map(m => ({ role: m.role, content: m.content }));
   const content = [];
   if (document) {
     const mime = String(document.mime_type || '').toLowerCase();
-    if (!SUPPORTED.has(mime)) throw Object.assign(new Error('Formato não compatível com a IA RLB. Use PDF, DOC/DOCX, TXT/MD/CSV ou XLS/XLSX.'), { status: 400 });
+    if (!SUPPORTED.has(mime)) throw Object.assign(new Error('Formato não compatível com a IA RLB. Use PDF, DOC/DOCX, TXT/MD/CSV ou XLS/XLSX.'), { status: 400, publicCode: 'unsupported_document' });
     content.push({ type: 'input_file', filename: document.filename, file_data: `data:${mime};base64,${Buffer.from(document.content).toString('base64')}` });
   }
   content.push({ type: 'input_text', text: message });
   input.push({ role: 'user', content });
-  const options = { model: AI_MODEL, instructions: INSTRUCTIONS, input, reasoning: { effort: 'medium' }, max_output_tokens: 3500, store: false };
-  if (useWeb) options.tools = [{ type: 'web_search' }];
-  try {
-    const response = await openai.responses.create(options, { timeout: 90000 });
-    return { answer: clean(response.output_text || 'Não foi possível gerar uma resposta.', 30000), sources: sourcesFrom(response) };
-  } catch (e) {
-    const status = Number(e?.status || 0);
-    const code = String(e?.code || e?.error?.code || '').toLowerCase();
-    console.error('IA RLB model error', status || e?.name || 'unknown');
-    let msg = 'O serviço da IA RLB está temporariamente indisponível.';
-    if (status === 401) msg = 'A credencial da IA RLB precisa ser revisada pelo administrador.';
-    else if (status === 429 || code.includes('quota') || code.includes('billing')) msg = 'A IA RLB está configurada, mas a conta da API da OpenAI está sem saldo ou limite disponível.';
-    throw Object.assign(new Error(msg), { status: 503 });
+
+  const models = [...new Set([AI_MODEL, AI_FALLBACK_MODEL].filter(Boolean))];
+  let lastMeta = null;
+  for (let i = 0; i < models.length; i += 1) {
+    const model = models[i];
+    try {
+      const response = await createResponse(openai, model, input, useWeb);
+      return {
+        answer: clean(response.output_text || 'Não foi possível gerar uma resposta.', 30000),
+        sources: sourcesFrom(response),
+        model
+      };
+    } catch (e) {
+      const meta = safeLogError('IA RLB model error', e, model);
+      lastMeta = meta;
+      if (meta.status === 401) throw Object.assign(new Error('A credencial da IA RLB precisa ser revisada pelo administrador.'), { status: 503, publicCode: 'invalid_key' });
+      if (isBillingError(meta)) {
+        throw Object.assign(new Error('A IA RLB está configurada corretamente, mas a organização da API da OpenAI está sem crédito ou com um limite de gasto atingido. O administrador precisa ativar ou recarregar o faturamento da API.'), { status: 402, publicCode: 'billing_required', providerCode: meta.code || meta.type || 'insufficient_quota' });
+      }
+      const retryable = isRateLimitError(meta) || meta.status === 403 || meta.status === 404 || meta.status >= 500;
+      if (retryable && i < models.length - 1) continue;
+      if (isRateLimitError(meta)) {
+        throw Object.assign(new Error('A OpenAI aplicou um limite temporário de requisições. Tente novamente em alguns segundos.'), { status: 429, publicCode: 'rate_limited' });
+      }
+      break;
+    }
   }
+
+  throw Object.assign(new Error('O serviço da IA RLB está temporariamente indisponível.'), { status: 503, publicCode: lastMeta?.code || 'provider_unavailable' });
 }
 
 export async function aiStatus(pool, userId) {
   const used = await usageToday(pool, userId);
-  return { configured: Boolean(await resolveApiKey(pool)), model: AI_MODEL, web_search: true, document_analysis: true, daily_limit: AI_DAILY_LIMIT, used_today: used };
+  return { configured: Boolean(await resolveApiKey(pool)), model: AI_MODEL, fallback_model: AI_FALLBACK_MODEL, web_search: true, document_analysis: true, daily_limit: AI_DAILY_LIMIT, used_today: used };
 }
 export async function listAiConversations(pool, userId) {
   const r = await pool.query('SELECT id,title,created_at,updated_at FROM ai_conversations WHERE user_id=$1 ORDER BY updated_at DESC LIMIT 40', [userId]);
@@ -247,11 +321,11 @@ export async function deleteAiConversation(pool, userId, conversationId) {
 }
 export async function runAiChat({ pool, userId, body, document }) {
   const apiKey = await resolveApiKey(pool);
-  if (!apiKey) throw Object.assign(new Error('A IA RLB ainda precisa ser ativada pelo administrador.'), { status: 503 });
+  if (!apiKey) throw Object.assign(new Error('A IA RLB ainda precisa ser ativada pelo administrador.'), { status: 503, publicCode: 'not_configured' });
   const used = await usageToday(pool, userId);
-  if (used >= AI_DAILY_LIMIT) throw Object.assign(new Error(`Limite diário da IA RLB atingido (${AI_DAILY_LIMIT} mensagens).`), { status: 429 });
+  if (used >= AI_DAILY_LIMIT) throw Object.assign(new Error(`Limite diário da IA RLB atingido (${AI_DAILY_LIMIT} mensagens).`), { status: 429, publicCode: 'daily_limit' });
   const message = clean(body.message, 6000);
-  if (!message) throw Object.assign(new Error('Digite uma pergunta para a IA RLB.'), { status: 400 });
+  if (!message) throw Object.assign(new Error('Digite uma pergunta para a IA RLB.'), { status: 400, publicCode: 'empty_message' });
   let conv = await getConversation(pool, userId, Number(body.conversation_id) || null);
   if (!conv) {
     const r = await pool.query('INSERT INTO ai_conversations(user_id,title) VALUES($1,$2) RETURNING id,title,created_at,updated_at', [userId, message.replace(/\s+/g, ' ').slice(0, 70)]);
@@ -270,5 +344,5 @@ export async function runAiChat({ pool, userId, body, document }) {
     try { await client.query('ROLLBACK'); } catch {}
     throw e;
   } finally { client.release(); }
-  return { conversation_id: conv.id, answer: result.answer, sources: result.sources, used_today: used + 1, daily_limit: AI_DAILY_LIMIT };
+  return { conversation_id: conv.id, answer: result.answer, sources: result.sources, model: result.model, used_today: used + 1, daily_limit: AI_DAILY_LIMIT };
 }
