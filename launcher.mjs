@@ -13,6 +13,7 @@ const themeSwitchV3 = originalReadFileSync(new URL('./theme-switch-v3.css', impo
 const intelligenceStripV4 = originalReadFileSync(new URL('./intelligence-strip-v4.css', import.meta.url), 'utf8');
 const aiRlbTheme = originalReadFileSync(new URL('./ai-rlb.css', import.meta.url), 'utf8');
 const aiRlbAdminTheme = originalReadFileSync(new URL('./ai-rlb-admin.css', import.meta.url), 'utf8');
+const enterpriseGovTechV5Theme = originalReadFileSync(new URL('./enterprise-govtech-v5.css', import.meta.url), 'utf8');
 const verifiedPncpScript = originalReadFileSync(new URL('./verified-pncp-links.js', import.meta.url), 'utf8');
 const chamberFilterScript = originalReadFileSync(new URL('./chamber-filter.js', import.meta.url), 'utf8');
 const liveFeedScript = originalReadFileSync(new URL('./live-feed.js', import.meta.url), 'utf8');
@@ -53,9 +54,9 @@ const iconStyle = `
 
 function applyBrand(html) {
   let out = String(html);
-  out = out.replace(/<meta name="theme-color" content="[^"]*">/i, '<meta name="theme-color" content="#102F4B">');
+  out = out.replace(/<meta name="theme-color" content="[^"]*">/i, '<meta name="theme-color" content="#061727">');
   out = out.replace(/<div class="brand-mark" aria-hidden="true"><svg[\s\S]*?<\/svg><\/div>/, `<div class="brand-mark" aria-hidden="true"><img src="${iconData}" alt=""></div>`);
-  out = out.replace('</head>', `<link rel="icon" type="image/svg+xml" href="${iconData}"><style id="vivid-theme">${vividTheme}</style><style id="institutional-theme">${institutionalTheme}</style><style id="institutional-v2-theme">${institutionalV2Theme}</style><style id="theme-switch-v3">${themeSwitchV3}</style><style id="intelligence-strip-v4">${intelligenceStripV4}</style><style id="ai-rlb-theme">${aiRlbTheme}</style><style id="ai-rlb-admin-theme">${aiRlbAdminTheme}</style><style id="rlb-icon-style">${iconStyle}</style></head>`);
+  out = out.replace('</head>', `<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Outfit:wght@500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"><link rel="icon" type="image/svg+xml" href="${iconData}"><style id="vivid-theme">${vividTheme}</style><style id="institutional-theme">${institutionalTheme}</style><style id="institutional-v2-theme">${institutionalV2Theme}</style><style id="theme-switch-v3">${themeSwitchV3}</style><style id="intelligence-strip-v4">${intelligenceStripV4}</style><style id="ai-rlb-theme">${aiRlbTheme}</style><style id="ai-rlb-admin-theme">${aiRlbAdminTheme}</style><style id="rlb-icon-style">${iconStyle}</style><style id="enterprise-govtech-v5">${enterpriseGovTechV5Theme}</style></head>`);
   out = out.replace('</body>', `<script id="verified-pncp-script">${verifiedPncpScript}</script><script id="chamber-filter-script">${chamberFilterScript}</script><script id="live-feed-script">${liveFeedScript}</script><script id="institutional-layout-script">${institutionalLayoutScript}</script><script id="institutional-v2-script">${institutionalV2Script}</script><script id="theme-switch-v3-script">${themeSwitchV3Script}</script><script id="intelligence-strip-v4-script">${intelligenceStripV4Script}</script><script id="ai-rlb-script">${aiRlbScript}</script><script id="ai-rlb-natural-voice-script">${aiRlbNaturalVoiceScript}</script><script id="ai-rlb-conversation-ui-script">${aiRlbConversationUiScript}</script><script id="ai-rlb-mic-permission-script">${aiRlbMicPermissionScript}</script><script id="ai-rlb-followups-script">${aiRlbFollowupsScript}</script><script id="ai-rlb-free-provider-ui-script">${aiRlbFreeProviderUiScript}</script><script id="ai-rlb-provider-indicator-script">${aiRlbProviderIndicatorScript}</script></body>`);
   return out;
 }
@@ -73,8 +74,12 @@ http.createServer = function patchedCreateServer(listener) {
   return originalCreateServer(async (req, res) => {
     const nativeSetHeader = res.setHeader.bind(res);
     res.setHeader = function patchedSetHeader(name, value) {
-      if (String(name).toLowerCase() === 'permissions-policy') {
+      const headerName = String(name).toLowerCase();
+      if (headerName === 'permissions-policy') {
         return nativeSetHeader(name, 'camera=(), microphone=(self), geolocation=()');
+      }
+      if (headerName === 'content-security-policy') {
+        return nativeSetHeader(name, "default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; script-src 'self' 'unsafe-inline'; connect-src 'self'; img-src 'self' data:; object-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'");
       }
       return nativeSetHeader(name, value);
     };
