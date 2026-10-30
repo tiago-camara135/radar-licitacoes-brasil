@@ -3,7 +3,7 @@ export const PNCP_MODALITY_CODES = Array.from({length:14},(_,i)=>i+1);
 const PREFERRED_PAGE_SIZE = Math.min(Math.max(Number(process.env.PNCP_PAGE_SIZE || 500),50),500);
 let effectivePageSize = PREFERRED_PAGE_SIZE;
 const REQUEST_SPACING_MS = Math.max(180, Number(process.env.PNCP_REQUEST_SPACING_MS || 320));
-const MAX_RETRIES = 3;
+const MAX_RETRIES = Math.min(Math.max(Number(process.env.PNCP_MAX_RETRIES || 1),0),3);
 let gate = Promise.resolve();
 let nextStartAt = 0;
 let cooldownUntil = 0;
@@ -48,7 +48,7 @@ async function fetchJsonWithRetry(url){
     const controller=new AbortController();
     const timeout=setTimeout(()=>controller.abort(),18000);
     try{
-      const r=await fetch(url,{headers:{accept:'application/json','user-agent':'RadarLicitacoesBrasil/3.1'},signal:controller.signal});
+      const r=await fetch(url,{headers:{accept:'application/json','user-agent':'RadarLicitacoesBrasil/3.2'},signal:controller.signal});
       if(r.status===204)return {response:r,body:{data:[],totalPaginas:0,totalRegistros:0}};
       const body=await r.json().catch(()=>({}));
       if(r.ok)return {response:r,body};
@@ -186,12 +186,9 @@ export async function fetchPncpSearch(filters={}){
   const f=normalizeSearchFilters(filters),end=new Date(),start=new Date(end.getTime()-f.days*86400000),codes=f.modality?[f.modality]:PNCP_MODALITY_CODES;
   const restrictive=Boolean(f.uf||f.municipalityIbge||f.cnpj||f.modality);
   const localText=Boolean(f.keyword||f.org||f.municipality);
-  // Production PNCP currently accepts 50 records/page. Keep user searches bounded so a state filter
-  // returns quickly and does not create a burst that triggers HTTP 429. The response metadata marks
-  // partial coverage whenever more pages exist; the local Radar cache is merged into the result.
-  const budget=restrictive?(localText?3:2):(localText?2:1);
-  const r=await fetchPncpRange({startDate:start,endDate:end,filters:f,codes,maxPagesPerModality:budget,concurrency:2});
+  const budget=localText?2:1;
+  const r=await fetchPncpRange({startDate:start,endDate:end,filters:f,codes,maxPagesPerModality:budget,concurrency:restrictive?1:2});
   return {...r,items:applySearchFilters(r.items,f),filters:f};
 }
 
-export function pncpClientHealth(){return {preferred_page_size:PREFERRED_PAGE_SIZE,effective_page_size:effectivePageSize,request_spacing_ms:REQUEST_SPACING_MS,cooldown_until:cooldownUntil?new Date(cooldownUntil).toISOString():null,base_url:PNCP_BASE_URL};}
+export function pncpClientHealth(){return {preferred_page_size:PREFERRED_PAGE_SIZE,effective_page_size:effectivePageSize,request_spacing_ms:REQUEST_SPACING_MS,max_retries:MAX_RETRIES,cooldown_until:cooldownUntil?new Date(cooldownUntil).toISOString():null,base_url:PNCP_BASE_URL};}
