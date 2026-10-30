@@ -1,133 +1,107 @@
 (()=>{
+  'use strict';
   const STORAGE_KEY='rlb-theme';
-  const $=s=>document.querySelector(s);
+  const $=(s,r=document)=>r.querySelector(s);
+  const $$=(s,r=document)=>Array.from(r.querySelectorAll(s));
 
   function safeTheme(){
-    try{
-      const saved=localStorage.getItem(STORAGE_KEY);
-      if(saved==='light'||saved==='dark')return saved;
-    }catch{}
+    try{const saved=localStorage.getItem(STORAGE_KEY);if(saved==='light'||saved==='dark')return saved}catch{}
     return window.matchMedia?.('(prefers-color-scheme: dark)').matches?'dark':'light';
-  }
-
-  function ambientSvg(theme){
-    if(theme==='dark'){
-      return `<svg viewBox="0 0 1600 1000" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
-        <defs><radialGradient id="g"><stop stop-color="#2bd498" stop-opacity=".16"/><stop offset="1" stop-color="#2bd498" stop-opacity="0"/></radialGradient></defs>
-        <circle cx="1370" cy="210" r="255" fill="url(#g)"/>
-        <g fill="none" stroke="#6fe6ba" stroke-opacity=".12" stroke-width="2"><circle cx="1360" cy="225" r="188"/><circle cx="1360" cy="225" r="132"/><circle cx="1360" cy="225" r="76"/><path d="M1360 225L1495 138"/></g>
-        <g fill="none" stroke="#5d87a0" stroke-opacity=".11" stroke-width="1.7"><path d="M120 188C300 88 460 280 642 168S998 100 1122 164"/><circle cx="120" cy="188" r="5"/><circle cx="372" cy="160" r="5"/><circle cx="642" cy="168" r="5"/><circle cx="878" cy="126" r="5"/><circle cx="1122" cy="164" r="5"/></g>
-        <g fill="none" stroke="#2bd498" stroke-opacity=".11" stroke-width="2" transform="translate(115 630)"><path d="M0 138h330M28 138V55h274v83M56 55L165 0l109 55M75 75v63M125 75v63M205 75v63M255 75v63M8 151h314"/></g>
-        <g fill="none" stroke="#f1c44a" stroke-opacity=".10" stroke-width="1.8" transform="translate(1040 660)"><rect x="0" y="0" width="150" height="195" rx="13"/><path d="M26 42h87M26 68h98M26 94h69M26 120h91"/><circle cx="112" cy="154" r="23"/><path d="M101 154l8 8 16-20"/></g>
-      </svg>`;
-    }
-    return `<svg viewBox="0 0 1600 1000" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
-      <g fill="none" stroke="#17435f" stroke-opacity=".065" stroke-width="2"><circle cx="1360" cy="225" r="188"/><circle cx="1360" cy="225" r="132"/><circle cx="1360" cy="225" r="76"/><path d="M1360 225L1494 138"/></g>
-      <g fill="none" stroke="#0b8f62" stroke-opacity=".07" stroke-width="2" transform="translate(115 630)"><path d="M0 138h330M28 138V55h274v83M56 55L165 0l109 55M75 75v63M125 75v63M205 75v63M255 75v63M8 151h314"/></g>
-      <g fill="none" stroke="#17435f" stroke-opacity=".06" stroke-width="1.7" transform="translate(1040 660)"><rect x="0" y="0" width="150" height="195" rx="13"/><path d="M26 42h87M26 68h98M26 94h69M26 120h91"/><circle cx="112" cy="154" r="23"/><path d="M101 154l8 8 16-20"/></g>
-      <g fill="none" stroke="#17435f" stroke-opacity=".06" stroke-width="1.5"><path d="M120 188C300 88 460 280 642 168S998 100 1122 164"/><circle cx="120" cy="188" r="5"/><circle cx="372" cy="160" r="5"/><circle cx="642" cy="168" r="5"/><circle cx="878" cy="126" r="5"/><circle cx="1122" cy="164" r="5"/></g>
-      <path fill="#d6a21d" fill-opacity=".04" d="M1510 520c-88 18-152 87-158 174-6 92 54 174 143 199 51 14 91 1 105-6V505c-21 2-52 6-90 15Z"/>
-      <path fill="#0b8f62" fill-opacity=".03" d="M0 315c74-39 164-31 223 22 54 49 77 130 54 196-27 77-112 131-219 116-22-3-41-8-58-15V315Z"/>
-    </svg>`;
-  }
-
-  function heroSvg(theme){
-    const dark=theme==='dark';
-    const panel=dark?'#10212e':'#ffffff';
-    const panel2=dark?'#162a38':'#f8fbfc';
-    const line=dark?'#2a4050':'#d7e3e9';
-    const ink=dark?'#dceaf1':'#183f58';
-    const muted=dark?'#617b8d':'#9bb0bf';
-    const green=dark?'#2bd498':'#0b8f62';
-    const gold=dark?'#f1c44a':'#d6a21d';
-    const top=dark?'#0b1721':'#153a55';
-    return `<svg viewBox="0 0 520 350" role="img" aria-label="Painel ilustrado de monitoramento de licitações">
-      <defs><filter id="rlb3sh"><feDropShadow dx="0" dy="14" stdDeviation="14" flood-color="#020c12" flood-opacity="${dark?'.36':'.22'}"/></filter></defs>
-      <g opacity="${dark?'.16':'.20'}" fill="none" stroke="${dark?'#5d87a0':'#b9d4df'}" stroke-width="1"><path d="M48 50h420M48 100h420M48 150h420M48 200h420M48 250h420M48 300h420"/><path d="M90 25v300M160 25v300M230 25v300M300 25v300M370 25v300M440 25v300"/></g>
-      <g transform="translate(56 46)" filter="url(#rlb3sh)">
-        <rect width="334" height="232" rx="20" fill="${panel}" stroke="${line}"/>
-        <rect width="334" height="38" rx="20" fill="${top}"/><rect y="20" width="334" height="18" fill="${top}"/>
-        <circle cx="22" cy="19" r="5" fill="${green}"/><circle cx="39" cy="19" r="5" fill="${gold}"/><circle cx="56" cy="19" r="5" fill="${dark?'#447188':'#6aa5c7'}"/>
-        <rect x="20" y="58" width="84" height="52" rx="11" fill="${panel2}"/><rect x="116" y="58" width="84" height="52" rx="11" fill="${dark?'#112b27':'#edf7f3'}"/><rect x="212" y="58" width="102" height="52" rx="11" fill="${dark?'#2b2718':'#fff7dd'}"/>
-        <rect x="32" y="73" width="35" height="7" rx="3.5" fill="${muted}"/><rect x="32" y="87" width="49" height="11" rx="4" fill="${ink}"/>
-        <rect x="128" y="73" width="35" height="7" rx="3.5" fill="${dark?'#668f80':'#87aa9c'}"/><rect x="128" y="87" width="49" height="11" rx="4" fill="${green}"/>
-        <rect x="224" y="73" width="41" height="7" rx="3.5" fill="${dark?'#8d8254':'#baa75e'}"/><rect x="224" y="87" width="66" height="11" rx="4" fill="${gold}"/>
-        <rect x="20" y="128" width="294" height="84" rx="13" fill="${panel2}" stroke="${line}"/>
-        <path d="M39 189 C74 166,102 181,132 153 S194 182,228 149 S275 169,297 142" fill="none" stroke="${green}" stroke-width="4" stroke-linecap="round"/>
-        <path d="M39 190h258" stroke="${line}" stroke-width="1"/><circle cx="132" cy="153" r="5" fill="${gold}"/><circle cx="228" cy="149" r="5" fill="${green}"/><circle cx="297" cy="142" r="5" fill="${dark?'#72b7df':'#2c739c'}"/>
-      </g>
-      <g transform="translate(344 92) rotate(5)" filter="url(#rlb3sh)"><rect width="112" height="148" rx="16" fill="${panel}" stroke="${line}"/><rect x="17" y="21" width="46" height="9" rx="4" fill="${ink}"/><rect x="17" y="42" width="77" height="7" rx="3.5" fill="${line}"/><rect x="17" y="57" width="66" height="7" rx="3.5" fill="${line}"/><rect x="17" y="72" width="72" height="7" rx="3.5" fill="${line}"/><circle cx="80" cy="112" r="20" fill="${green}"/><path d="M71 112l6 6 13-16" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></g>
-      <g transform="translate(367 231)" filter="url(#rlb3sh)"><circle cx="54" cy="54" r="49" fill="${dark?'#08141e':'#102f4b'}" stroke="${dark?'#284150':'#ffffff'}" stroke-opacity=".45"/><circle cx="54" cy="54" r="34" fill="none" stroke="${green}" stroke-opacity=".65" stroke-width="2"/><circle cx="54" cy="54" r="20" fill="none" stroke="${green}" stroke-opacity=".48" stroke-width="2"/><path d="M54 54L91 34A43 43 0 0 1 96 56Z" fill="${green}" fill-opacity=".26"/><path d="M54 54L91 34" stroke="${green}" stroke-width="3" stroke-linecap="round"/><circle cx="91" cy="34" r="5" fill="${gold}"/></g>
-    </svg>`;
-  }
-
-  function updateArtwork(theme){
-    const ambient=$('#rlbAmbientArt');
-    if(ambient)ambient.innerHTML=ambientSvg(theme);
-    const hero=$('.rlb-hero-visual');
-    if(hero)hero.innerHTML=heroSvg(theme);
   }
 
   function setTheme(theme,persist=true){
     if(theme!=='light'&&theme!=='dark')theme='light';
     document.documentElement.dataset.theme=theme;
     document.body?.setAttribute('data-theme',theme);
-    document.querySelectorAll('[data-rlb-theme]').forEach(btn=>btn.setAttribute('aria-pressed',String(btn.dataset.rlbTheme===theme)));
-    const meta=document.querySelector('meta[name="theme-color"]');
-    if(meta)meta.setAttribute('content',theme==='dark'?'#08131E':'#102F4B');
-    updateArtwork(theme);
+    $$('[data-rlb-theme]').forEach(btn=>btn.setAttribute('aria-pressed',String(btn.dataset.rlbTheme===theme)));
+    const meta=$('meta[name="theme-color"]');if(meta)meta.setAttribute('content',theme==='dark'?'#08131E':'#102F4B');
     if(persist){try{localStorage.setItem(STORAGE_KEY,theme)}catch{}}
   }
 
   function installThemeControl(){
-    if($('#rlbThemeControl'))return;
-    const top=$('.top');
-    const who=$('#who');
-    if(!top)return;
-    const control=document.createElement('div');
-    control.id='rlbThemeControl';
-    control.className='rlb-theme-control';
-    control.setAttribute('role','group');
-    control.setAttribute('aria-label','Tema da interface');
-    control.innerHTML='<button type="button" data-rlb-theme="light" aria-pressed="false"><span class="rlb-theme-icon">☀</span> Claro</button><button type="button" data-rlb-theme="dark" aria-pressed="false"><span class="rlb-theme-icon">◐</span> Escuro</button>';
-    control.addEventListener('click',e=>{const btn=e.target.closest('[data-rlb-theme]');if(btn)setTheme(btn.dataset.rlbTheme,true)});
-    if(who)top.insertBefore(control,who);else top.appendChild(control);
+    const top=$('.top'),who=$('#who');if(!top)return;
+    let control=$('#rlbThemeControl');
+    if(!control){
+      control=document.createElement('div');
+      control.id='rlbThemeControl';
+      control.className='rlb-theme-control';
+      control.setAttribute('role','group');
+      control.setAttribute('aria-label','Tema da interface');
+      control.innerHTML='<button type="button" data-rlb-theme="light" aria-pressed="false"><span class="rlb-theme-icon">☀</span> Claro</button><button type="button" data-rlb-theme="dark" aria-pressed="false"><span class="rlb-theme-icon">◐</span> Escuro</button>';
+      control.addEventListener('click',e=>{const btn=e.target.closest('[data-rlb-theme]');if(btn)setTheme(btn.dataset.rlbTheme,true)});
+      if(who)top.insertBefore(control,who);else top.appendChild(control);
+    }
+    setTheme(safeTheme(),false);
   }
 
-  function replaceUsageGuide(){
-    $('#rlbUsageGuide')?.remove();
-    if($('#rlbPlatformValue'))return;
-    const hero=$('#rlbInstitutionalHero');
-    if(!hero)return;
-    const strip=document.createElement('section');
-    strip.id='rlbPlatformValue';
-    strip.className='rlb-platform-value';
-    strip.innerHTML=`
-      <div class="rlb-value-card"><span class="rlb-value-icon">●</span><div><b>Monitoramento ativo</b><span>O Radar acompanha novas publicações e alimenta o Feed ao Vivo enquanto o serviço está disponível.</span></div></div>
-      <div class="rlb-value-card"><span class="rlb-value-icon">⌕</span><div><b>Busca inteligente</b><span>Localize oportunidades por objeto, localidade, modalidade, órgão, fonte e demais critérios.</span></div></div>
-      <div class="rlb-value-card"><span class="rlb-value-icon">✓</span><div><b>Fontes oficiais</b><span>Acesse o PNCP e, quando informado pelo registro oficial, o portal de origem da contratação.</span></div></div>`;
-    hero.insertAdjacentElement('afterend',strip);
+  function installDashboardStyle(){
+    let st=$('#rlbMovementDashboardStyle');if(st)st.remove();
+    st=document.createElement('style');st.id='rlbMovementDashboardStyle';
+    st.textContent=`
+      #rlbPlatformValue.rlb-movement-dashboard{display:block!important;margin:0 0 18px!important;padding:18px!important;border:1px solid var(--rlb3-line,#d9e4eb)!important;border-radius:16px!important;background:var(--rlb3-surface,#fff)!important;box-shadow:0 10px 28px rgba(17,49,74,.07)!important;color:var(--rlb3-text,#102f4b)!important}
+      .rlb-mv-head{display:flex!important;align-items:flex-start!important;justify-content:space-between!important;gap:16px!important;margin-bottom:14px!important}.rlb-mv-head-copy{min-width:0!important}.rlb-mv-kicker{display:block!important;margin-bottom:4px!important;color:#0b74de!important;font-size:8.5px!important;font-weight:900!important;text-transform:uppercase!important;letter-spacing:.1em!important}.rlb-mv-head h3{margin:0!important;font-size:17px!important;line-height:1.25!important;font-weight:850!important}.rlb-mv-head p{margin:5px 0 0!important;color:var(--rlb3-muted,#718596)!important;font-size:9.5px!important;line-height:1.5!important}.rlb-mv-refresh{min-height:36px!important;padding:0 12px!important;border:1px solid var(--rlb3-line,#d9e4eb)!important;border-radius:9px!important;background:var(--rlb3-surface-soft,#f8fbfd)!important;color:var(--rlb3-text,#102f4b)!important;font-size:9px!important;font-weight:800!important;cursor:pointer!important;white-space:nowrap!important}
+      .rlb-mv-grid{display:grid!important;grid-template-columns:repeat(6,minmax(0,1fr))!important;gap:9px!important}.rlb-mv-card{padding:12px!important;border:1px solid var(--rlb3-line,#d9e4eb)!important;border-radius:11px!important;background:var(--rlb3-surface-soft,#f8fbfd)!important}.rlb-mv-card span{display:block!important;color:var(--rlb3-muted,#718596)!important;font-size:8px!important;font-weight:800!important;text-transform:uppercase!important;letter-spacing:.05em!important}.rlb-mv-card strong{display:block!important;margin-top:6px!important;font-size:18px!important;line-height:1!important;font-weight:900!important}.rlb-mv-card small{display:block!important;margin-top:5px!important;color:var(--rlb3-muted,#718596)!important;font-size:7.8px!important;line-height:1.35!important}
+      .rlb-mv-lower{display:grid!important;grid-template-columns:1.1fr 1.1fr 1.5fr!important;gap:10px!important;margin-top:10px!important}.rlb-mv-panel{padding:12px!important;border:1px solid var(--rlb3-line,#d9e4eb)!important;border-radius:11px!important;background:var(--rlb3-surface-soft,#f8fbfd)!important}.rlb-mv-panel h4{margin:0 0 9px!important;font-size:10px!important;font-weight:850!important}.rlb-mv-list{display:grid!important;gap:6px!important}.rlb-mv-row{display:flex!important;justify-content:space-between!important;gap:12px!important;align-items:center!important;font-size:8.8px!important}.rlb-mv-row b{font-size:9px!important}.rlb-mv-bars{display:grid!important;grid-template-columns:repeat(7,minmax(0,1fr))!important;gap:5px!important;align-items:end!important;height:82px!important}.rlb-mv-bar{display:grid!important;grid-template-rows:1fr auto!important;gap:4px!important;height:100%!important;align-items:end!important}.rlb-mv-bar i{display:block!important;min-height:3px!important;border-radius:5px 5px 2px 2px!important;background:linear-gradient(180deg,#0b74de,#075fc7)!important}.rlb-mv-bar small{text-align:center!important;color:var(--rlb3-muted,#718596)!important;font-size:7px!important}.rlb-mv-foot{display:flex!important;justify-content:space-between!important;gap:12px!important;align-items:flex-start!important;margin-top:10px!important;padding-top:10px!important;border-top:1px solid var(--rlb3-line,#d9e4eb)!important;color:var(--rlb3-muted,#718596)!important;font-size:7.8px!important;line-height:1.45!important}.rlb-mv-loading,.rlb-mv-error{padding:16px!important;border:1px dashed var(--rlb3-line,#d9e4eb)!important;border-radius:10px!important;text-align:center!important;color:var(--rlb3-muted,#718596)!important;font-size:9px!important}
+      html[data-theme="dark"] #rlbPlatformValue.rlb-movement-dashboard{background:#0f1d29!important;border-color:#243746!important;color:#edf6fb!important}html[data-theme="dark"] .rlb-mv-card,html[data-theme="dark"] .rlb-mv-panel,html[data-theme="dark"] .rlb-mv-refresh{background:#122330!important;border-color:#243746!important;color:#edf6fb!important}html[data-theme="dark"] .rlb-mv-head p,html[data-theme="dark"] .rlb-mv-card span,html[data-theme="dark"] .rlb-mv-card small,html[data-theme="dark"] .rlb-mv-foot,html[data-theme="dark"] .rlb-mv-bar small{color:#8fa5b4!important}
+      @media(max-width:1050px){.rlb-mv-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important}.rlb-mv-lower{grid-template-columns:1fr 1fr!important}.rlb-mv-lower .rlb-mv-panel:last-child{grid-column:1/-1!important}}@media(max-width:700px){.rlb-mv-head{flex-direction:column!important}.rlb-mv-refresh{width:100%!important}.rlb-mv-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}.rlb-mv-lower{grid-template-columns:1fr!important}.rlb-mv-lower .rlb-mv-panel:last-child{grid-column:auto!important}}
+    `;
+    document.head.appendChild(st);
+  }
+
+  const num=v=>Number(v||0).toLocaleString('pt-BR');
+  const dec=v=>Number(v||0).toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1});
+
+  function buildMovementDashboard(){
+    const hero=$('#rlbInstitutionalHero');if(!hero)return false;
+    $('#rlbUsageGuide')?.remove();$('#rlbFunctionalIntelligenceV12')?.remove();$$('.rlb-command-center').forEach(x=>x.remove());
+    let section=$('#rlbPlatformValue');if(!section){section=document.createElement('section');hero.insertAdjacentElement('afterend',section)}
+    section.id='rlbPlatformValue';section.className='rlb-platform-value rlb-movement-dashboard';
+    section.innerHTML=`
+      <div class="rlb-mv-head"><div class="rlb-mv-head-copy"><span class="rlb-mv-kicker">Movimentação nacional monitorada</span><h3>Panorama real de licitações acompanhadas pelo Radar</h3><p>Indicadores calculados em tempo real sobre os registros efetivamente armazenados pelo monitor do Radar a partir do PNCP.</p></div><button type="button" class="rlb-mv-refresh" id="rlbMvRefresh">Atualizar dados</button></div>
+      <div id="rlbMvContent"><div class="rlb-mv-loading">Carregando indicadores reais da base de produção...</div></div>`;
+    $('#rlbMvRefresh',section)?.addEventListener('click',loadMovementMetrics);
+    return true;
+  }
+
+  async function loadMovementMetrics(){
+    const root=$('#rlbMvContent');if(!root)return;
+    root.innerHTML='<div class="rlb-mv-loading">Atualizando indicadores da base de produção...</div>';
+    try{
+      const r=await fetch('/api/movement-metrics',{credentials:'same-origin',headers:{accept:'application/json'},cache:'no-store'});const d=await r.json().catch(()=>({}));
+      if(!r.ok)throw new Error(d.error||'Não foi possível carregar os indicadores.');
+      const s=d.summary||{},states=Array.isArray(d.top_states)?d.top_states:[],mods=Array.isArray(d.top_modalities)?d.top_modalities:[],daily=Array.isArray(d.daily_7d)?d.daily_7d:[];
+      const max=Math.max(1,...daily.map(x=>Number(x.total||0)));
+      root.innerHTML=`
+        <div class="rlb-mv-grid">
+          <div class="rlb-mv-card"><span>Últimas 24h</span><strong>${num(s.last_24h)}</strong><small>publicações registradas</small></div>
+          <div class="rlb-mv-card"><span>Últimos 7 dias</span><strong>${num(s.last_7d)}</strong><small>registros monitorados</small></div>
+          <div class="rlb-mv-card"><span>Últimos 30 dias</span><strong>${num(s.last_30d)}</strong><small>movimentação monitorada</small></div>
+          <div class="rlb-mv-card"><span>Média diária</span><strong>${dec(s.avg_daily_30d)}</strong><small>registros/dia em 30 dias</small></div>
+          <div class="rlb-mv-card"><span>Propostas abertas</span><strong>${num(s.open_now)}</strong><small>com encerramento futuro</small></div>
+          <div class="rlb-mv-card"><span>Base monitorada</span><strong>${num(s.total_stored)}</strong><small>registros armazenados</small></div>
+        </div>
+        <div class="rlb-mv-lower">
+          <div class="rlb-mv-panel"><h4>UFs com maior volume • 30 dias</h4><div class="rlb-mv-list">${states.map(x=>`<div class="rlb-mv-row"><span>${String(x.uf||'N/I')}</span><b>${num(x.total)}</b></div>`).join('')||'<div class="rlb-mv-row"><span>Sem dados</span><b>—</b></div>'}</div></div>
+          <div class="rlb-mv-panel"><h4>Modalidades mais frequentes • 30 dias</h4><div class="rlb-mv-list">${mods.map(x=>`<div class="rlb-mv-row"><span>${String(x.name||'Não informada')}</span><b>${num(x.total)}</b></div>`).join('')||'<div class="rlb-mv-row"><span>Sem dados</span><b>—</b></div>'}</div></div>
+          <div class="rlb-mv-panel"><h4>Movimentação diária • últimos 7 dias</h4><div class="rlb-mv-bars">${daily.map(x=>`<div class="rlb-mv-bar" title="${String(x.day)}: ${num(x.total)}"><i style="height:${Math.max(4,Math.round((Number(x.total||0)/max)*60))}px"></i><small>${String(x.day)}</small></div>`).join('')}</div></div>
+        </div>
+        <div class="rlb-mv-foot"><span>Fonte: ${String(d.source||'Radar/PNCP')}</span><span>${String(d.scope||'')}</span></div>`;
+    }catch(e){root.innerHTML=`<div class="rlb-mv-error">${String(e.message||'Falha temporária ao carregar os indicadores.')}</div>`}
   }
 
   function refineCopy(){
-    const hero=$('#rlbInstitutionalHero');
-    if(!hero)return;
-    const eye=hero.querySelector('.rlb-hero-eyebrow');
-    const h=hero.querySelector('h1');
-    const p=hero.querySelector('p');
+    const hero=$('#rlbInstitutionalHero');if(!hero)return;
+    const eye=hero.querySelector('.rlb-hero-eyebrow'),h=hero.querySelector('h1'),p=hero.querySelector('p');
     if(eye)eye.innerHTML='<i></i> inteligência para oportunidades públicas';
     if(h)h.textContent='Descubra, acompanhe e organize oportunidades de contratação pública em um só ambiente.';
     if(p)p.textContent='Use dados oficiais para pesquisar licitações, acompanhar novas publicações e chegar mais rápido às oportunidades relevantes para sua atuação.';
   }
 
   function install(){
-    installThemeControl();
-    replaceUsageGuide();
-    refineCopy();
-    setTheme(safeTheme(),false);
+    installThemeControl();installDashboardStyle();refineCopy();buildMovementDashboard();loadMovementMetrics();
+    setInterval(loadMovementMetrics,240000);
   }
 
-  const initial=safeTheme();
-  document.documentElement.dataset.theme=initial;
+  const initial=safeTheme();document.documentElement.dataset.theme=initial;
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});else install();
 })();
