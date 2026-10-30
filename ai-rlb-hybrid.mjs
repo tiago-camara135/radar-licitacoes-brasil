@@ -1,6 +1,14 @@
 import crypto from 'node:crypto';
 
-const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-3.8-flash';
+const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-3.5-flash-lite';
+const GEMINI_FALLBACK_MODELS = [...new Set([
+  GEMINI_MODEL,
+  ...String(process.env.GEMINI_FALLBACK_MODELS || 'gemini-3.6-flash,gemini-3.8-flash').split(',').map(x=>x.trim()).filter(Boolean),
+  'gemini-3.5-flash-lite',
+  'gemini-3.6-flash',
+  'gemini-3.8-flash'
+])];
+const FORCE_GEMINI = String(process.env.AI_RLB_FORCE_GEMINI || 'true').toLowerCase() !== 'false';
 const GROQ_MODEL = process.env.GROQ_MODEL || 'qwen/qwen3.8-27b';
 const SECRET = process.env.AI_RLB_SECRET || process.env.ADMIN_PASSWORD || process.env.DATABASE_URL || '';
 const CACHE = new Map();
@@ -44,19 +52,40 @@ async function storedProvider(pool){
   if(process.env.GEMINI_API_KEY)return {provider:'gemini',apiKey:process.env.GEMINI_API_KEY,model:GEMINI_MODEL,source:'env'};
   if(process.env.GROQ_API_KEY)return {provider:'groq',apiKey:process.env.GROQ_API_KEY,model:GROQ_MODEL,source:'env'};
   const r=await pool.query('SELECT provider,api_key_cipher,model,enabled,updated_at FROM ai_provider_settings WHERE id=1 LIMIT 1');
-  const row=r.rows[0];if(!row?.enabled)return null;const apiKey=unseal(row.api_key_cipher);if(!apiKey)return null;return {provider:row.provider,apiKey,model:row.model,source:'database',updated_at:row.updated_at};
+  const row=r.rows[0];if(!row?.enabled)return null;const apiKey=unseal(row.api_key_cipher);if(!apiKey)return null;
+  return {provider:row.provider,apiKey,model:row.provider==='gemini'?GEMINI_MODEL:row.model,source:'database',updated_at:row.updated_at};
 }
-function publicProvider(p){return p?{configured:true,provider:p.provider,model:p.model,source:p.source,free_tier:true}:{configured:false,provider:null,model:null,free_tier:true}}
+function publicProvider(p){return p?{configured:true,provider:p.provider,model:p.actualModel||p.model,source:p.source,free_tier:true,forced:p.provider==='gemini'&&FORCE_GEMINI}:{configured:false,provider:null,model:null,free_tier:true}}
 
-async function geminiCall(apiKey,messages,{maxTokens=1200,temperature=.35}={}){
+async function geminiOnce(p,model,messages,{maxTokens=1200,temperature=.35,jsonMode=false}={}){
   const system=messages.find(x=>x.role==='system')?.content||'';
   const contents=messages.filter(x=>x.role!=='system').map(x=>({role:x.role==='assistant'?'model':'user',parts:[{text:String(x.content||'')}]}));
-  const r=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(GEMINI_MODEL)}:generateContent`,{
-    method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':apiKey},signal:AbortSignal.timeout(25000),
-    body:JSON.stringify({systemInstruction:{parts:[{text:system}]},contents,generationConfig:{temperature,maxOutputTokens:maxTokens,topP:.9}})
+  const generationConfig={temperature,maxOutputTokens:maxTokens,topP:.9};
+  if(jsonMode)generationConfig.responseMimeType='application/json';
+  const r=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,{
+    method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':p.apiKey},signal:AbortSignal.timeout(12000),
+    body:JSON.stringify({systemInstruction:{parts:[{text:system}]},contents,generationConfig})
   });
-  const data=await r.json().catch(()=>({}));if(!r.ok)throw Object.assign(new Error(data?.error?.message||`Gemini HTTP ${r.status}`),{providerStatus:r.status});
-  const text=(data.candidates?.[0]?.content?.parts||[]).map(x=>x.text||'').join('').trim();if(!text)throw new Error('Gemini não retornou texto.');return text;
+  const data=await r.json().catch(()=>({}));
+  if(!r.ok)throw Object.assign(new Error(data?.error?.message||`Gemini HTTP ${r.status}`),{providerStatus:r.status,model});
+  const text=(data.candidates?.[0]?.content?.parts||[]).map(x=>x.text||'').join('').trim();
+  if(!text)throw Object.assign(new Error('Gemini não retornou texto.'),{model});
+  p.actualModel=model;
+  return text;
+}
+async function geminiCall(p,messages,opts={}){
+  let last=null;
+  for(const model of GEMINI_FALLBACK_MODELS){
+    try{return await geminiOnce(p,model,messages,opts)}
+    catch(e){
+      last=e;
+      if(e?.providerStatus===401||e?.providerStatus===403)break;
+      console.warn('IA RLB Gemini model attempt failed:',model,e?.message||e);
+    }
+  }
+  const err=last||new Error('Nenhum modelo Gemini respondeu.');
+  err.attemptedModels=GEMINI_FALLBACK_MODELS;
+  throw err;
 }
 async function groqCall(apiKey,messages,{maxTokens=1200,temperature=.35}={}){
   const r=await fetch('https://api.groq.com/openai/v1/chat/completions',{
@@ -66,7 +95,7 @@ async function groqCall(apiKey,messages,{maxTokens=1200,temperature=.35}={}){
   const data=await r.json().catch(()=>({}));if(!r.ok)throw Object.assign(new Error(data?.error?.message||`Groq HTTP ${r.status}`),{providerStatus:r.status});
   const text=String(data.choices?.[0]?.message?.content||'').trim();if(!text)throw new Error('Groq não retornou texto.');return text;
 }
-async function providerCall(p,messages,opts){return p.provider==='gemini'?geminiCall(p.apiKey,messages,opts):groqCall(p.apiKey,messages,opts)}
+async function providerCall(p,messages,opts){return p.provider==='gemini'?geminiCall(p,messages,opts):groqCall(p.apiKey,messages,opts)}
 
 async function validateProvider(provider,apiKey){
   if(!['gemini','groq'].includes(provider))throw Object.assign(new Error('Provedor inválido.'),{status:400});
@@ -76,16 +105,20 @@ async function validateProvider(provider,apiKey){
     return {model:GROQ_MODEL};
   }
   const r=await fetch('https://generativelanguage.googleapis.com/v1beta/models',{headers:{'x-goog-api-key':apiKey},signal:AbortSignal.timeout(12000)});if(!r.ok)throw Object.assign(new Error('A chave do Gemini não foi aceita.'),{status:400});
-  return {model:GEMINI_MODEL};
+  const probe={provider:'gemini',apiKey,model:GEMINI_MODEL};
+  try{
+    await geminiCall(probe,[{role:'system',content:'Responda de forma mínima.'},{role:'user',content:'Responda apenas OK.'}],{maxTokens:16,temperature:0});
+  }catch(e){throw Object.assign(new Error(`A chave foi aceita, mas nenhum modelo Gemini respondeu agora: ${e?.message||'indisponível'}`),{status:503});}
+  return {model:probe.actualModel||GEMINI_MODEL};
 }
 export async function hybridAdminStatus(pool){return publicProvider(await storedProvider(pool))}
 export async function configureHybridProvider(pool,userId,body={}){
   const provider=String(body.provider||'').toLowerCase(),apiKey=String(body.api_key||'').trim();const valid=await validateProvider(provider,apiKey);const cipher=seal(apiKey);
   await pool.query(`INSERT INTO ai_provider_settings(id,provider,api_key_cipher,model,enabled,updated_by,updated_at) VALUES(1,$1,$2,$3,TRUE,$4,NOW()) ON CONFLICT(id) DO UPDATE SET provider=EXCLUDED.provider,api_key_cipher=EXCLUDED.api_key_cipher,model=EXCLUDED.model,enabled=TRUE,updated_by=EXCLUDED.updated_by,updated_at=NOW()`,[provider,cipher,valid.model,userId]);
-  return {configured:true,operational:true,provider,model:valid.model,source:'database',free_tier:true,message:`Motor conversacional gratuito ${provider==='gemini'?'Gemini':'Groq'} ativado.`};
+  return {configured:true,operational:true,provider,model:valid.model,source:'database',free_tier:true,message:`Motor conversacional gratuito ${provider==='gemini'?'Gemini':'Groq'} ativado e testado.`};
 }
 export async function removeHybridProvider(pool){await pool.query('DELETE FROM ai_provider_settings WHERE id=1');return {configured:false,free_tier:true,message:'Motor externo gratuito removido. A IA RLB continuará com o modo local de contingência.'}}
-export async function hybridStatus(pool,base={}){const p=await storedProvider(pool);return {...base,hybrid_ai:Boolean(p),provider:p?.provider||null,provider_model:p?.model||null,free_provider:true}}
+export async function hybridStatus(pool,base={}){const p=await storedProvider(pool);return {...base,hybrid_ai:Boolean(p),provider:p?.provider||null,provider_model:p?.actualModel||p?.model||null,free_provider:true,gemini_forced:Boolean(p?.provider==='gemini'&&FORCE_GEMINI)}}
 
 function entities(s){return String(s||'').replace(/&nbsp;/gi,' ').replace(/&amp;/gi,'&').replace(/&quot;/gi,'"').replace(/&#39;/gi,"'").replace(/&lt;/gi,'<').replace(/&gt;/gi,'>').replace(/&#(\d+);/g,(_,n)=>String.fromCharCode(Number(n))).replace(/&#x([0-9a-f]+);/gi,(_,n)=>String.fromCharCode(parseInt(n,16)))}
 function htmlToText(html){return entities(String(html||'').replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi,' ').replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi,' ').replace(/<(br|\/p|\/div|\/li|\/h\d|\/tr|\/section|\/article)>/gi,'\n').replace(/<[^>]+>/g,' ')).replace(/\r/g,'').replace(/[\t ]+/g,' ').replace(/\n[ \t]+/g,'\n').replace(/\n{3,}/g,'\n\n').trim()}
@@ -110,7 +143,7 @@ Regras:
 - likely_articles só pode conter artigos quando você tiver boa confiança; caso contrário, deixe vazio.
 - Nunca invente fatos, artigos, acórdãos ou prazos.`}
 function historyForModel(history){return history.slice(-10).map(x=>({role:x.role==='assistant'?'assistant':'user',content:clean(x.content,2500)}))}
-async function plan(p,message,history){const msgs=[{role:'system',content:plannerSystem()},...historyForModel(history),{role:'user',content:message}];const raw=await providerCall(p,msgs,{maxTokens:500,temperature:.15});return extractJson(raw)}
+async function plan(p,message,history){const msgs=[{role:'system',content:plannerSystem()},...historyForModel(history),{role:'user',content:message}];const raw=await providerCall(p,msgs,{maxTokens:650,temperature:.15,jsonMode:true});return extractJson(raw)}
 
 async function collectEvidence(plan,message){const hits=[],sources=[];const query=clean(plan?.normalized_question||message,1000),terms=Array.isArray(plan?.search_terms)?plan.search_terms.map(x=>clean(x,100)):[],articles=Array.isArray(plan?.likely_articles)?plan.likely_articles.map(x=>String(x).replace(/\D/g,'')).filter(Boolean):[];
   try{const law=await fetchLaw();const sel=rankSegments(lawSegments(law.text),query,terms,articles);for(const x of sel)hits.push({source:law.src.title,url:law.src.url,label:`Art. ${x.article}`,text:x.text});if(sel.length)sources.push({title:law.src.title,url:law.src.url})}catch{}
@@ -139,7 +172,8 @@ export async function runHybridChat({pool,userId,body,document,fallback}){
   const message=clean(body.message,6000);if(!message)return fallback({pool,userId,body,document});
   let conv=await getConversation(pool,userId,Number(body.conversation_id)||null);if(!conv)conv=await createConversation(pool,userId,message);const history=await recent(pool,userId,conv.id);const used=await usageToday(pool,userId);
   try{
-    const pl=await plan(p,message,history);if(!pl)return fallback({pool,userId,body:{...body,conversation_id:conv.id},document});
+    const pl=await plan(p,message,history);
+    if(!pl)throw new Error('O Gemini não retornou um plano conversacional válido.');
     let answer='',sources=[],interaction='hybrid_conversation';
     if(pl.mode==='social'){answer=clean(pl.direct_answer||'Oi! Pode falar comigo normalmente. Como posso ajudar?',6000);interaction='social'}
     else if(pl.mode==='clarify'){answer=clean(pl.clarification_question||'Quero entender exatamente o que você quis dizer antes de responder. Pode detalhar um pouco?',6000);interaction='clarification'}
@@ -150,6 +184,12 @@ export async function runHybridChat({pool,userId,body,document,fallback}){
       else{answer=await synthesize(p,message,history,evidence,pl);interaction='hybrid_procurement'}
     }
     await persist(pool,userId,conv,message,answer,sources,null);
-    return {conversation_id:conv.id,answer,sources,suggestions:interaction==='hybrid_procurement'?['Explique mais simples','Mostre a base legal','Aplique ao meu caso']:[],used_today:used+1,daily_limit:200,mode:'hybrid_free_ai_official_sources',interaction_type:interaction,provider:p.provider,model:p.model};
-  }catch(e){console.warn('IA RLB hybrid fallback:',p.provider,e?.message||e);return fallback({pool,userId,body:{...body,conversation_id:conv.id},document});}
+    return {conversation_id:conv.id,answer,sources,suggestions:interaction==='hybrid_procurement'?['Explique mais simples','Mostre a base legal','Aplique ao meu caso']:[],used_today:used+1,daily_limit:200,mode:'hybrid_free_ai_official_sources',interaction_type:interaction,provider:p.provider,model:p.actualModel||p.model};
+  }catch(e){
+    if(p.provider==='gemini'&&FORCE_GEMINI){
+      console.error('IA RLB Gemini forced failure:',JSON.stringify({message:e?.message||'unknown',status:e?.providerStatus||null,model:e?.model||p.actualModel||p.model,attempted:e?.attemptedModels||GEMINI_FALLBACK_MODELS}));
+      return {conversation_id:conv.id,answer:'O Gemini está temporariamente indisponível ou atingiu o limite gratuito neste momento. A IA RLB está configurada para não substituir a resposta pelo motor local, então nenhuma resposta jurídica foi inventada. Tente novamente em instantes.',sources:[],suggestions:[],used_today:used,daily_limit:200,mode:'gemini_unavailable',interaction_type:'provider_error',provider:'gemini',model:p.actualModel||p.model,error_code:'gemini_unavailable'};
+    }
+    console.warn('IA RLB hybrid fallback:',p.provider,e?.message||e);return fallback({pool,userId,body:{...body,conversation_id:conv.id},document});
+  }
 }
