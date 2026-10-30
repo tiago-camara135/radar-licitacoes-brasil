@@ -21,6 +21,7 @@ const institutionalV2Script = originalReadFileSync(new URL('./institutional-v2.j
 const themeSwitchV3Script = originalReadFileSync(new URL('./theme-switch-v3.js', import.meta.url), 'utf8');
 const intelligenceStripV4Script = originalReadFileSync(new URL('./intelligence-strip-v4.js', import.meta.url), 'utf8');
 const aiRlbScript = originalReadFileSync(new URL('./ai-rlb.js', import.meta.url), 'utf8');
+const aiRlbConversationUiScript = originalReadFileSync(new URL('./ai-rlb-conversation-ui.js', import.meta.url), 'utf8');
 
 const iconSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" role="img" aria-label="RLB">
 <defs>
@@ -50,7 +51,7 @@ function applyBrand(html) {
   out = out.replace(/<meta name="theme-color" content="[^"]*">/i, '<meta name="theme-color" content="#102F4B">');
   out = out.replace(/<div class="brand-mark" aria-hidden="true"><svg[\s\S]*?<\/svg><\/div>/, `<div class="brand-mark" aria-hidden="true"><img src="${iconData}" alt=""></div>`);
   out = out.replace('</head>', `<link rel="icon" type="image/svg+xml" href="${iconData}"><style id="vivid-theme">${vividTheme}</style><style id="institutional-theme">${institutionalTheme}</style><style id="institutional-v2-theme">${institutionalV2Theme}</style><style id="theme-switch-v3">${themeSwitchV3}</style><style id="intelligence-strip-v4">${intelligenceStripV4}</style><style id="ai-rlb-theme">${aiRlbTheme}</style><style id="ai-rlb-admin-theme">${aiRlbAdminTheme}</style><style id="rlb-icon-style">${iconStyle}</style></head>`);
-  out = out.replace('</body>', `<script id="verified-pncp-script">${verifiedPncpScript}</script><script id="chamber-filter-script">${chamberFilterScript}</script><script id="live-feed-script">${liveFeedScript}</script><script id="institutional-layout-script">${institutionalLayoutScript}</script><script id="institutional-v2-script">${institutionalV2Script}</script><script id="theme-switch-v3-script">${themeSwitchV3Script}</script><script id="intelligence-strip-v4-script">${intelligenceStripV4Script}</script><script id="ai-rlb-script">${aiRlbScript}</script></body>`);
+  out = out.replace('</body>', `<script id="verified-pncp-script">${verifiedPncpScript}</script><script id="chamber-filter-script">${chamberFilterScript}</script><script id="live-feed-script">${liveFeedScript}</script><script id="institutional-layout-script">${institutionalLayoutScript}</script><script id="institutional-v2-script">${institutionalV2Script}</script><script id="theme-switch-v3-script">${themeSwitchV3Script}</script><script id="intelligence-strip-v4-script">${intelligenceStripV4Script}</script><script id="ai-rlb-script">${aiRlbScript}</script><script id="ai-rlb-conversation-ui-script">${aiRlbConversationUiScript}</script></body>`);
   return out;
 }
 
