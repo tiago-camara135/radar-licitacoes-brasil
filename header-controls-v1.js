@@ -24,36 +24,13 @@
 
   const sun=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>`;
   const moon=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79Z"/></svg>`;
-
   function preferredTheme(){try{const saved=localStorage.getItem(STORAGE_KEY);if(saved==='light'||saved==='dark')return saved}catch{}return window.matchMedia?.('(prefers-color-scheme: dark)').matches?'dark':'light'}
   function applyTheme(theme,persist=true){const next=theme==='dark'?'dark':'light';document.documentElement.dataset.theme=next;document.body?.setAttribute('data-theme',next);$$('#rlbThemeControl [data-rlb-theme]').forEach(btn=>btn.setAttribute('aria-pressed',String(btn.dataset.rlbTheme===next)));const meta=$('meta[name="theme-color"]');if(meta)meta.setAttribute('content',next==='dark'?'#08131e':'#f8fafc');if(persist){try{localStorage.setItem(STORAGE_KEY,next)}catch{}}}
   function removeTopShortcuts(){const q=$('#rlbQuickAccess');if(q){q.classList.remove('is-visible');q.setAttribute('aria-hidden','true')}$('#rlbQuickNotifications')?.setAttribute('hidden','');$('#rlbQuickAdmin')?.setAttribute('hidden','')}
-
-  function installThemeControl(){
-    const top=$('.top');if(!top)return false;
-    let control=$('#rlbThemeControl');
-    if(!control){
-      control=document.createElement('div');control.id='rlbThemeControl';control.setAttribute('role','group');control.setAttribute('aria-label','Tema da interface');
-      control.innerHTML=`<button type="button" data-rlb-theme="light" aria-pressed="false" aria-label="Usar tema claro"><span class="rlb-theme-icon">${sun}</span><span class="rlb-theme-label">Claro</span></button><button type="button" data-rlb-theme="dark" aria-pressed="false" aria-label="Usar tema escuro"><span class="rlb-theme-icon">${moon}</span><span class="rlb-theme-label">Escuro</span></button>`;
-      control.addEventListener('click',e=>{const btn=e.target.closest('[data-rlb-theme]');if(btn)applyTheme(btn.dataset.rlbTheme,true)});
-    }
-    const who=$('#who');
-    if(control.parentElement!==top){if(who)top.insertBefore(control,who);else top.appendChild(control)}
-    else if(who&&control.nextElementSibling!==who)top.insertBefore(control,who);
-    applyTheme(preferredTheme(),false);return true;
-  }
-
+  function installThemeControl(){const top=$('.top');if(!top)return false;let control=$('#rlbThemeControl');if(!control){control=document.createElement('div');control.id='rlbThemeControl';control.setAttribute('role','group');control.setAttribute('aria-label','Tema da interface');control.innerHTML=`<button type="button" data-rlb-theme="light" aria-pressed="false" aria-label="Usar tema claro"><span class="rlb-theme-icon">${sun}</span><span class="rlb-theme-label">Claro</span></button><button type="button" data-rlb-theme="dark" aria-pressed="false" aria-label="Usar tema escuro"><span class="rlb-theme-icon">${moon}</span><span class="rlb-theme-label">Escuro</span></button>`;control.addEventListener('click',e=>{const btn=e.target.closest('[data-rlb-theme]');if(btn)applyTheme(btn.dataset.rlbTheme,true)})}const who=$('#who');if(control.parentElement!==top){if(who)top.insertBefore(control,who);else top.appendChild(control)}else if(who&&control.nextElementSibling!==who)top.insertBefore(control,who);applyTheme(preferredTheme(),false);return true}
   function stabilize(){ensureStyle();removeTopShortcuts();installThemeControl()}
-  function install(){
-    stabilize();
-    [100,300,700,1500,3000,6000].forEach(ms=>setTimeout(stabilize,ms));
-    const observer=new MutationObserver(()=>{removeTopShortcuts();if(!$('#rlbThemeControl')||$('#rlbThemeControl')?.parentElement!==$('.top'))installThemeControl()});
-    observer.observe(document.documentElement,{childList:true,subtree:true});
-    setInterval(stabilize,5000);
-    $('#authBtn')?.addEventListener('click',()=>[250,700,1400,2500,5000].forEach(ms=>setTimeout(stabilize,ms)));
-    window.addEventListener('pageshow',stabilize);window.addEventListener('focus',stabilize);document.addEventListener('visibilitychange',()=>{if(!document.hidden)stabilize()});
-    window.RLBHeaderControlsStabilize=stabilize;
-  }
+  window.RLBHeaderControlsStabilize=stabilize;
+  function install(){stabilize();[100,300,700,1500,3000,6000].forEach(ms=>setTimeout(stabilize,ms));const observer=new MutationObserver(()=>{removeTopShortcuts();if(!$('#rlbThemeControl')||$('#rlbThemeControl')?.parentElement!==$('.top'))installThemeControl()});observer.observe(document.documentElement,{childList:true,subtree:true});setInterval(stabilize,5000);$('#authBtn')?.addEventListener('click',()=>[250,700,1400,2500,5000].forEach(ms=>setTimeout(stabilize,ms)));window.addEventListener('pageshow',stabilize);window.addEventListener('focus',stabilize);document.addEventListener('visibilitychange',()=>{if(!document.hidden)stabilize()})}
   const initial=preferredTheme();document.documentElement.dataset.theme=initial;
   if(document.readyState==='complete')install();else window.addEventListener('load',install,{once:true});
 })();
