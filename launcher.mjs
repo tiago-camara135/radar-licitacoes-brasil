@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import http from 'node:http';
 import { syncBuiltinESMExports } from 'node:module';
 import { initLiveMonitor, handleLiveRoute } from './live-monitor-v2.mjs';
+import { initAiRlb, handleAiRlbRoute } from './ai-rlb-router.mjs';
 
 const originalReadFileSync = fs.readFileSync;
 const originalCreateServer = http.createServer.bind(http);
@@ -10,6 +11,7 @@ const institutionalTheme = originalReadFileSync(new URL('./institutional-theme.c
 const institutionalV2Theme = originalReadFileSync(new URL('./institutional-v2.css', import.meta.url), 'utf8');
 const themeSwitchV3 = originalReadFileSync(new URL('./theme-switch-v3.css', import.meta.url), 'utf8');
 const intelligenceStripV4 = originalReadFileSync(new URL('./intelligence-strip-v4.css', import.meta.url), 'utf8');
+const aiRlbTheme = originalReadFileSync(new URL('./ai-rlb.css', import.meta.url), 'utf8');
 const verifiedPncpScript = originalReadFileSync(new URL('./verified-pncp-links.js', import.meta.url), 'utf8');
 const chamberFilterScript = originalReadFileSync(new URL('./chamber-filter.js', import.meta.url), 'utf8');
 const liveFeedScript = originalReadFileSync(new URL('./live-feed.js', import.meta.url), 'utf8');
@@ -17,6 +19,7 @@ const institutionalLayoutScript = originalReadFileSync(new URL('./institutional-
 const institutionalV2Script = originalReadFileSync(new URL('./institutional-v2.js', import.meta.url), 'utf8');
 const themeSwitchV3Script = originalReadFileSync(new URL('./theme-switch-v3.js', import.meta.url), 'utf8');
 const intelligenceStripV4Script = originalReadFileSync(new URL('./intelligence-strip-v4.js', import.meta.url), 'utf8');
+const aiRlbScript = originalReadFileSync(new URL('./ai-rlb.js', import.meta.url), 'utf8');
 
 const iconSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" role="img" aria-label="RLB">
 <defs>
@@ -45,8 +48,8 @@ function applyBrand(html) {
   let out = String(html);
   out = out.replace(/<meta name="theme-color" content="[^"]*">/i, '<meta name="theme-color" content="#102F4B">');
   out = out.replace(/<div class="brand-mark" aria-hidden="true"><svg[\s\S]*?<\/svg><\/div>/, `<div class="brand-mark" aria-hidden="true"><img src="${iconData}" alt=""></div>`);
-  out = out.replace('</head>', `<link rel="icon" type="image/svg+xml" href="${iconData}"><style id="vivid-theme">${vividTheme}</style><style id="institutional-theme">${institutionalTheme}</style><style id="institutional-v2-theme">${institutionalV2Theme}</style><style id="theme-switch-v3">${themeSwitchV3}</style><style id="intelligence-strip-v4">${intelligenceStripV4}</style><style id="rlb-icon-style">${iconStyle}</style></head>`);
-  out = out.replace('</body>', `<script id="verified-pncp-script">${verifiedPncpScript}</script><script id="chamber-filter-script">${chamberFilterScript}</script><script id="live-feed-script">${liveFeedScript}</script><script id="institutional-layout-script">${institutionalLayoutScript}</script><script id="institutional-v2-script">${institutionalV2Script}</script><script id="theme-switch-v3-script">${themeSwitchV3Script}</script><script id="intelligence-strip-v4-script">${intelligenceStripV4Script}</script></body>`);
+  out = out.replace('</head>', `<link rel="icon" type="image/svg+xml" href="${iconData}"><style id="vivid-theme">${vividTheme}</style><style id="institutional-theme">${institutionalTheme}</style><style id="institutional-v2-theme">${institutionalV2Theme}</style><style id="theme-switch-v3">${themeSwitchV3}</style><style id="intelligence-strip-v4">${intelligenceStripV4}</style><style id="ai-rlb-theme">${aiRlbTheme}</style><style id="rlb-icon-style">${iconStyle}</style></head>`);
+  out = out.replace('</body>', `<script id="verified-pncp-script">${verifiedPncpScript}</script><script id="chamber-filter-script">${chamberFilterScript}</script><script id="live-feed-script">${liveFeedScript}</script><script id="institutional-layout-script">${institutionalLayoutScript}</script><script id="institutional-v2-script">${institutionalV2Script}</script><script id="theme-switch-v3-script">${themeSwitchV3Script}</script><script id="intelligence-strip-v4-script">${intelligenceStripV4Script}</script><script id="ai-rlb-script">${aiRlbScript}</script></body>`);
   return out;
 }
 
@@ -63,13 +66,14 @@ http.createServer = function patchedCreateServer(listener) {
   return originalCreateServer(async (req, res) => {
     try {
       const url = new URL(req.url || '/', 'http://localhost');
+      if (await handleAiRlbRoute(req, res, url)) return;
       if (await handleLiveRoute(req, res, url)) return;
     } catch (e) {
-      console.error('live route error:', e?.message || e);
+      console.error('launcher route error:', e?.message || e);
       if (!res.headersSent) {
         res.statusCode = 500;
         res.setHeader('Content-Type', 'application/json; charset=utf-8');
-        return res.end(JSON.stringify({ error: 'Falha temporária no monitor ao vivo.' }));
+        return res.end(JSON.stringify({ error: 'Falha temporária no serviço.' }));
       }
       try { return res.end(); } catch {}
     }
@@ -78,5 +82,6 @@ http.createServer = function patchedCreateServer(listener) {
 };
 
 syncBuiltinESMExports();
+await initAiRlb();
 await initLiveMonitor();
 await import('./server.mjs');
