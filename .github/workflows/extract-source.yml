@@ -1,0 +1,36 @@
+name: Extract Radar source
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/extract-source.yml'
+      - 'radar-app.tar.gz'
+
+permissions:
+  contents: write
+
+jobs:
+  extract:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Extract application source
+        run: |
+          rm -rf app
+          mkdir -p app
+          tar -xzf radar-app.tar.gz -C app
+
+      - name: Commit extracted source
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app
+          if git diff --cached --quiet; then
+            echo "No source changes to commit."
+          else
+            git commit -m "Extract Radar application source"
+            git push
+          fi
