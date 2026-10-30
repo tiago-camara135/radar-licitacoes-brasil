@@ -60,7 +60,7 @@ async function latest(limit=60){
   return r.rows.map(row=>({...row.raw,_detectedAt:new Date(row.detected_at).toISOString(),_pncpUrl:row.pncp_url||pncpUrl(row.raw||{}),_originUrl:row.origin_url||originUrl(row.raw||{}),_liveMonitor:true}));
 }
 
-function status(){return {enabled:true,version:'5.0',source:'PNCP',storage:pool?'postgresql':'unavailable',interval_seconds:90,running,baseline_completed:!firstScan,last_scan_at:lastScanAt,last_success_at:lastSuccessAt,last_detected_at:lastDetectedAt,last_new_count:lastNewCount,total_stored:totalStored,subscribers:subscribers.size,consecutive_failures:consecutiveFailures,last_error:lastError,live:{modalities_per_cycle:14,page_budget:1}}}
+function status(){return {enabled:true,version:'5.1',source:'PNCP',storage:pool?'postgresql':'unavailable',interval_seconds:90,running,baseline_completed:!firstScan,last_scan_at:lastScanAt,last_success_at:lastSuccessAt,last_detected_at:lastDetectedAt,last_new_count:lastNewCount,total_stored:totalStored,subscribers:subscribers.size,consecutive_failures:consecutiveFailures,last_error:lastError,live:{modalities_per_cycle:14,page_budget:1,concurrency:3}}}
 function broadcast(event,data){const packet=`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;for(const res of [...subscribers]){try{res.write(packet)}catch{subscribers.delete(res)}}}
 function schedule(startedAt=Date.now()){if(timer)clearTimeout(timer);const elapsed=Date.now()-startedAt;const delay=Math.max(5_000,CYCLE_MS-elapsed);timer=setTimeout(scan,delay);timer.unref?.()}
 
@@ -69,7 +69,7 @@ async function scan(){
   const startedAt=Date.now();running=true;lastScanAt=new Date().toISOString();
   try{
     await initStorage();const today=new Date();
-    const result=await fetchPncpRange({startDate:today,endDate:today,filters:{},codes:PNCP_MODALITY_CODES,maxPagesPerModality:1,concurrency:1});
+    const result=await fetchPncpRange({startDate:today,endDate:today,filters:{},codes:PNCP_MODALITY_CODES,maxPagesPerModality:1,concurrency:3});
     if(result.successfulModalities===0)throw new Error(`PNCP indisponível: ${result.errors.slice(0,3).map(x=>x.message).join(' | ')}`);
     const warmup=firstScan,fresh=await persist(result.items,{historical:warmup});
     lastSuccessAt=new Date().toISOString();consecutiveFailures=0;lastError=result.errors.length?`${result.errors.length} modalidade(s) temporariamente indisponíveis`:null;lastNewCount=warmup?0:fresh.length;
