@@ -1,19 +1,24 @@
-import fs from 'node:fs';
+import http from 'node:http';
 import { syncBuiltinESMExports } from 'node:module';
+import { handleMovementMetrics } from './movement-metrics-v1.mjs';
 
-const nativeReadFileSync = fs.readFileSync.bind(fs);
-const intelligenceCss = nativeReadFileSync(new URL('./theme-functional-v14.css', import.meta.url), 'utf8');
-const intelligenceJs = nativeReadFileSync(new URL('./theme-functional-v14.js', import.meta.url), 'utf8');
+const nativeCreateServer=http.createServer.bind(http);
 
-fs.readFileSync = function rlbV10ReadFileSync(path, ...args) {
-  const value = path instanceof URL ? path.pathname : String(path);
-  const html = nativeReadFileSync(path, ...args);
-  if (typeof html !== 'string') return html;
-  if (value.endsWith('/app-professional.html') || value.endsWith('\\app-professional.html')) {
-    const finalLayer = `<script id="rlb-functional-v14-final">window.addEventListener('load',()=>{try{const old=document.getElementById('rlb-functional-v14-style');if(old)old.remove();const st=document.createElement('style');st.id='rlb-functional-v14-style';st.textContent=${JSON.stringify(intelligenceCss)};document.head.appendChild(st);${intelligenceJs}}catch(e){console.error('RLB functional V14 final:',e)}},{once:true});</script>`;
-    return html.replace('</body>', `${finalLayer}</body>`);
-  }
-  return html;
+http.createServer=function rlbV10CreateServer(listener){
+  return nativeCreateServer(async(req,res)=>{
+    try{
+      const url=new URL(req.url||'/','http://localhost');
+      if(await handleMovementMetrics(req,res,url))return;
+    }catch(e){
+      console.error('movement metrics gateway error:',e?.message||e);
+      if(!res.headersSent){
+        res.statusCode=500;
+        res.setHeader('Content-Type','application/json; charset=utf-8');
+        return res.end(JSON.stringify({error:'Falha temporária nos indicadores.'}));
+      }
+    }
+    return listener(req,res);
+  });
 };
 
 syncBuiltinESMExports();
