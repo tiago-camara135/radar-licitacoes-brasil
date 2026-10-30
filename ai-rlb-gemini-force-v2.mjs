@@ -1,4 +1,6 @@
 import crypto from 'node:crypto';
+import mammoth from 'mammoth';
+import * as XLSX from 'xlsx';
 
 const SECRET = process.env.AI_RLB_SECRET || process.env.ADMIN_PASSWORD || process.env.DATABASE_URL || '';
 const CACHE = new Map();
@@ -10,13 +12,14 @@ const MODEL_CANDIDATES = () => [...new Set([
   'gemini-3.8-flash',
   'gemini-3.6-flash',
   process.env.GEMINI_MODEL,
-  'gemini-flash-lite-latest'
+  'gemini-3.1-flash-lite'
 ].filter(Boolean))];
 
 const SOURCES = [
   { title: 'Senado Federal — Lei nº 14.133/2021', url: 'https://legis.senado.leg.br/norma/33382036/publicacao/33383820', legal: true },
   { title: 'Câmara dos Deputados — Lei nº 14.133/2021', url: 'https://www2.camara.leg.br/legin/fed/lei/2021/lei-14133-1-abril-2021-791222-norma-pl.html', legal: true },
-  { title: 'PNCP — Perguntas e Respostas', url: 'https://www.gov.br/pncp/pt-br/pncp/perguntas-e-respostas/', legal: false }
+  { title: 'PNCP — Perguntas e Respostas', url: 'https://www.gov.br/pncp/pt-br/pncp/perguntas-e-respostas/', legal: false },
+  { title: 'Compras.gov.br — Manuais', url: 'https://www.gov.br/compras/pt-br/acesso-a-informacao/manuais', legal: false }
 ];
 
 const STOP = new Set('a o os as um uma uns umas de da do das dos em no na nos nas por para com sem e ou que qual quais como quando onde quem isso isto esse essa esses essas ao aos se sua seu suas seus sobre entre mais menos muito muita tambem ja ser estar ter tem pode podem deve devem foi sao eu voce voces meu minha'.split(/\s+/));
@@ -58,7 +61,7 @@ async function fetchText(url) {
   const hit = CACHE.get(url);
   if (hit && Date.now() - hit.at < 6 * 60 * 60 * 1000) return hit.text;
   const r = await fetch(url, {
-    headers: { 'User-Agent': 'RadarLicitacoesBrasil-GeminiV2/1.0', 'Accept': 'text/html,text/plain;q=0.9,*/*;q=.5' },
+    headers: { 'User-Agent': 'RadarLicitacoesBrasil-GeminiOnly/1.0', 'Accept': 'text/html,text/plain;q=0.9,*/*;q=.5' },
     signal: AbortSignal.timeout(12000)
   });
   if (!r.ok) throw new Error(`Fonte oficial HTTP ${r.status}`);
@@ -91,10 +94,10 @@ async function collectEvidence(query) {
     if (item.status !== 'fulfilled') continue;
     const { src, text } = item.value;
     const selected = rank(chunks(text), query).slice(0, src.legal ? 4 : 2);
-    for (const x of selected) hits.push({ source: src.title, url: src.url, text: x.text.slice(0, 1100) });
+    for (const x of selected) hits.push({ source: src.title, url: src.url, text: x.text.slice(0, 1200) });
     if (selected.length) sources.push({ title: src.title, url: src.url });
   }
-  return { hits: hits.slice(0, 7), sources: [...new Map(sources.map(x => [x.url, x])).values()] };
+  return { hits: hits.slice(0, 8), sources: [...new Map(sources.map(x => [x.url, x])).values()] };
 }
 
 async function history(pool, userId, conversationId) {
@@ -133,27 +136,88 @@ function modelHistory(items) {
 }
 
 const SYSTEM = `Você é a IA RLB, assistente conversacional especializado em licitações, contratos administrativos e compras públicas brasileiras.
+Toda interpretação, raciocínio, resposta e análise deve ser feita por você, Gemini.
 Converse de forma natural, contextual e humana, sem parecer um buscador automático.
 REGRAS:
-- Se a mensagem for saudação, agradecimento ou conversa simples, responda naturalmente e NÃO fale de lei ou fontes sem necessidade.
+- Se a mensagem for saudação, agradecimento ou conversa simples, responda naturalmente e não fale de lei ou fontes sem necessidade.
 - Entenda o contexto das mensagens anteriores. Perguntas curtas podem ser continuação do assunto anterior.
-- Se a pergunta for ambígua, faça uma pergunta curta de esclarecimento antes de concluir. Ex.: "quem pode licitar?" pode significar quem pode participar como licitante ou quem pode conduzir a licitação pela Administração.
-- Para fatos jurídicos, artigos, prazos, impedimentos, requisitos e procedimentos, use SOMENTE as EVIDÊNCIAS OFICIAIS fornecidas abaixo.
-- Não invente artigo, acórdão, jurisprudência, prazo ou regra.
-- Se as evidências não forem suficientes, diga isso de forma natural e peça apenas o contexto necessário.
+- Se a pergunta for ambígua, faça uma pergunta curta de esclarecimento antes de concluir.
+- Para fatos jurídicos, artigos, prazos, impedimentos, requisitos e procedimentos, use somente as EVIDÊNCIAS OFICIAIS fornecidas nesta chamada.
+- Não invente artigo, acórdão, jurisprudência, prazo, requisito ou regra.
+- Se as evidências não forem suficientes, diga isso de forma natural e peça o contexto mínimo necessário.
+- Quando houver documento, analise o documento de forma crítica, identifique tipo, finalidade, inconsistências, riscos, pontos de atenção e melhorias, sempre cruzando com as evidências oficiais quando houver conteúdo jurídico.
 - Responda primeiro ao ponto perguntado e depois explique de forma prática. Não despeje texto bruto da lei.
 - Português brasileiro, tom profissional, claro e próximo. Evite bordões repetitivos e respostas engessadas.`;
+
+function inferMime(document) {
+  const mime = String(document?.mime_type || '').toLowerCase();
+  if (mime) return mime;
+  const name = String(document?.filename || '').toLowerCase();
+  if (name.endsWith('.pdf')) return 'application/pdf';
+  if (name.endsWith('.docx')) return 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+  if (name.endsWith('.xlsx')) return 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+  if (name.endsWith('.xls')) return 'application/vnd.ms-excel';
+  if (name.endsWith('.csv')) return 'text/csv';
+  if (name.endsWith('.json')) return 'application/json';
+  if (name.endsWith('.html') || name.endsWith('.htm')) return 'text/html';
+  if (name.endsWith('.md')) return 'text/markdown';
+  if (name.endsWith('.txt')) return 'text/plain';
+  return 'application/octet-stream';
+}
+function asBuffer(content) {
+  if (Buffer.isBuffer(content)) return content;
+  if (content?.type === 'Buffer' && Array.isArray(content.data)) return Buffer.from(content.data);
+  if (typeof content === 'string') return Buffer.from(content, 'utf8');
+  return Buffer.from(content || '');
+}
+async function prepareDocument(document) {
+  if (!document) return { parts: [], searchText: '' };
+  const buffer = asBuffer(document.content);
+  const mime = inferMime(document);
+  const filename = String(document.filename || 'documento');
+  if (!buffer.length) throw Object.assign(new Error('O documento está vazio.'), { status: 400, publicCode: 'empty_document' });
+
+  if (mime === 'application/pdf' || mime.startsWith('image/')) {
+    return {
+      parts: [
+        { inlineData: { mimeType: mime, data: buffer.toString('base64') } },
+        { text: `Arquivo anexado: ${filename}` }
+      ],
+      searchText: filename
+    };
+  }
+
+  if (mime.includes('wordprocessingml') || filename.toLowerCase().endsWith('.docx')) {
+    const out = await mammoth.extractRawText({ buffer });
+    const text = clean(out.value, 60000);
+    return { parts: [{ text: `CONTEÚDO EXTRAÍDO DO DOCX ${filename}:\n${text}` }], searchText: text.slice(0, 8000) };
+  }
+
+  if (mime.includes('spreadsheet') || mime.includes('ms-excel') || /\.(xlsx|xls)$/i.test(filename)) {
+    const wb = XLSX.read(buffer, { type: 'buffer' });
+    const text = wb.SheetNames.map(name => `PLANILHA: ${name}\n${XLSX.utils.sheet_to_csv(wb.Sheets[name])}`).join('\n\n');
+    const trimmed = clean(text, 60000);
+    return { parts: [{ text: `CONTEÚDO EXTRAÍDO DA PLANILHA ${filename}:\n${trimmed}` }], searchText: trimmed.slice(0, 8000) };
+  }
+
+  if (mime.startsWith('text/') || ['application/json', 'application/xml'].includes(mime) || /\.(txt|md|csv|json|html?|xml)$/i.test(filename)) {
+    const text = clean(buffer.toString('utf8'), 60000);
+    return { parts: [{ text: `CONTEÚDO DO ARQUIVO ${filename}:\n${text}` }], searchText: text.slice(0, 8000) };
+  }
+
+  throw Object.assign(new Error('Para análise 100% Gemini, este formato ainda não é compatível. Converta o arquivo para PDF, DOCX, XLSX, CSV, TXT ou imagem.'), { status: 415, publicCode: 'unsupported_document_type' });
+}
 
 async function callModel(apiKey, model, contents, evidenceText) {
   const body = {
     systemInstruction: { parts: [{ text: `${SYSTEM}\n\nEVIDÊNCIAS OFICIAIS DISPONÍVEIS NESTA RESPOSTA:\n${evidenceText || 'Nenhuma evidência oficial relevante foi localizada para esta mensagem.'}` }] },
     contents,
-    generationConfig: { temperature: 0.42, topP: 0.9, maxOutputTokens: 1200 }
+    generationConfig: { temperature: 0.42, topP: 0.9, maxOutputTokens: 1500 }
   };
   const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
-    signal: AbortSignal.timeout(15000),
+    signal: AbortSignal.timeout(22000),
     body: JSON.stringify(body)
   });
   const data = await r.json().catch(() => ({}));
@@ -172,17 +236,16 @@ async function cascade(apiKey, contents, evidenceText) {
     } catch (e) {
       last = e;
       if (preferredModel === model) preferredModel = null;
-      console.warn('IA RLB Gemini v2 attempt failed:', model, e?.message || e);
+      console.warn('IA RLB Gemini-only attempt failed:', model, e?.message || e);
     }
   }
   throw last || new Error('Gemini indisponível');
 }
 
-export async function runForcedGeminiChatV2({ pool, userId, body, document, fallback }) {
-  if (document) return fallback({ pool, userId, body, document });
+export async function runForcedGeminiChatV2({ pool, userId, body, document }) {
   const apiKey = await geminiKey(pool);
   if (!apiKey) throw Object.assign(new Error('Gemini não está configurado. Abra as configurações da IA RLB e ative a chave gratuita.'), { status: 503, publicCode: 'gemini_not_configured' });
-  const message = clean(body.message, 6000);
+  const message = clean(body.message || (document ? 'Analise este documento e destaque os principais pontos relacionados a licitações e contratos públicos.' : ''), 6000);
   if (!message) throw Object.assign(new Error('Digite uma mensagem.'), { status: 400, publicCode: 'empty_message' });
 
   let conv = await getConv(pool, userId, Number(body.conversation_id) || null);
@@ -191,29 +254,32 @@ export async function runForcedGeminiChatV2({ pool, userId, body, document, fall
   const used = await usage(pool, userId);
 
   try {
-    const contextQuery = [...hist.filter(x => x.role === 'user').slice(-2).map(x => x.content), message].join(' ');
+    const doc = await prepareDocument(document);
+    const contextQuery = [...hist.filter(x => x.role === 'user').slice(-2).map(x => x.content), message, doc.searchText].join(' ').slice(0, 12000);
     const ev = await collectEvidence(contextQuery);
     const evidenceText = ev.hits.map((h, i) => `[FONTE ${i + 1}] ${h.source}\n${h.text}`).join('\n\n');
-    const contents = [...modelHistory(hist), { role: 'user', parts: [{ text: message }] }];
+    const userParts = [...doc.parts, { text: message }];
+    const contents = [...modelHistory(hist), { role: 'user', parts: userParts }];
     const result = await cascade(apiKey, contents, evidenceText);
-    const interaction = obviousSocial(message) ? 'social' : (ev.hits.length ? 'gemini_procurement' : 'gemini_conversation');
+    const interaction = document ? 'gemini_document_analysis' : (obviousSocial(message) ? 'social' : (ev.hits.length ? 'gemini_procurement' : 'gemini_conversation'));
 
     await persist(pool, userId, conv, message, result.text, ev.sources);
-    console.log('IA RLB Gemini v2 response:', result.model, interaction);
+    console.log('IA RLB Gemini-only response:', result.model, interaction);
     return {
       conversation_id: conv.id,
       answer: result.text,
       sources: ev.sources,
-      suggestions: interaction === 'gemini_procurement' ? ['Explique mais simples', 'Mostre a base legal', 'Aplique ao meu caso'] : [],
+      suggestions: interaction === 'gemini_procurement' || interaction === 'gemini_document_analysis' ? ['Explique mais simples', 'Mostre a base legal', 'Aplique ao meu caso'] : [],
       used_today: used + 1,
       daily_limit: 200,
-      mode: 'gemini_forced_single_call_official_sources',
+      mode: 'gemini_only_official_sources',
       interaction_type: interaction,
       provider: 'gemini',
       model: result.model
     };
   } catch (e) {
-    console.error('IA RLB Gemini v2 failure:', e?.message || e);
-    throw Object.assign(new Error('O Gemini não conseguiu concluir esta resposta agora. O Radar tentou os modelos gratuitos disponíveis e não usou o modo local.'), { status: 503, publicCode: 'gemini_temporarily_unavailable' });
+    if (e?.status && e?.publicCode) throw e;
+    console.error('IA RLB Gemini-only failure:', e?.message || e);
+    throw Object.assign(new Error('O Gemini não conseguiu concluir esta resposta agora. A IA RLB não utilizou nenhum motor local.'), { status: 503, publicCode: 'gemini_temporarily_unavailable' });
   }
 }
