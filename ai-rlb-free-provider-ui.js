@@ -1,5 +1,6 @@
 (()=>{
   const $=s=>document.querySelector(s);
+  let installing=false;
   async function api(path,options={}){const r=await fetch(path,{credentials:'same-origin',...options,headers:{'Content-Type':'application/json',...(options.headers||{})}});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.error||'Falha na configuração.');return d}
   function style(){if($('#rlb-free-ai-style'))return;const s=document.createElement('style');s.id='rlb-free-ai-style';s.textContent=`
     .rlb-free-ai-btn{font-size:16px!important}.rlb-free-ai-modal{position:absolute;inset:58px 10px 10px;z-index:80;background:var(--rlb3-surface,#0d2533);border:1px solid var(--rlb3-border,#29495a);border-radius:16px;box-shadow:0 22px 50px rgba(0,0,0,.34);padding:16px;overflow:auto}.rlb-free-ai-modal[hidden]{display:none!important}.rlb-free-ai-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:14px}.rlb-free-ai-top h3{margin:0;font-size:14px}.rlb-free-ai-top p{margin:4px 0 0;color:var(--rlb3-muted,#90a8b5);font-size:10px;line-height:1.45}.rlb-free-ai-card{border:1px solid var(--rlb3-border,#29495a);border-radius:12px;padding:12px;background:var(--rlb3-surface-soft,#102837);margin-bottom:10px}.rlb-free-ai-card label{display:block;font-size:9px;font-weight:800;margin:0 0 5px}.rlb-free-ai-card select,.rlb-free-ai-card input{width:100%;box-sizing:border-box;height:38px;border:1px solid var(--rlb3-border,#29495a);border-radius:9px;background:var(--rlb3-surface,#0d2533);color:var(--rlb3-text,#eef6f8);padding:0 10px;outline:none;margin-bottom:9px}.rlb-free-ai-card input:focus,.rlb-free-ai-card select:focus{border-color:#19c58b;box-shadow:0 0 0 2px rgba(25,197,139,.13)}.rlb-free-ai-actions{display:flex;gap:8px;flex-wrap:wrap}.rlb-free-ai-actions button,.rlb-free-ai-actions a{border:0;border-radius:9px;padding:9px 12px;font-weight:800;font-size:9px;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;justify-content:center}.rlb-free-ai-save{background:#19c58b;color:#05271d}.rlb-free-ai-open{background:#2d7ff9;color:white}.rlb-free-ai-remove{background:transparent;color:var(--rlb3-text,#eef6f8);border:1px solid var(--rlb3-border,#29495a)!important}.rlb-free-ai-status{font-size:9px;line-height:1.45;color:var(--rlb3-muted,#90a8b5);margin-top:9px}.rlb-free-ai-ok{color:#19c58b;font-weight:800}.rlb-free-ai-note{font-size:9px;line-height:1.5;color:var(--rlb3-muted,#90a8b5);padding:10px;border-radius:10px;background:rgba(25,197,139,.06);border:1px solid rgba(25,197,139,.16)}.rlb-free-ai-steps{margin:0 0 10px;padding:10px 11px;border-radius:10px;background:rgba(45,127,249,.08);border:1px solid rgba(45,127,249,.2);font-size:9px;line-height:1.55;color:var(--rlb3-text,#eef6f8)}
@@ -8,8 +9,29 @@
   async function refresh(){const st=$('#rlbFreeAiStatus');try{const d=await api('/api/ai-rlb/admin/config');if(st)st.innerHTML=d.configured?`<span class="rlb-free-ai-ok">Ativo:</span> ${d.provider==='gemini'?'Gemini':'Groq'} • ${d.model}`:'Nenhum modelo externo configurado. A IA RLB está usando o motor local.';const provider=$('#rlbFreeAiProvider');if(provider&&d.provider)provider.value=d.provider}catch(e){if(st)st.textContent=e.message}}
   async function save(){const b=$('#rlbFreeAiSave'),st=$('#rlbFreeAiStatus'),provider=$('#rlbFreeAiProvider')?.value,key=$('#rlbFreeAiKey')?.value.trim();if(!key){st.textContent='Informe a chave gratuita do provedor escolhido.';return}b.disabled=true;st.textContent='Validando a chave e ativando…';try{const d=await api('/api/ai-rlb/admin/config',{method:'POST',body:JSON.stringify({provider,api_key:key})});$('#rlbFreeAiKey').value='';st.innerHTML=`<span class="rlb-free-ai-ok">Ativado:</span> ${d.provider==='gemini'?'Gemini':'Groq'} • ${d.model}`}catch(e){st.textContent=e.message}finally{b.disabled=false}}
   async function remove(){const st=$('#rlbFreeAiStatus');try{await api('/api/ai-rlb/admin/config',{method:'DELETE'});st.textContent='Modelo externo removido. A IA RLB voltou ao motor local.'}catch(e){st.textContent=e.message}}
-  async function install(){style();const panel=$('#rlbAiPanel'),head=panel?.querySelector('.rlb-ai-head-actions');if(!panel||!head||$('#rlbFreeAiBtn'))return;try{const me=await api('/api/me');if(me?.user?.role!=='admin')return}catch{return}const btn=document.createElement('button');btn.id='rlbFreeAiBtn';btn.type='button';btn.className='rlb-ai-icon-btn rlb-free-ai-btn';btn.title='Configurar motor gratuito da IA RLB';btn.textContent='⚙';head.insertBefore(btn,head.firstChild);btn.onclick=async()=>{const m=modal();m.hidden=!m.hidden;if(!m.hidden)await refresh()}}
-  function bounded(){install();requestAnimationFrame(install);setTimeout(install,120);setTimeout(install,700)}
+  function dedupeSettingsButtons(head){
+    if(!head)return null;
+    const buttons=[...head.querySelectorAll('button')];
+    const settings=buttons.filter(b=>b.id==='rlbFreeAiBtn'||String(b.textContent||'').trim()==='⚙'||/configur|motor gratuito|provedor|settings/i.test(String(b.title||'')));
+    let keep=settings.find(b=>b.id==='rlbFreeAiBtn')||settings[0]||null;
+    for(const b of settings){if(b!==keep)b.remove()}
+    if(keep&&keep.id!=='rlbFreeAiBtn')keep.remove(),keep=null;
+    return keep;
+  }
+  async function install(){
+    style();
+    const panel=$('#rlbAiPanel'),head=panel?.querySelector('.rlb-ai-head-actions');
+    if(!panel||!head)return;
+    const existing=dedupeSettingsButtons(head);if(existing)return;
+    if(installing)return;
+    installing=true;
+    try{
+      const me=await api('/api/me');if(me?.user?.role!=='admin')return;
+      const again=dedupeSettingsButtons(head);if(again)return;
+      const btn=document.createElement('button');btn.id='rlbFreeAiBtn';btn.type='button';btn.className='rlb-ai-icon-btn rlb-free-ai-btn';btn.title='Configurar IA RLB';btn.setAttribute('aria-label','Configurar IA RLB');btn.textContent='⚙';head.insertBefore(btn,head.firstChild);btn.onclick=async()=>{const m=modal();m.hidden=!m.hidden;if(!m.hidden)await refresh()};
+    }finally{installing=false;dedupeSettingsButtons(head)}
+  }
+  function bounded(){install();requestAnimationFrame(install);setTimeout(install,120);setTimeout(install,700);setTimeout(install,1500)}
   document.addEventListener('click',e=>{if(e.target.closest('#rlbAiLauncher'))setTimeout(bounded,80)},true);
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bounded,{once:true});else bounded();
 })();
