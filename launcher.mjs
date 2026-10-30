@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import http from 'node:http';
 import { syncBuiltinESMExports } from 'node:module';
-import { initLiveMonitor, handleLiveRoute } from './live-monitor.mjs';
+import { initLiveMonitor, handleLiveRoute } from './live-monitor-v2.mjs';
 
 const originalReadFileSync = fs.readFileSync;
 const originalCreateServer = http.createServer.bind(http);
