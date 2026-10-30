@@ -8,6 +8,7 @@ const notificationCss = nativeReadFileSync(new URL('./notifications-v1.css', imp
 const notificationJs = nativeReadFileSync(new URL('./notifications-v3.js', import.meta.url), 'utf8');
 const navigationRecoveryCss = nativeReadFileSync(new URL('./navigation-recovery.css', import.meta.url), 'utf8');
 const navigationRecoveryJs = nativeReadFileSync(new URL('./navigation-recovery.js', import.meta.url), 'utf8');
+const userAccessJs = nativeReadFileSync(new URL('./user-access-v1.js', import.meta.url), 'utf8');
 
 fs.readFileSync = function rlbV8ReadFileSync(path, ...args) {
   const value = path instanceof URL ? path.pathname : String(path);
@@ -15,7 +16,7 @@ fs.readFileSync = function rlbV8ReadFileSync(path, ...args) {
   if (typeof html !== 'string') return html;
   if (value.endsWith('/app-professional.html') || value.endsWith('\\app-professional.html')) {
     const cssTag = `<style id="rlb-notifications-v9">${notificationCss}</style><style id="rlb-navigation-recovery">${navigationRecoveryCss}</style>`;
-    const delayedScript = `<script id="rlb-notifications-v9-script">window.addEventListener('load',()=>{try{${notificationJs}}catch(e){console.error('RLB notifications UI V3:',e)}},{once:true});</script><script id="rlb-navigation-recovery-script">window.addEventListener('load',()=>{try{${navigationRecoveryJs}}catch(e){console.error('RLB navigation recovery:',e)}},{once:true});</script>`;
+    const delayedScript = `<script id="rlb-notifications-v9-script">window.addEventListener('load',()=>{try{${notificationJs}}catch(e){console.error('RLB notifications UI V3:',e)}},{once:true});</script><script id="rlb-navigation-recovery-script">window.addEventListener('load',()=>{try{${navigationRecoveryJs}}catch(e){console.error('RLB navigation recovery:',e)}},{once:true});</script><script id="rlb-user-access-v1-script">window.addEventListener('load',()=>{try{${userAccessJs}}catch(e){console.error('RLB shared user access:',e)}},{once:true});</script>`;
     return html
       .replace('</head>', `${cssTag}</head>`)
       .replace('</body>', `${delayedScript}</body>`);
