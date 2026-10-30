@@ -5,49 +5,179 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Radar de Licitações Brasil</title>
 <style>
-:root{--bg:#07111f;--panel:#0d1b2d;--text:#edf6ff;--muted:#9cb1c8;--blue:#35a7ff;--cyan:#35e0d0;--green:#35d07f;--red:#ff6b78;--line:#203853}*{box-sizing:border-box}body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;background:radial-gradient(circle at 15% 0,#123760 0,transparent 38%),radial-gradient(circle at 90% 10%,#083d3b 0,transparent 28%),var(--bg);color:var(--text);min-height:100vh}.shell{max-width:1250px;margin:auto;padding:24px}.top{display:flex;justify-content:space-between;gap:16px;align-items:center;margin-bottom:20px}.brand{font-weight:900;font-size:25px}.brand span{color:var(--cyan)}.sub{font-size:13px;color:var(--muted)}.card{background:linear-gradient(180deg,#10243bdd,#091725ee);border:1px solid var(--line);border-radius:18px;padding:20px;box-shadow:0 18px 55px #0006}.auth{max-width:500px;margin:7vh auto}.tabs,.nav{display:flex;gap:8px;flex-wrap:wrap}.tabs{margin-bottom:16px}.tabs button,.nav button,.btn{border:1px solid var(--line);border-radius:10px;padding:10px 14px;background:#132943;color:var(--text);cursor:pointer;font-weight:700}.tabs button.active,.nav button.active,.btn.primary{background:linear-gradient(135deg,var(--blue),var(--cyan));color:#04131d;border-color:transparent}.btn.danger{background:#351620;color:#ffb1b8}.grid{display:grid;gap:14px}.grid2{grid-template-columns:repeat(2,minmax(0,1fr))}.grid4{grid-template-columns:repeat(4,minmax(0,1fr))}label{display:block;color:var(--muted);font-size:12px;margin-bottom:6px}input,select{width:100%;padding:11px 12px;border-radius:10px;border:1px solid #29445f;background:#071525;color:var(--text)}.hidden{display:none!important}.nav{margin-bottom:16px}.stats{margin-bottom:14px}.stat{padding:16px;border-radius:14px;background:#0a192a;border:1px solid var(--line)}.stat b{display:block;font-size:26px;margin-top:5px}.notice{padding:10px 12px;border-radius:10px;margin:12px 0;font-size:13px}.ok{background:#0d3327;color:#8bf0c0}.err{background:#3c1720;color:#ffadb5}.results{display:grid;gap:12px;margin-top:16px}.lic{padding:16px;border:1px solid var(--line);border-radius:14px;background:#091725}.lic h3{font-size:16px;margin:0 0 8px}.meta{display:flex;gap:8px;flex-wrap:wrap;color:var(--muted);font-size:12px}.pill{padding:4px 8px;border-radius:999px;background:#142d47}.money{color:var(--green);font-weight:800}.toolbar{display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap}.table{width:100%;border-collapse:collapse;font-size:13px}.table th,.table td{padding:10px;text-align:left;border-bottom:1px solid var(--line)}.doc{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)}a{color:var(--cyan)}@media(max-width:800px){.grid2,.grid4{grid-template-columns:1fr}.shell{padding:14px}.top{align-items:flex-start;flex-direction:column}}
+:root{--bg:#07101c;--panel:#0c1a2a;--panel2:#10243a;--text:#f2f7fb;--muted:#93a8bc;--blue:#3da5ff;--cyan:#34e0d2;--green:#35d07f;--orange:#ffba5c;--red:#ff6b78;--line:#203852;--shadow:0 20px 60px #0007}*{box-sizing:border-box}body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;background:radial-gradient(circle at 12% 0,#11355a 0,transparent 36%),radial-gradient(circle at 90% 8%,#083b3a 0,transparent 26%),var(--bg);color:var(--text);min-height:100vh}.shell{max-width:1380px;margin:auto;padding:22px}.top{display:flex;justify-content:space-between;gap:16px;align-items:center;margin-bottom:18px}.brand{font-weight:900;font-size:26px;letter-spacing:-.4px}.brand span{color:var(--cyan)}.sub{font-size:13px;color:var(--muted)}.card{background:linear-gradient(180deg,#10243bdd,#091725f2);border:1px solid var(--line);border-radius:18px;padding:18px;box-shadow:var(--shadow)}.auth{max-width:520px;margin:7vh auto}.tabs,.nav,.actions{display:flex;gap:8px;flex-wrap:wrap}.tabs{margin-bottom:16px}.tabs button,.nav button,.btn{border:1px solid var(--line);border-radius:10px;padding:10px 14px;background:#132943;color:var(--text);cursor:pointer;font-weight:800}.tabs button.active,.nav button.active,.btn.primary{background:linear-gradient(135deg,var(--blue),var(--cyan));color:#04131d;border-color:transparent}.btn.success{background:#133827;color:#9af1c4}.btn.warn{background:#3a2c12;color:#ffd597}.btn.danger{background:#351620;color:#ffb1b8}.btn.tiny{padding:7px 9px;font-size:12px}.grid{display:grid;gap:12px}.grid2{grid-template-columns:repeat(2,minmax(0,1fr))}.grid3{grid-template-columns:repeat(3,minmax(0,1fr))}.grid4{grid-template-columns:repeat(4,minmax(0,1fr))}.grid6{grid-template-columns:repeat(6,minmax(0,1fr))}label{display:block;color:var(--muted);font-size:12px;margin-bottom:6px;font-weight:700}input,select{width:100%;padding:11px 12px;border-radius:10px;border:1px solid #29445f;background:#071525;color:var(--text);outline:none}input:focus,select:focus{border-color:#3da5ff}.hidden{display:none!important}.nav{margin-bottom:16px}.stats{margin-bottom:14px}.stat{padding:15px;border-radius:14px;background:#0a192a;border:1px solid var(--line)}.stat b{display:block;font-size:24px;margin-top:4px}.stat small{color:var(--muted)}.notice{padding:10px 12px;border-radius:10px;margin:12px 0;font-size:13px}.ok{background:#0d3327;color:#8bf0c0}.err{background:#3c1720;color:#ffadb5}.info{background:#102d4b;color:#a8d7ff}.results{display:grid;gap:12px;margin-top:16px}.lic{padding:16px;border:1px solid var(--line);border-radius:14px;background:#091725}.lic.new{border-color:#2cae8e;box-shadow:0 0 0 1px #2cae8e33}.lic h3{font-size:16px;margin:0 0 8px;line-height:1.4}.meta{display:flex;gap:7px;flex-wrap:wrap;color:var(--muted);font-size:12px}.pill{padding:4px 8px;border-radius:999px;background:#142d47}.pill.green{background:#113a2a;color:#a4f0c8}.pill.orange{background:#3b2a13;color:#ffd295}.money{color:var(--green);font-weight:900;font-size:18px;margin:10px 0 5px}.toolbar{display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap}.table{width:100%;border-collapse:collapse;font-size:13px}.table th,.table td{padding:10px;text-align:left;border-bottom:1px solid var(--line);vertical-align:middle}.doc,.alert-row{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:12px 0;border-bottom:1px solid var(--line)}.alert-row:last-child,.doc:last-child{border-bottom:0}.alert-title{font-weight:900}.kv{display:flex;gap:7px;flex-wrap:wrap;margin-top:6px}.muted{color:var(--muted)}a{color:var(--cyan)}h2{margin:0 0 8px}.section-gap{margin-top:16px}.statusdot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--green);margin-right:6px}.empty{padding:20px;border:1px dashed var(--line);border-radius:14px;color:var(--muted);text-align:center}.footer-note{font-size:12px;color:var(--muted);margin-top:12px}.badge{display:inline-block;font-size:11px;padding:3px 7px;border-radius:8px;background:#12304c;color:#b5dfff}.admin-stat b{font-size:22px}.right{margin-left:auto}.split{display:grid;grid-template-columns:1.1fr .9fr;gap:16px}.nowrap{white-space:nowrap}.spin{display:inline-block;animation:spin 1s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}@media(max-width:1050px){.grid6{grid-template-columns:repeat(3,1fr)}.grid4{grid-template-columns:repeat(2,1fr)}.split{grid-template-columns:1fr}}@media(max-width:720px){.grid2,.grid3,.grid4,.grid6{grid-template-columns:1fr}.shell{padding:12px}.top{align-items:flex-start;flex-direction:column}.table{min-width:760px}.doc,.alert-row{align-items:flex-start;flex-direction:column}.right{margin-left:0}}
 </style>
 </head>
 <body>
 <div class="shell">
-  <div class="top"><div><div class="brand">Radar de <span>Licitações Brasil</span></div><div class="sub">Monitoramento de oportunidades públicas com consulta ao PNCP</div></div><div id="who" class="sub"></div></div>
+  <div class="top">
+    <div><div class="brand">Radar de <span>Licitações Brasil</span></div><div class="sub">Monitoramento de oportunidades públicas com dados oficiais do PNCP</div></div>
+    <div id="who" class="sub"></div>
+  </div>
+
   <div id="auth" class="card auth">
     <div class="tabs"><button id="tabLogin" class="active">Entrar</button><button id="tabRegister">Criar conta</button></div>
     <div id="authMsg"></div>
-    <div class="grid"><div><label>E-mail</label><input id="email" type="email"></div><div><label>Senha (mínimo 10 caracteres)</label><input id="password" type="password"></div><button id="authBtn" class="btn primary">Entrar</button></div>
+    <div class="grid">
+      <div><label>E-mail</label><input id="email" type="email" autocomplete="email"></div>
+      <div><label>Senha (mínimo 10 caracteres)</label><input id="password" type="password" autocomplete="current-password"></div>
+      <button id="authBtn" class="btn primary">Entrar</button>
+    </div>
   </div>
+
   <div id="app" class="hidden">
-    <div class="nav"><button data-view="radar" class="active">Radar PNCP</button><button data-view="alerts">Meus alertas</button><button data-view="docs">Documentos</button><button id="adminTab" data-view="admin" class="hidden">Administração</button><button id="logout">Sair</button></div>
+    <div class="nav">
+      <button data-view="radar" class="active">Radar PNCP</button>
+      <button data-view="alerts">Alertas</button>
+      <button data-view="docs">Documentos</button>
+      <button id="adminTab" data-view="admin" class="hidden">Administração</button>
+      <button id="logout" class="right">Sair</button>
+    </div>
+
     <section id="view-radar">
-      <div class="grid grid4 stats"><div class="stat"><span class="sub">Fonte</span><b>PNCP</b></div><div class="stat"><span class="sub">Modalidades consultadas</span><b>14</b></div><div class="stat"><span class="sub">Período máximo</span><b>30 dias</b></div><div class="stat"><span class="sub">Resultados</span><b id="count">—</b></div></div>
-      <div class="card"><div class="grid grid4"><div><label>Palavra-chave</label><input id="q" placeholder="ex.: combustível, pneus, software"></div><div><label>UF</label><select id="uf"><option value="">Brasil inteiro</option><option>AC</option><option>AL</option><option>AP</option><option>AM</option><option>BA</option><option>CE</option><option>DF</option><option>ES</option><option>GO</option><option>MA</option><option>MT</option><option>MS</option><option>MG</option><option>PA</option><option>PB</option><option>PR</option><option>PE</option><option>PI</option><option>RJ</option><option>RN</option><option>RS</option><option>RO</option><option>RR</option><option>SC</option><option>SP</option><option>SE</option><option>TO</option></select></div><div><label>Modalidade</label><select id="modal"><option value="">Todas</option><option value="4">Concorrência eletrônica</option><option value="5">Concorrência presencial</option><option value="6">Pregão eletrônico</option><option value="7">Pregão presencial</option><option value="8">Dispensa</option><option value="9">Inexigibilidade</option><option value="12">Credenciamento</option></select></div><div><label>Período</label><select id="days"><option value="1">Hoje</option><option value="7" selected>7 dias</option><option value="15">15 dias</option><option value="30">30 dias</option></select></div></div><button id="search" class="btn primary" style="margin-top:14px">Buscar licitações reais</button><div id="searchMsg"></div><div id="results" class="results"></div></div>
+      <div class="grid grid6 stats">
+        <div class="stat"><span class="sub">Fonte oficial</span><b>PNCP</b><small>API pública</small></div>
+        <div class="stat"><span class="sub">Modalidades</span><b>14</b><small>consulta ampla</small></div>
+        <div class="stat"><span class="sub">Período máximo</span><b>30 dias</b><small>por busca</small></div>
+        <div class="stat"><span class="sub">Resultados</span><b id="count">—</b><small>na busca atual</small></div>
+        <div class="stat"><span class="sub">Propostas abertas</span><b id="openCount">—</b><small>com prazo futuro</small></div>
+        <div class="stat"><span class="sub">Atualização</span><b id="lastUpdate" style="font-size:16px">—</b><small>consulta ao vivo</small></div>
+      </div>
+
+      <div class="card">
+        <div class="toolbar"><div><h2>Busca avançada</h2><div class="sub">Combine filtros para encontrar oportunidades específicas.</div></div><button id="clearFilters" class="btn">Limpar filtros</button></div>
+        <div class="grid grid4 section-gap">
+          <div><label>Palavra-chave / objeto</label><input id="q" placeholder="ex.: combustível, pneus, software"></div>
+          <div><label>UF</label><select id="uf"><option value="">Brasil inteiro</option><option>AC</option><option>AL</option><option>AP</option><option>AM</option><option>BA</option><option>CE</option><option>DF</option><option>ES</option><option>GO</option><option>MA</option><option>MT</option><option>MS</option><option>MG</option><option>PA</option><option>PB</option><option>PR</option><option>PE</option><option>PI</option><option>RJ</option><option>RN</option><option>RS</option><option>RO</option><option>RR</option><option>SC</option><option>SP</option><option>SE</option><option>TO</option></select></div>
+          <div><label>Município</label><input id="municipality" placeholder="ex.: Natal"></div>
+          <div><label>Código IBGE (opcional)</label><input id="municipalityIbge" maxlength="7" placeholder="7 dígitos"></div>
+          <div><label>Modalidade</label><select id="modal"><option value="">Todas</option><option value="1">Leilão - Eletrônico</option><option value="2">Diálogo Competitivo</option><option value="3">Concurso</option><option value="4">Concorrência - Eletrônica</option><option value="5">Concorrência - Presencial</option><option value="6">Pregão - Eletrônico</option><option value="7">Pregão - Presencial</option><option value="8">Dispensa de Licitação</option><option value="9">Inexigibilidade</option><option value="10">Manifestação de Interesse</option><option value="11">Pré-qualificação</option><option value="12">Credenciamento</option><option value="13">Leilão - Presencial</option><option value="14">Outras / código 14</option></select></div>
+          <div><label>Órgão / unidade</label><input id="org" placeholder="ex.: Prefeitura de Natal"></div>
+          <div><label>CNPJ do órgão</label><input id="cnpj" maxlength="18" placeholder="somente se quiser refinar"></div>
+          <div><label>Período</label><select id="days"><option value="1">Hoje</option><option value="3">3 dias</option><option value="7" selected>7 dias</option><option value="15">15 dias</option><option value="30">30 dias</option></select></div>
+          <div><label>Valor mínimo estimado</label><input id="minValue" type="number" min="0" step="0.01" placeholder="0,00"></div>
+          <div><label>Valor máximo estimado</label><input id="maxValue" type="number" min="0" step="0.01" placeholder="0,00"></div>
+          <div><label>Situação</label><select id="openOnly"><option value="false">Todas publicadas</option><option value="true">Somente propostas abertas</option></select></div>
+          <div><label>Ordenação</label><select id="order"><option value="newest">Mais recentes</option><option value="deadline">Prazo mais próximo</option><option value="value_desc">Maior valor</option><option value="value_asc">Menor valor</option></select></div>
+        </div>
+        <button id="search" class="btn primary section-gap">Buscar licitações reais</button>
+        <div id="searchMsg"></div>
+        <div id="results" class="results"></div>
+      </div>
     </section>
-    <section id="view-alerts" class="hidden"><div class="card"><h2>Meus alertas</h2><p class="sub">Salve os filtros que deseja acompanhar.</p><div class="grid grid2"><div><label>UF</label><input id="prefUf" maxlength="2" placeholder="RN"></div><div><label>Palavra-chave</label><input id="prefKeyword" placeholder="ex.: combustível"></div><div><label>Código da modalidade</label><input id="prefModal" type="number"></div><div><label>Ativo</label><select id="prefEnabled"><option value="true">Sim</option><option value="false">Não</option></select></div></div><button id="savePref" class="btn primary" style="margin-top:14px">Salvar alerta</button><div id="prefMsg"></div></div></section>
-    <section id="view-docs" class="hidden"><div class="card"><h2>Documentos</h2><p class="sub">Armazene arquivos de apoio no Radar.</p><input id="file" type="file"><button id="upload" class="btn primary" style="margin-top:10px">Enviar arquivo</button><div id="docMsg"></div><div id="docsList"></div></div></section>
-    <section id="view-admin" class="hidden"><div class="card"><div class="toolbar"><div><h2>Administração</h2><div class="sub">Usuários cadastrados</div></div><button id="refreshUsers" class="btn">Atualizar</button></div><div style="overflow:auto"><table class="table"><thead><tr><th>ID</th><th>E-mail</th><th>Perfil</th><th>Ativo</th><th>Criado</th></tr></thead><tbody id="users"></tbody></table></div></div></section>
+
+    <section id="view-alerts" class="hidden">
+      <div class="split">
+        <div class="card">
+          <div class="toolbar"><div><h2>Criar alerta</h2><div class="sub">Você pode manter até 20 alertas diferentes.</div></div><button id="enableBrowserNotify" class="btn">Ativar notificação no navegador</button></div>
+          <div class="grid grid2 section-gap">
+            <div><label>Nome do alerta</label><input id="alertName" placeholder="ex.: Combustíveis RN"></div>
+            <div><label>Palavra-chave</label><input id="alertKeyword" placeholder="ex.: combustível"></div>
+            <div><label>UF</label><input id="alertUf" maxlength="2" placeholder="RN"></div>
+            <div><label>Município</label><input id="alertMunicipality" placeholder="ex.: Natal"></div>
+            <div><label>Código IBGE (opcional)</label><input id="alertIbge" maxlength="7" placeholder="7 dígitos"></div>
+            <div><label>Modalidade</label><select id="alertModal"><option value="">Todas</option><option value="4">Concorrência eletrônica</option><option value="6">Pregão eletrônico</option><option value="8">Dispensa</option><option value="9">Inexigibilidade</option><option value="12">Credenciamento</option></select></div>
+            <div><label>Órgão / unidade</label><input id="alertOrg" placeholder="opcional"></div>
+            <div><label>CNPJ do órgão</label><input id="alertCnpj" placeholder="opcional"></div>
+            <div><label>Valor mínimo</label><input id="alertMin" type="number" min="0" step="0.01"></div>
+            <div><label>Valor máximo</label><input id="alertMax" type="number" min="0" step="0.01"></div>
+          </div>
+          <button id="createAlert" class="btn primary section-gap">Salvar alerta</button>
+          <div id="alertMsg"></div>
+          <div class="footer-note">Os alertas consultam dados oficiais do PNCP. Enquanto esta página estiver aberta, o feed é atualizado automaticamente a cada 5 minutos.</div>
+        </div>
+
+        <div class="card">
+          <div class="toolbar"><div><h2>Meus alertas</h2><div class="sub">Ative, pause ou exclua seus filtros salvos.</div></div><button id="refreshAlerts" class="btn">Atualizar</button></div>
+          <div id="alertList" class="section-gap"></div>
+        </div>
+      </div>
+
+      <div class="card section-gap">
+        <div class="toolbar"><div><h2>Oportunidades dos meus alertas</h2><div id="feedMeta" class="sub">Clique em atualizar para consultar.</div></div><button id="refreshFeed" class="btn primary">Atualizar agora</button></div>
+        <div id="feedMsg"></div>
+        <div id="alertFeed" class="results"></div>
+      </div>
+    </section>
+
+    <section id="view-docs" class="hidden">
+      <div class="card"><h2>Documentos</h2><p class="sub">Armazene arquivos de apoio vinculados à sua conta. Limite atual: 3 MB por arquivo.</p><input id="file" type="file"><button id="upload" class="btn primary section-gap">Enviar arquivo</button><div id="docMsg"></div><div id="docsList" class="section-gap"></div></div>
+    </section>
+
+    <section id="view-admin" class="hidden">
+      <div class="grid grid6 stats" id="adminStats"></div>
+      <div class="card">
+        <div class="toolbar"><div><h2>Gestão de usuários</h2><div class="sub">Controle de perfil e acesso dos usuários cadastrados.</div></div><button id="refreshUsers" class="btn">Atualizar</button></div>
+        <div style="overflow:auto" class="section-gap"><table class="table"><thead><tr><th>ID</th><th>E-mail</th><th>Perfil</th><th>Status</th><th>Criado</th><th>Ações</th></tr></thead><tbody id="users"></tbody></table></div>
+      </div>
+      <div class="card section-gap">
+        <div class="toolbar"><div><h2>Auditoria</h2><div class="sub">Últimas ações registradas no sistema.</div></div><button id="refreshAudit" class="btn">Atualizar</button></div>
+        <div style="overflow:auto" class="section-gap"><table class="table"><thead><tr><th>Data</th><th>Usuário</th><th>Ação</th><th>Detalhes</th><th>IP</th></tr></thead><tbody id="audit"></tbody></table></div>
+      </div>
+    </section>
   </div>
 </div>
 <script>
-const $=s=>document.querySelector(s), $$=s=>Array.from(document.querySelectorAll(s));let me=null,mode='login';
+const $=s=>document.querySelector(s), $$=s=>Array.from(document.querySelectorAll(s));let me=null,mode='login',feedTimer=null;
 async function api(path,opt={}){const r=await fetch(path,{headers:{'content-type':'application/json',...(opt.headers||{})},...opt});let d={};try{d=await r.json()}catch{}if(!r.ok)throw new Error(d.error||'Erro na operação');return d}
-function msg(el,t,ok=true){el.innerHTML=t?'<div class="notice '+(ok?'ok':'err')+'">'+esc(t)+'</div>':''}
+function msg(el,t,type='ok'){el.innerHTML=t?'<div class="notice '+type+'">'+esc(t)+'</div>':''}
 function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function safeUrl(s){try{const u=new URL(s);return ['http:','https:'].includes(u.protocol)?u.href:'#'}catch{return '#'}}
-function showApp(){ $('#auth').classList.add('hidden');$('#app').classList.remove('hidden');$('#who').textContent=me.email+(me.role==='admin'?' • ADMIN':'');$('#adminTab').classList.toggle('hidden',me.role!=='admin');loadPref();loadDocs() }
+function brl(v){const n=Number(v);return Number.isFinite(n)?n.toLocaleString('pt-BR',{style:'currency',currency:'BRL'}):'—'}
+function when(v){if(!v)return'—';const d=new Date(v);return Number.isNaN(d.getTime())?esc(v):d.toLocaleString('pt-BR')}
+function municipalityOf(x){return x?.unidadeOrgao?.municipioNome||x?.unidadeOrgao?.nomeMunicipio||x?.municipioNome||''}
+function closingOf(x){return x?.dataEncerramentoProposta||x?.dataFimRecebimentoProposta||null}
+function resultKey(x){return x.numeroControlePNCP||[x.orgaoEntidade?.cnpj,x.anoCompra,x.sequencialCompra,x._modalidadeConsultada].join('-')}
+function isOpen(x){const c=closingOf(x);return c&&Date.parse(c)>=Date.now()}
+function resultCard(x,extra=''){
+  const org=x.orgaoEntidade?.razaoSocial||'Órgão não informado',uf=x.unidadeOrgao?.ufSigla||'',mun=municipalityOf(x),close=closingOf(x),open=isOpen(x);
+  const link=x.linkSistemaOrigem||x.linkProcessoEletronico||'';
+  return '<div class="lic '+extra+'"><h3>'+esc(x.objetoCompra||'Objeto não informado')+'</h3><div class="meta"><span class="pill">'+esc(x.modalidadeNome||('Modalidade '+(x._modalidadeConsultada||'')))+'</span>'+(uf?'<span class="pill">'+esc(uf)+'</span>':'')+(mun?'<span class="pill">'+esc(mun)+'</span>':'')+(open?'<span class="pill green">Proposta aberta</span>':'')+'<span>'+esc(org)+'</span><span>Publicação: '+when(x.dataPublicacaoPncp)+'</span>'+(close?'<span>Encerramento: '+when(close)+'</span>':'')+'</div><p class="money">'+brl(x.valorTotalEstimado)+'</p><div class="actions">'+(link?'<a target="_blank" rel="noopener" href="'+safeUrl(link)+'">Abrir origem</a>':'')+(x.numeroControlePNCP?'<span class="sub">PNCP: '+esc(x.numeroControlePNCP)+'</span>':'')+'</div></div>'
+}
+function showApp(){
+  $('#auth').classList.add('hidden');$('#app').classList.remove('hidden');$('#who').textContent=me.email+(me.role==='admin'?' • ADMIN':'');$('#adminTab').classList.toggle('hidden',me.role!=='admin');loadDocs();loadAlerts(false)
+}
 async function boot(){try{const d=await api('/api/me');me=d.user;showApp()}catch{}}
 $('#tabLogin').onclick=()=>{mode='login';$('#tabLogin').classList.add('active');$('#tabRegister').classList.remove('active');$('#authBtn').textContent='Entrar'};
 $('#tabRegister').onclick=()=>{mode='register';$('#tabRegister').classList.add('active');$('#tabLogin').classList.remove('active');$('#authBtn').textContent='Criar conta'};
-$('#authBtn').onclick=async()=>{try{const d=await api('/api/auth/'+mode,{method:'POST',body:JSON.stringify({email:$('#email').value,password:$('#password').value})});me=d.user;showApp()}catch(e){msg($('#authMsg'),e.message,false)}};
+$('#authBtn').onclick=async()=>{try{const d=await api('/api/auth/'+mode,{method:'POST',body:JSON.stringify({email:$('#email').value,password:$('#password').value})});me=d.user;showApp()}catch(e){msg($('#authMsg'),e.message,'err')}};
 $('#logout').onclick=async()=>{await api('/api/auth/logout',{method:'POST',body:'{}'}).catch(()=>{});location.reload()};
-$$('.nav [data-view]').forEach(b=>b.onclick=()=>{$$('.nav [data-view]').forEach(x=>x.classList.remove('active'));b.classList.add('active');$$('section[id^="view-"]').forEach(s=>s.classList.add('hidden'));$('#view-'+b.dataset.view).classList.remove('hidden');if(b.dataset.view==='admin')loadUsers();if(b.dataset.view==='docs')loadDocs()});
-function brl(v){const n=Number(v);return Number.isFinite(n)?n.toLocaleString('pt-BR',{style:'currency',currency:'BRL'}):'—'}
-$('#search').onclick=async()=>{msg($('#searchMsg'),'Consultando o PNCP...');$('#results').innerHTML='';try{const p=new URLSearchParams({keyword:$('#q').value,uf:$('#uf').value,modalidade:$('#modal').value,days:$('#days').value});const d=await api('/api/licitacoes?'+p.toString());$('#count').textContent=d.items.length;msg($('#searchMsg'),d.items.length+' resultado(s) encontrado(s).');$('#results').innerHTML=d.items.map(x=>'<div class="lic"><h3>'+esc(x.objetoCompra||'Objeto não informado')+'</h3><div class="meta"><span class="pill">'+esc(x.modalidadeNome||('Modalidade '+(x._modalidadeConsultada||'')))+'</span><span class="pill">'+esc((x.unidadeOrgao&&x.unidadeOrgao.ufSigla)||'')+'</span><span>'+esc((x.orgaoEntidade&&x.orgaoEntidade.razaoSocial)||'Órgão não informado')+'</span><span>Publicação: '+esc(x.dataPublicacaoPncp||'—')+'</span></div><p class="money">'+brl(x.valorTotalEstimado)+'</p>'+(x.linkSistemaOrigem?'<a target="_blank" rel="noopener" href="'+safeUrl(x.linkSistemaOrigem)+'">Abrir origem</a>':'')+'</div>').join('')||'<div class="sub">Nenhum resultado encontrado.</div>'}catch(e){msg($('#searchMsg'),e.message,false)}};
-async function loadPref(){try{const d=await api('/api/preferences');const p=d.preference||{};$('#prefUf').value=p.uf||'';$('#prefKeyword').value=p.keyword||'';$('#prefModal').value=p.modality_code||'';$('#prefEnabled').value=String(p.enabled??true)}catch{}}
-$('#savePref').onclick=async()=>{try{await api('/api/preferences',{method:'PUT',body:JSON.stringify({uf:$('#prefUf').value,keyword:$('#prefKeyword').value,modality_code:$('#prefModal').value||null,enabled:$('#prefEnabled').value==='true'})});msg($('#prefMsg'),'Alerta salvo com sucesso.')}catch(e){msg($('#prefMsg'),e.message,false)}};
-async function loadDocs(){if(!me)return;try{const d=await api('/api/documents');$('#docsList').innerHTML=d.items.map(x=>'<div class="doc"><div><b>'+esc(x.filename)+'</b><div class="sub">'+Math.round(x.size_bytes/1024)+' KB • '+new Date(x.created_at).toLocaleString('pt-BR')+'</div></div><div><a href="/api/documents/'+x.id+'/download">Baixar</a> <button class="btn danger" onclick="delDoc('+x.id+')">Excluir</button></div></div>').join('')||'<div class="sub">Nenhum documento.</div>'}catch{}}
-$('#upload').onclick=async()=>{const f=$('#file').files[0];if(!f)return msg($('#docMsg'),'Selecione um arquivo.',false);if(f.size>1024*1024)return msg($('#docMsg'),'O limite atual é 1 MB por arquivo.',false);const b64=await new Promise((ok,no)=>{const r=new FileReader();r.onload=()=>ok(String(r.result).split(',')[1]);r.onerror=no;r.readAsDataURL(f)});try{await api('/api/documents',{method:'POST',body:JSON.stringify({filename:f.name,mime_type:f.type||'application/octet-stream',content_base64:b64})});msg($('#docMsg'),'Arquivo enviado.');loadDocs()}catch(e){msg($('#docMsg'),e.message,false)}};
-window.delDoc=async id=>{if(!confirm('Excluir este documento?'))return;await api('/api/documents/'+id,{method:'DELETE',body:'{}'});loadDocs()};
-async function loadUsers(){if(me?.role!=='admin')return;try{const d=await api('/api/admin/users');$('#users').innerHTML=d.items.map(u=>'<tr><td>'+u.id+'</td><td>'+esc(u.email)+'</td><td>'+esc(u.role)+'</td><td>'+(u.active?'Sim':'Não')+'</td><td>'+new Date(u.created_at).toLocaleString('pt-BR')+'</td></tr>').join('')}catch{}}
-$('#refreshUsers').onclick=loadUsers;boot();
+$$('.nav [data-view]').forEach(b=>b.onclick=()=>{
+  $$('.nav [data-view]').forEach(x=>x.classList.remove('active'));b.classList.add('active');$$('section[id^="view-"]').forEach(s=>s.classList.add('hidden'));$('#view-'+b.dataset.view).classList.remove('hidden');
+  if(b.dataset.view==='admin')loadAdmin();if(b.dataset.view==='docs')loadDocs();if(b.dataset.view==='alerts'){loadAlerts(false);loadFeed(false);startFeedTimer()}else stopFeedTimer()
+});
+
+function radarParams(){return new URLSearchParams({keyword:$('#q').value,uf:$('#uf').value,municipality:$('#municipality').value,municipalityIbge:$('#municipalityIbge').value,modalidade:$('#modal').value,org:$('#org').value,cnpj:$('#cnpj').value,minValue:$('#minValue').value,maxValue:$('#maxValue').value,openOnly:$('#openOnly').value,days:$('#days').value,order:$('#order').value})}
+$('#search').onclick=async()=>{
+  msg($('#searchMsg'),'Consultando o PNCP...','info');$('#results').innerHTML='';$('#search').disabled=true;
+  try{const d=await api('/api/licitacoes?'+radarParams().toString());$('#count').textContent=d.items.length;$('#openCount').textContent=d.items.filter(isOpen).length;$('#lastUpdate').textContent=new Date(d.fetched_at).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});msg($('#searchMsg'),d.items.length+' resultado(s) encontrado(s).');$('#results').innerHTML=d.items.map(x=>resultCard(x)).join('')||'<div class="empty">Nenhum resultado encontrado com esses filtros.</div>'}catch(e){msg($('#searchMsg'),e.message,'err')}finally{$('#search').disabled=false}
+};
+$('#clearFilters').onclick=()=>{$('#q').value='';$('#uf').value='';$('#municipality').value='';$('#municipalityIbge').value='';$('#modal').value='';$('#org').value='';$('#cnpj').value='';$('#days').value='7';$('#minValue').value='';$('#maxValue').value='';$('#openOnly').value='false';$('#order').value='newest'};
+
+function alertPayload(){return{name:$('#alertName').value,keyword:$('#alertKeyword').value,uf:$('#alertUf').value,municipality:$('#alertMunicipality').value,municipality_ibge:$('#alertIbge').value,modality_code:$('#alertModal').value||null,org_name:$('#alertOrg').value,org_cnpj:$('#alertCnpj').value,min_value:$('#alertMin').value||null,max_value:$('#alertMax').value||null,enabled:true}}
+function clearAlertForm(){['alertName','alertKeyword','alertUf','alertMunicipality','alertIbge','alertOrg','alertCnpj','alertMin','alertMax'].forEach(id=>$('#'+id).value='');$('#alertModal').value=''}
+$('#createAlert').onclick=async()=>{try{await api('/api/alerts',{method:'POST',body:JSON.stringify(alertPayload())});msg($('#alertMsg'),'Alerta criado com sucesso.');clearAlertForm();await loadAlerts(false);await loadFeed(false)}catch(e){msg($('#alertMsg'),e.message,'err')}};
+async function loadAlerts(showMsg=true){if(!me)return;try{const d=await api('/api/alerts');$('#alertList').innerHTML=d.items.map(a=>'<div class="alert-row"><div><div class="alert-title">'+esc(a.name)+'</div><div class="kv">'+(a.keyword?'<span class="badge">'+esc(a.keyword)+'</span>':'')+(a.uf?'<span class="badge">'+esc(a.uf)+'</span>':'')+(a.municipality?'<span class="badge">'+esc(a.municipality)+'</span>':'')+(a.modality_code?'<span class="badge">Modalidade '+esc(a.modality_code)+'</span>':'')+(a.org_name?'<span class="badge">'+esc(a.org_name)+'</span>':'')+'</div><div class="sub">'+(a.enabled?'Ativo':'Pausado')+' • criado em '+when(a.created_at)+'</div></div><div class="actions"><button class="btn tiny '+(a.enabled?'warn':'success')+'" data-alert-toggle="'+a.id+'" data-enabled="'+a.enabled+'">'+(a.enabled?'Pausar':'Ativar')+'</button><button class="btn tiny danger" data-alert-delete="'+a.id+'">Excluir</button></div></div>').join('')||'<div class="empty">Você ainda não criou nenhum alerta.</div>';if(showMsg)msg($('#alertMsg'),'Alertas atualizados.')}catch(e){if(showMsg)msg($('#alertMsg'),e.message,'err')}}
+$('#alertList').onclick=async e=>{const t=e.target.closest('[data-alert-toggle],[data-alert-delete]');if(!t)return;try{if(t.dataset.alertToggle){await api('/api/alerts/'+t.dataset.alertToggle,{method:'PATCH',body:JSON.stringify({enabled:t.dataset.enabled!=='true'})})}else if(t.dataset.alertDelete){if(!confirm('Excluir este alerta?'))return;await api('/api/alerts/'+t.dataset.alertDelete,{method:'DELETE',body:'{}'})}await loadAlerts(false);await loadFeed(false)}catch(err){msg($('#alertMsg'),err.message,'err')}};
+$('#refreshAlerts').onclick=()=>loadAlerts(true);
+function startFeedTimer(){stopFeedTimer();feedTimer=setInterval(()=>loadFeed(false),300000)}function stopFeedTimer(){if(feedTimer){clearInterval(feedTimer);feedTimer=null}}
+async function loadFeed(show=true){if(!me)return;if(show)msg($('#feedMsg'),'Consultando seus alertas no PNCP...','info');try{const d=await api('/api/alerts/feed');$('#feedMeta').textContent=d.items.length+' correspondência(s) • atualizado '+new Date(d.fetched_at).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});const seen=JSON.parse(localStorage.getItem('radar_seen')||'[]'),seenSet=new Set(seen),fresh=[];$('#alertFeed').innerHTML=d.items.map(m=>{const k=m.alert.id+':'+resultKey(m.item),isNew=!seenSet.has(k);if(isNew)fresh.push({k,m});return '<div><div class="sub" style="margin:0 0 5px">Alerta: <b>'+esc(m.alert.name)+'</b></div>'+resultCard(m.item,isNew?'new':'')+'</div>'}).join('')||'<div class="empty">Nenhuma oportunidade corresponde aos alertas ativos nos últimos 7 dias.</div>';const next=[...fresh.map(x=>x.k),...seen].slice(0,500);localStorage.setItem('radar_seen',JSON.stringify(next));if(show)msg($('#feedMsg'),'Feed atualizado.');notifyFresh(fresh)}catch(e){if(show)msg($('#feedMsg'),e.message,'err')}}
+$('#refreshFeed').onclick=()=>loadFeed(true);
+$('#enableBrowserNotify').onclick=async()=>{if(!('Notification'in window))return msg($('#feedMsg'),'Seu navegador não oferece notificações.','err');const p=await Notification.requestPermission();msg($('#feedMsg'),p==='granted'?'Notificações do navegador ativadas.':'Permissão de notificação não concedida.',p==='granted'?'ok':'err')};
+function notifyFresh(fresh){if(!('Notification'in window)||Notification.permission!=='granted'||!fresh.length)return;fresh.slice(0,3).forEach(({m})=>new Notification('Radar de Licitações: '+m.alert.name,{body:(m.item.objetoCompra||'Nova oportunidade').slice(0,160)}))}
+
+async function loadDocs(){if(!me)return;try{const d=await api('/api/documents');$('#docsList').innerHTML=d.items.map(x=>'<div class="doc"><div><b>'+esc(x.filename)+'</b><div class="sub">'+Math.round(x.size_bytes/1024)+' KB • '+when(x.created_at)+'</div></div><div class="actions"><a href="/api/documents/'+x.id+'/download">Baixar</a><button class="btn tiny danger" data-doc-delete="'+x.id+'">Excluir</button></div></div>').join('')||'<div class="empty">Nenhum documento.</div>'}catch{}}
+$('#upload').onclick=async()=>{const f=$('#file').files[0];if(!f)return msg($('#docMsg'),'Selecione um arquivo.','err');if(f.size>3*1024*1024)return msg($('#docMsg'),'O limite atual é 3 MB por arquivo.','err');const b64=await new Promise((ok,no)=>{const r=new FileReader();r.onload=()=>ok(String(r.result).split(',')[1]);r.onerror=no;r.readAsDataURL(f)});try{await api('/api/documents',{method:'POST',body:JSON.stringify({filename:f.name,mime_type:f.type||'application/octet-stream',content_base64:b64})});msg($('#docMsg'),'Arquivo enviado.');$('#file').value='';loadDocs()}catch(e){msg($('#docMsg'),e.message,'err')}};
+$('#docsList').onclick=async e=>{const b=e.target.closest('[data-doc-delete]');if(!b)return;if(!confirm('Excluir este documento?'))return;await api('/api/documents/'+b.dataset.docDelete,{method:'DELETE',body:'{}'});loadDocs()};
+
+async function loadAdmin(){if(me?.role!=='admin')return;await Promise.all([loadAdminStats(),loadUsers(),loadAudit()])}
+async function loadAdminStats(){try{const d=await api('/api/admin/stats'),s=d.stats;$('#adminStats').innerHTML='<div class="stat admin-stat"><span class="sub">Usuários</span><b>'+s.users.total+'</b><small>'+s.users.active+' ativos</small></div><div class="stat admin-stat"><span class="sub">Administradores</span><b>'+s.users.admins+'</b><small>perfis ADM</small></div><div class="stat admin-stat"><span class="sub">Alertas</span><b>'+s.alerts.total+'</b><small>'+s.alerts.enabled+' ativos</small></div><div class="stat admin-stat"><span class="sub">Documentos</span><b>'+s.documents.count+'</b><small>'+Math.round(Number(s.documents.bytes||0)/1024)+' KB</small></div><div class="stat admin-stat"><span class="sub">Ações 24h</span><b>'+s.audit24h+'</b><small>auditoria</small></div><div class="stat admin-stat"><span class="sub">Armazenamento</span><b style="font-size:16px">'+esc(s.storage)+'</b><small><span class="statusdot"></span>online</small></div>'}catch{}}
+async function loadUsers(){if(me?.role!=='admin')return;try{const d=await api('/api/admin/users');$('#users').innerHTML=d.items.map(u=>'<tr><td>'+u.id+'</td><td>'+esc(u.email)+'</td><td><select data-user-role="'+u.id+'"><option value="user" '+(u.role==='user'?'selected':'')+'>Usuário</option><option value="admin" '+(u.role==='admin'?'selected':'')+'>Administrador</option></select></td><td>'+(u.active?'<span class="pill green">Ativo</span>':'<span class="pill orange">Bloqueado</span>')+'</td><td class="nowrap">'+when(u.created_at)+'</td><td><button class="btn tiny '+(u.active?'danger':'success')+'" data-user-active="'+u.id+'" data-active="'+u.active+'">'+(u.active?'Bloquear':'Ativar')+'</button></td></tr>').join('')}catch{}}
+$('#users').onchange=async e=>{const s=e.target.closest('[data-user-role]');if(!s)return;try{await api('/api/admin/users/'+s.dataset.userRole,{method:'PATCH',body:JSON.stringify({role:s.value})});await loadAdmin()}catch(err){alert(err.message);loadUsers()}};
+$('#users').onclick=async e=>{const b=e.target.closest('[data-user-active]');if(!b)return;try{await api('/api/admin/users/'+b.dataset.userActive,{method:'PATCH',body:JSON.stringify({active:b.dataset.active!=='true'})});await loadAdmin()}catch(err){alert(err.message)}};
+async function loadAudit(){if(me?.role!=='admin')return;try{const d=await api('/api/admin/audit');$('#audit').innerHTML=d.items.map(a=>'<tr><td class="nowrap">'+when(a.created_at)+'</td><td>'+esc(a.email||'Sistema')+'</td><td><span class="badge">'+esc(a.action)+'</span></td><td>'+esc(JSON.stringify(a.metadata||{})).slice(0,180)+'</td><td>'+esc(a.ip||'—')+'</td></tr>').join('')||'<tr><td colspan="5" class="muted">Sem registros.</td></tr>'}catch{}}
+$('#refreshUsers').onclick=loadAdmin;$('#refreshAudit').onclick=loadAudit;
+boot();
 </script>
-</body></html>
+</body>
+</html>
