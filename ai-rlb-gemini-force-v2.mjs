@@ -1,6 +1,6 @@
 import crypto from 'node:crypto';
 import mammoth from 'mammoth';
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
 
 const SECRET = process.env.AI_RLB_SECRET || process.env.ADMIN_PASSWORD || process.env.DATABASE_URL || '';
 const CACHE = new Map();
@@ -170,6 +170,16 @@ function asBuffer(content) {
   if (typeof content === 'string') return Buffer.from(content, 'utf8');
   return Buffer.from(content || '');
 }
+function cellText(value) {
+  if (value == null) return '';
+  if (typeof value === 'object') {
+    if (Array.isArray(value.richText)) return value.richText.map(x => x.text || '').join('');
+    if (value.text != null) return String(value.text);
+    if (value.result != null) return String(value.result);
+    if (value.formula != null) return String(value.result ?? value.formula);
+  }
+  return String(value);
+}
 async function prepareDocument(document) {
   if (!document) return { parts: [], searchText: '' };
   const buffer = asBuffer(document.content);
@@ -193,11 +203,24 @@ async function prepareDocument(document) {
     return { parts: [{ text: `CONTEÚDO EXTRAÍDO DO DOCX ${filename}:\n${text}` }], searchText: text.slice(0, 8000) };
   }
 
-  if (mime.includes('spreadsheet') || mime.includes('ms-excel') || /\.(xlsx|xls)$/i.test(filename)) {
-    const wb = XLSX.read(buffer, { type: 'buffer' });
-    const text = wb.SheetNames.map(name => `PLANILHA: ${name}\n${XLSX.utils.sheet_to_csv(wb.Sheets[name])}`).join('\n\n');
-    const trimmed = clean(text, 60000);
-    return { parts: [{ text: `CONTEÚDO EXTRAÍDO DA PLANILHA ${filename}:\n${trimmed}` }], searchText: trimmed.slice(0, 8000) };
+  if (mime.includes('spreadsheetml') || filename.toLowerCase().endsWith('.xlsx')) {
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.load(buffer);
+    const sheets = [];
+    for (const ws of workbook.worksheets) {
+      const rows = [];
+      ws.eachRow({ includeEmpty: false }, row => {
+        const values = Array.isArray(row.values) ? row.values.slice(1).map(cellText) : [];
+        rows.push(values.join('\t'));
+      });
+      sheets.push(`PLANILHA: ${ws.name}\n${rows.join('\n')}`);
+    }
+    const text = clean(sheets.join('\n\n'), 60000);
+    return { parts: [{ text: `CONTEÚDO EXTRAÍDO DA PLANILHA ${filename}:\n${text}` }], searchText: text.slice(0, 8000) };
+  }
+
+  if (mime.includes('ms-excel') || filename.toLowerCase().endsWith('.xls')) {
+    throw Object.assign(new Error('Para manter a análise 100% Gemini com processamento seguro, converta o arquivo .XLS para .XLSX, CSV ou PDF.'), { status: 415, publicCode: 'legacy_xls_unsupported' });
   }
 
   if (mime.startsWith('text/') || ['application/json', 'application/xml'].includes(mime) || /\.(txt|md|csv|json|html?|xml)$/i.test(filename)) {
