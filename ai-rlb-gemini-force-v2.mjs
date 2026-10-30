@@ -2,16 +2,13 @@ import crypto from 'node:crypto';
 
 const SECRET = process.env.AI_RLB_SECRET || process.env.ADMIN_PASSWORD || process.env.DATABASE_URL || '';
 const CACHE = new Map();
-let preferredModel = null;
+const preferred = { chat: null, document: null };
+const health = new Map();
 
-const MODEL_CANDIDATES = () => [...new Set([
-  preferredModel,
-  'gemini-3.5-flash-lite',
-  'gemini-3.8-flash',
-  'gemini-3.6-flash',
-  process.env.GEMINI_MODEL,
-  'gemini-3.1-flash-lite'
-].filter(Boolean))];
+const BASE_MODELS = {
+  chat: ['gemini-3.5-flash-lite', 'gemini-3.6-flash', 'gemini-3.8-flash'],
+  document: ['gemini-3.6-flash', 'gemini-3.5-flash-lite', 'gemini-3.8-flash']
+};
 
 const SOURCES = [
   { title: 'Senado Federal — Lei nº 14.133/2021', url: 'https://legis.senado.leg.br/norma/33382036/publicacao/33383820', legal: true },
@@ -59,8 +56,8 @@ async function fetchText(url) {
   const hit = CACHE.get(url);
   if (hit && Date.now() - hit.at < 6 * 60 * 60 * 1000) return hit.text;
   const r = await fetch(url, {
-    headers: { 'User-Agent': 'RadarLicitacoesBrasil-GeminiOnly/1.0', 'Accept': 'text/html,text/plain;q=0.9,*/*;q=.5' },
-    signal: AbortSignal.timeout(12000)
+    headers: { 'User-Agent': 'RadarLicitacoesBrasil-GeminiOnly/2.0', 'Accept': 'text/html,text/plain;q=0.9,*/*;q=.5' },
+    signal: AbortSignal.timeout(7000)
   });
   if (!r.ok) throw new Error(`Fonte oficial HTTP ${r.status}`);
   const raw = Buffer.from(await r.arrayBuffer()).toString('utf8');
@@ -130,7 +127,7 @@ async function persist(pool, userId, conv, message, answer, sources) {
   } finally { c.release(); }
 }
 function modelHistory(items) {
-  return items.slice(-8).map(x => ({ role: x.role === 'assistant' ? 'model' : 'user', parts: [{ text: clean(x.content, 1800) }] }));
+  return items.slice(-8).map(x => ({ role: x.role === 'assistant' ? 'model' : 'user', parts: [{ text: clean(x.content, 2200) }] }));
 }
 
 const SYSTEM = `Você é a IA RLB, assistente conversacional especializado em licitações, contratos administrativos e compras públicas brasileiras.
@@ -143,7 +140,8 @@ REGRAS:
 - Para fatos jurídicos, artigos, prazos, impedimentos, requisitos e procedimentos, use somente as EVIDÊNCIAS OFICIAIS fornecidas nesta chamada.
 - Não invente artigo, acórdão, jurisprudência, prazo, requisito ou regra.
 - Se as evidências não forem suficientes, diga isso de forma natural e peça o contexto mínimo necessário.
-- Quando houver documento, analise o documento de forma crítica, identifique tipo, finalidade, inconsistências, riscos, pontos de atenção e melhorias, sempre cruzando com as evidências oficiais quando houver conteúdo jurídico.
+- Quando houver documento, analise criticamente o documento, identifique tipo, finalidade, inconsistências, riscos, pontos de atenção e melhorias, sempre cruzando com as evidências oficiais quando houver conteúdo jurídico.
+- Em perguntas de continuidade como “explique mais simples”, “resuma”, “continue” ou “aplique ao meu caso”, use o histórico anterior e não exija que o documento seja reenviado se a resposta anterior já contém o contexto necessário.
 - Responda primeiro ao ponto perguntado e depois explique de forma prática. Não despeje texto bruto da lei.
 - Português brasileiro, tom profissional, claro e próximo. Evite bordões repetitivos e respostas engessadas.`;
 
@@ -168,60 +166,82 @@ function asBuffer(content) {
   if (typeof content === 'string') return Buffer.from(content, 'utf8');
   return Buffer.from(content || '');
 }
+function needsDocumentAgain(message, hist) {
+  if (!hist.length) return true;
+  const q = norm(message);
+  if (/^(explique mais simples|explica mais simples|resuma|resume|continue|continua|aprofunde|detalhe melhor|simplifique|mais simples|em resumo|aplique ao meu caso|tem certeza|confira isso)[?.! ]*$/.test(q)) return false;
+  return /(documento|arquivo|edital|pdf|pagina|página|item|clausula|cláusula|anexo|trecho|conteudo|conteúdo|reanalis|analise novamente|confira no|verifique no|leia o|o que diz)/.test(q);
+}
 async function prepareDocument(document) {
   if (!document) return { parts: [], searchText: '' };
   const buffer = asBuffer(document.content);
   const mime = inferMime(document);
   const filename = String(document.filename || 'documento');
   if (!buffer.length) throw Object.assign(new Error('O documento está vazio.'), { status: 400, publicCode: 'empty_document' });
-
   if (mime === 'application/pdf' || mime.startsWith('image/')) {
-    return {
-      parts: [
-        { inlineData: { mimeType: mime, data: buffer.toString('base64') } },
-        { text: `Arquivo anexado: ${filename}` }
-      ],
-      searchText: filename
-    };
+    return { parts: [{ inlineData: { mimeType: mime, data: buffer.toString('base64') } }, { text: `Arquivo anexado: ${filename}` }], searchText: filename };
   }
-
   if (mime.startsWith('text/') || ['application/json', 'application/xml'].includes(mime) || /\.(txt|md|csv|json|html?|xml)$/i.test(filename)) {
     const text = clean(buffer.toString('utf8'), 60000);
     return { parts: [{ text: `CONTEÚDO DO ARQUIVO ${filename}:\n${text}` }], searchText: text.slice(0, 8000) };
   }
-
   throw Object.assign(new Error('Para manter toda a análise no Gemini, envie o documento em PDF, TXT, CSV, JSON, HTML/XML ou imagem. Para DOC/DOCX/XLS/XLSX, converta primeiro para PDF.'), { status: 415, publicCode: 'gemini_document_format_required' });
 }
 
-async function callModel(apiKey, model, contents, evidenceText) {
+function modelCandidates(task) {
+  const base = BASE_MODELS[task] || BASE_MODELS.chat;
+  const pref = preferred[task];
+  const all = [...new Set([pref, process.env.GEMINI_MODEL, ...base].filter(Boolean))];
+  const now = Date.now();
+  const healthy = all.filter(m => (health.get(m)?.cooldownUntil || 0) <= now);
+  return healthy.length ? healthy : all;
+}
+function noteSuccess(model, task) {
+  preferred[task] = model;
+  health.set(model, { failures: 0, cooldownUntil: 0, lastSuccess: Date.now() });
+}
+function noteFailure(model) {
+  const old = health.get(model) || { failures: 0 };
+  const failures = old.failures + 1;
+  const cooldownMs = failures >= 2 ? 120000 : 45000;
+  health.set(model, { ...old, failures, cooldownUntil: Date.now() + cooldownMs, lastFailure: Date.now() });
+}
+async function callModel(apiKey, model, contents, evidenceText, task = 'chat', diagnostic = false) {
+  const isDoc = task === 'document';
   const body = {
     systemInstruction: { parts: [{ text: `${SYSTEM}\n\nEVIDÊNCIAS OFICIAIS DISPONÍVEIS NESTA RESPOSTA:\n${evidenceText || 'Nenhuma evidência oficial relevante foi localizada para esta mensagem.'}` }] },
     contents,
-    generationConfig: { temperature: 0.42, topP: 0.9, maxOutputTokens: 1500 }
+    generationConfig: {
+      maxOutputTokens: diagnostic ? 220 : (isDoc ? 1800 : 1000),
+      thinkingConfig: { thinkingLevel: 'low' }
+    }
   };
+  const timeout = diagnostic ? 16000 : (isDoc ? 38000 : (model.includes('3.5-flash-lite') ? 13000 : 18000));
+  const started = Date.now();
   const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
-    signal: AbortSignal.timeout(22000),
+    signal: AbortSignal.timeout(timeout),
     body: JSON.stringify(body)
   });
   const data = await r.json().catch(() => ({}));
-  if (!r.ok) throw Object.assign(new Error(data?.error?.message || `Gemini ${model} HTTP ${r.status}`), { model, statusCode: r.status });
+  if (!r.ok) throw Object.assign(new Error(data?.error?.message || `Gemini ${model} HTTP ${r.status}`), { model, statusCode: r.status, elapsed: Date.now() - started });
   const text = (data.candidates?.[0]?.content?.parts || []).map(x => x.text || '').join('').trim();
-  if (!text) throw Object.assign(new Error(`Gemini ${model} não retornou texto.`), { model });
-  return { text, model };
+  if (!text) throw Object.assign(new Error(`Gemini ${model} não retornou texto.`), { model, elapsed: Date.now() - started });
+  return { text, model, elapsed: Date.now() - started };
 }
-async function cascade(apiKey, contents, evidenceText) {
+async function cascade(apiKey, contents, evidenceText, task = 'chat', diagnostic = false) {
   let last;
-  for (const model of MODEL_CANDIDATES()) {
+  const models = modelCandidates(task);
+  for (const model of models) {
     try {
-      const result = await callModel(apiKey, model, contents, evidenceText);
-      preferredModel = model;
+      const result = await callModel(apiKey, model, contents, evidenceText, task, diagnostic);
+      noteSuccess(model, task);
       return result;
     } catch (e) {
       last = e;
-      if (preferredModel === model) preferredModel = null;
-      console.warn('IA RLB Gemini-only attempt failed:', model, e?.message || e);
+      noteFailure(model);
+      console.warn('IA RLB Gemini-only attempt failed:', model, e?.message || e, `elapsed=${e?.elapsed || 0}ms`);
     }
   }
   throw last || new Error('Gemini indisponível');
@@ -239,17 +259,19 @@ export async function runForcedGeminiChatV2({ pool, userId, body, document }) {
   const used = await usage(pool, userId);
 
   try {
-    const doc = await prepareDocument(document);
-    const contextQuery = [...hist.filter(x => x.role === 'user').slice(-2).map(x => x.content), message, doc.searchText].join(' ').slice(0, 12000);
+    const attachDocument = Boolean(document && needsDocumentAgain(message, hist));
+    const doc = attachDocument ? await prepareDocument(document) : { parts: [], searchText: '' };
+    const contextQuery = [...hist.filter(x => x.role === 'user').slice(-2).map(x => x.content), message, doc.searchText].join(' ');
     const ev = await collectEvidence(contextQuery);
     const evidenceText = ev.hits.map((h, i) => `[FONTE ${i + 1}] ${h.source}\n${h.text}`).join('\n\n');
     const userParts = [...doc.parts, { text: message }];
     const contents = [...modelHistory(hist), { role: 'user', parts: userParts }];
-    const result = await cascade(apiKey, contents, evidenceText);
-    const interaction = document ? 'gemini_document_analysis' : (obviousSocial(message) ? 'social' : (ev.hits.length ? 'gemini_procurement' : 'gemini_conversation'));
+    const task = attachDocument ? 'document' : 'chat';
+    const result = await cascade(apiKey, contents, evidenceText, task);
+    const interaction = attachDocument ? 'gemini_document_analysis' : (document ? 'gemini_document_followup' : (obviousSocial(message) ? 'social' : (ev.hits.length ? 'gemini_procurement' : 'gemini_conversation')));
 
     await persist(pool, userId, conv, message, result.text, ev.sources);
-    console.log('IA RLB Gemini-only response:', result.model, interaction);
+    console.log('IA RLB Gemini-only response:', result.model, interaction, `elapsed=${result.elapsed}ms`, `doc_sent=${attachDocument}`);
     return {
       conversation_id: conv.id,
       answer: result.text,
@@ -257,14 +279,54 @@ export async function runForcedGeminiChatV2({ pool, userId, body, document }) {
       suggestions: interaction === 'gemini_procurement' || interaction === 'gemini_document_analysis' ? ['Explique mais simples', 'Mostre a base legal', 'Aplique ao meu caso'] : [],
       used_today: used + 1,
       daily_limit: 200,
-      mode: 'gemini_only_official_sources',
+      mode: 'gemini_only_optimized_official_sources',
       interaction_type: interaction,
       provider: 'gemini',
       model: result.model
     };
   } catch (e) {
-    if (e?.status && e?.publicCode) throw e;
     console.error('IA RLB Gemini-only failure:', e?.message || e);
     throw Object.assign(new Error('O Gemini não conseguiu concluir esta resposta agora. A IA RLB não utilizou nenhum motor local.'), { status: 503, publicCode: 'gemini_temporarily_unavailable' });
   }
+}
+
+export async function runGeminiDiagnostics(pool) {
+  const started = Date.now();
+  const report = { key: false, sources: false, social: false, legal: false, context: false, details: {} };
+  try {
+    const apiKey = await geminiKey(pool);
+    report.key = Boolean(apiKey);
+    if (!apiKey) throw new Error('Gemini não configurado');
+
+    const ev = await collectEvidence('concorrência pregão modalidade licitação Lei 14.133 habilitação');
+    report.sources = ev.hits.length > 0;
+    report.details.source_hits = ev.hits.length;
+    report.details.source_count = ev.sources.length;
+    const evidenceText = ev.hits.slice(0, 4).map((h, i) => `[FONTE ${i + 1}] ${h.source}\n${h.text}`).join('\n\n');
+
+    const social = await cascade(apiKey, [{ role: 'user', parts: [{ text: 'Responda somente com: DIAG_SOCIAL_OK' }] }], '', 'chat', true);
+    report.social = /DIAG_SOCIAL_OK/i.test(social.text);
+    report.details.social_model = social.model;
+    report.details.social_ms = social.elapsed;
+
+    const legal = await cascade(apiKey, [{ role: 'user', parts: [{ text: 'Com base nas evidências oficiais, explique em uma frase o que é concorrência e termine exatamente com [DIAG_LEGAL_OK].' }] }], evidenceText, 'chat', true);
+    report.legal = /DIAG_LEGAL_OK/i.test(legal.text);
+    report.details.legal_model = legal.model;
+    report.details.legal_ms = legal.elapsed;
+
+    const contextContents = [
+      { role: 'user', parts: [{ text: 'Estamos falando sobre a modalidade concorrência.' }] },
+      { role: 'model', parts: [{ text: 'Certo, estamos falando sobre concorrência em licitações.' }] },
+      { role: 'user', parts: [{ text: 'Explique mais simples e termine exatamente com [DIAG_CONTEXT_OK].' }] }
+    ];
+    const context = await cascade(apiKey, contextContents, evidenceText, 'chat', true);
+    report.context = /DIAG_CONTEXT_OK/i.test(context.text);
+    report.details.context_model = context.model;
+    report.details.context_ms = context.elapsed;
+  } catch (e) {
+    report.error = String(e?.message || e);
+  }
+  report.elapsed_ms = Date.now() - started;
+  console.log('IA RLB DIAGNOSTICS:', JSON.stringify(report));
+  return report;
 }
