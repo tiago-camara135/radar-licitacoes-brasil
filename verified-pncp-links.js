@@ -1,6 +1,7 @@
 (()=>{
   const originalFetch=window.fetch.bind(window);
   const digits=v=>String(v??'').replace(/\D/g,'');
+  const safeExternal=v=>{try{const u=new URL(String(v||''),location.origin);return ['http:','https:'].includes(u.protocol)?u.href:''}catch{return''}};
   function parts(x){
     let cnpj=digits(x?.orgaoEntidade?.cnpj);
     let ano=Number(x?.anoCompra);
@@ -21,7 +22,20 @@
     if(!String(x?.dataPublicacaoPncp||'').trim())return false;
     return true;
   }
-  function normalizeItem(x){if(!verified(x))return null;return {...x,linkSistemaOrigem:officialUrl(x),_rlbVerifiedPncp:true}}
+  function normalizeItem(x){
+    if(!verified(x))return null;
+    const pncp=officialUrl(x);
+    const origin=safeExternal(x?.linkSistemaOrigem||'');
+    const process=safeExternal(x?.linkProcessoEletronico||'');
+    return {
+      ...x,
+      _rlbOriginUrl:origin,
+      _rlbProcessUrl:process,
+      _rlbPncpUrl:pncp,
+      linkSistemaOrigem:pncp,
+      _rlbVerifiedPncp:true
+    };
+  }
   window.fetch=async function(input,init){
     const res=await originalFetch(input,init);
     try{
