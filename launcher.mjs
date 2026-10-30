@@ -1,13 +1,17 @@
 import fs from 'node:fs';
+import http from 'node:http';
 import { syncBuiltinESMExports } from 'node:module';
+import { initLiveMonitor, handleLiveRoute } from './live-monitor.mjs';
 
 const originalReadFileSync = fs.readFileSync;
+const originalCreateServer = http.createServer.bind(http);
 const vividTheme = originalReadFileSync(new URL('./vivid-theme.css', import.meta.url), 'utf8');
 const autoNotifyStyle = originalReadFileSync(new URL('./auto-notifications.css', import.meta.url), 'utf8');
 const verifiedPncpScript = originalReadFileSync(new URL('./verified-pncp-links.js', import.meta.url), 'utf8');
 const autoNotifyScript = originalReadFileSync(new URL('./auto-notifications.js', import.meta.url), 'utf8');
 const radarOnlyAlertsScript = originalReadFileSync(new URL('./radar-only-alerts.js', import.meta.url), 'utf8');
 const chamberFilterScript = originalReadFileSync(new URL('./chamber-filter.js', import.meta.url), 'utf8');
+const liveFeedScript = originalReadFileSync(new URL('./live-feed.js', import.meta.url), 'utf8');
 
 const iconSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" role="img" aria-label="RLB">
 <defs>
@@ -37,7 +41,7 @@ function applyBrand(html) {
   out = out.replace(/<meta name="theme-color" content="[^"]*">/i, '<meta name="theme-color" content="#009C3B">');
   out = out.replace(/<div class="brand-mark" aria-hidden="true"><svg[\s\S]*?<\/svg><\/div>/, `<div class="brand-mark" aria-hidden="true"><img src="${iconData}" alt=""></div>`);
   out = out.replace('</head>', `<link rel="icon" type="image/svg+xml" href="${iconData}"><style id="vivid-theme">${vividTheme}</style><style id="rlb-icon-style">${iconStyle}</style><style id="auto-notification-style">${autoNotifyStyle}</style></head>`);
-  out = out.replace('</body>', `<script id="verified-pncp-script">${verifiedPncpScript}</script><script id="chamber-filter-script">${chamberFilterScript}</script><script id="auto-notification-script">${autoNotifyScript}</script><script id="radar-only-alerts-script">${radarOnlyAlertsScript}</script></body>`);
+  out = out.replace('</body>', `<script id="verified-pncp-script">${verifiedPncpScript}</script><script id="chamber-filter-script">${chamberFilterScript}</script><script id="live-feed-script">${liveFeedScript}</script><script id="auto-notification-script">${autoNotifyScript}</script><script id="radar-only-alerts-script">${radarOnlyAlertsScript}</script></body>`);
   return out;
 }
 
@@ -50,5 +54,24 @@ fs.readFileSync = function patchedReadFileSync(path, ...args) {
   return originalReadFileSync.call(fs, path, ...args);
 };
 
+http.createServer = function patchedCreateServer(listener) {
+  return originalCreateServer(async (req, res) => {
+    try {
+      const url = new URL(req.url || '/', 'http://localhost');
+      if (await handleLiveRoute(req, res, url)) return;
+    } catch (e) {
+      console.error('live route error:', e?.message || e);
+      if (!res.headersSent) {
+        res.statusCode = 500;
+        res.setHeader('Content-Type', 'application/json; charset=utf-8');
+        return res.end(JSON.stringify({ error: 'Falha temporária no monitor ao vivo.' }));
+      }
+      try { return res.end(); } catch {}
+    }
+    return listener(req, res);
+  });
+};
+
 syncBuiltinESMExports();
+await initLiveMonitor();
 await import('./server.mjs');
