@@ -71,7 +71,7 @@ async function localSearch(filters,limit=900){
   let n=2;
   const add=(sql,val)=>{where.push(sql.replace('?',`$${n++}`));params.push(val)};
   if(f.uf)add('uf=?',f.uf);
-  if(f.modality)add('modality_code=?',f.modality);
+  if(f.modalities.length){where.push(`modality_code = ANY($${n++}::int[])`);params.push(f.modalities)}
   if(f.cnpj.length===14)add('org_cnpj=?',f.cnpj);
   if(f.municipalityIbge.length===7)add("COALESCE(raw->'unidadeOrgao'->>'codigoIbge','')=?",f.municipalityIbge);
   if(f.municipality)add('municipality ILIKE ?',`%${f.municipality}%`);
