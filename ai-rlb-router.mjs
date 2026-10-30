@@ -1,7 +1,7 @@
 import { Pool } from 'pg';
-import { initAiTables, aiStatus, listAiConversations, listAiMessages, deleteAiConversation, runAiChat } from './ai-rlb-core.mjs';
+import { initAiTables, aiStatus, listAiConversations, listAiMessages, deleteAiConversation } from './ai-rlb-core.mjs';
 import { initHybridTables, hybridStatus, hybridAdminStatus, configureHybridProvider, removeHybridProvider } from './ai-rlb-hybrid.mjs';
-import { runForcedGeminiChatV2 } from './ai-rlb-gemini-force-v2.mjs';
+import { runForcedGeminiChatV2, runGeminiDiagnostics } from './ai-rlb-gemini-force-v2.mjs';
 
 const PORT = Number(process.env.PORT || 10000);
 const DATABASE_URL = process.env.DATABASE_URL || '';
@@ -55,6 +55,9 @@ export async function initAiRlb() {
   if (!pool) { console.log('IA RLB router ready: no database'); return; }
   await initAiTables(pool);
   await initHybridTables(pool);
+  setTimeout(() => {
+    runGeminiDiagnostics(pool).catch(e => console.error('IA RLB diagnostics boot error:', e?.message || e));
+  }, 2500);
 }
 
 export async function handleAiRlbRoute(req, res, url) {
@@ -102,8 +105,8 @@ export async function handleAiRlbRoute(req, res, url) {
       const body = await readJson(req);
       const document = body.document_id ? await ownedDocument(user.id, Number(body.document_id)) : null;
       if (body.document_id && !document) { send(res, 404, { error: 'Documento não encontrado ou sem acesso.', code: 'document_not_found' }); return true; }
-      const result = await runForcedGeminiChatV2({ pool, userId: user.id, body, document, fallback: runAiChat });
-      await audit(user.id, 'ai_rlb.chat', { conversation_id: result.conversation_id, document_id: document?.id || null, web_search: body.use_web !== false, provider: result.provider || 'local', model: result.model || null }, ip);
+      const result = await runForcedGeminiChatV2({ pool, userId: user.id, body, document });
+      await audit(user.id, 'ai_rlb.chat', { conversation_id: result.conversation_id, document_id: document?.id || null, web_search: body.use_web !== false, provider: result.provider || 'gemini', model: result.model || null }, ip);
       send(res, 200, result); return true;
     }
     send(res, 404, { error: 'Rota da IA RLB não encontrada.', code: 'route_not_found' }); return true;
