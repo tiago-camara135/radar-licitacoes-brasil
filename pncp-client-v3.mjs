@@ -186,7 +186,10 @@ export async function fetchPncpSearch(filters={}){
   const f=normalizeSearchFilters(filters),end=new Date(),start=new Date(end.getTime()-f.days*86400000),codes=f.modality?[f.modality]:PNCP_MODALITY_CODES;
   const restrictive=Boolean(f.uf||f.municipalityIbge||f.cnpj||f.modality);
   const localText=Boolean(f.keyword||f.org||f.municipality);
-  const budget=restrictive?(localText?8:6):(localText?4:3);
+  // Production PNCP currently accepts 50 records/page. Keep user searches bounded so a state filter
+  // returns quickly and does not create a burst that triggers HTTP 429. The response metadata marks
+  // partial coverage whenever more pages exist; the local Radar cache is merged into the result.
+  const budget=restrictive?(localText?3:2):(localText?2:1);
   const r=await fetchPncpRange({startDate:start,endDate:end,filters:f,codes,maxPagesPerModality:budget,concurrency:2});
   return {...r,items:applySearchFilters(r.items,f),filters:f};
 }
