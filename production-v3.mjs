@@ -6,6 +6,7 @@ const notificationV3=nativeReadFileSync(new URL('./onsite-notifications-v3.js',i
 const draggableAiV1=nativeReadFileSync(new URL('./draggable-ai-v1.js',import.meta.url),'utf8');
 const aiUiEnhancements=nativeReadFileSync(new URL('./ai-ui-enhancements.js',import.meta.url),'utf8');
 const aiUiCss=nativeReadFileSync(new URL('./ai-ui-enhancements.css',import.meta.url),'utf8');
+const headerModel1Css=nativeReadFileSync(new URL('./header-model1.css',import.meta.url),'utf8');
 const legacyMarker="\n\n(()=>{\n'use strict';\nconst CHECK_MS=5*60*1000;";
 const runtimeCss=`
 #rlbNationalNoticeHost{
@@ -97,7 +98,7 @@ fs.readFileSync=function patchedReadFileSync(path,...args){
   }
   if(value.endsWith('/app-v2.css')||value.endsWith('\\app-v2.css')){
     const source=Buffer.isBuffer(data)?data.toString('utf8'):String(data);
-    const finalCss=source+'\n'+runtimeCss+'\n'+aiUiCss;
+    const finalCss=source+'\n'+runtimeCss+'\n'+aiUiCss+'\n'+headerModel1Css;
     return Buffer.isBuffer(data)?Buffer.from(finalCss):finalCss;
   }
   return data;
