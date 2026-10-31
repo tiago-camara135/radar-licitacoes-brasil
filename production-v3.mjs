@@ -1,7 +1,10 @@
 import fs from 'node:fs';
+import http from 'node:http';
 import { syncBuiltinESMExports } from 'node:module';
+import { handleAdminControlCenter } from './admin-control-center.mjs';
 
 const nativeReadFileSync=fs.readFileSync.bind(fs);
+const nativeCreateServer=http.createServer.bind(http);
 const notificationV3=nativeReadFileSync(new URL('./onsite-notifications-v3.js',import.meta.url),'utf8');
 const draggableAiV1=nativeReadFileSync(new URL('./draggable-ai-v1.js',import.meta.url),'utf8');
 const aiUiEnhancements=nativeReadFileSync(new URL('./ai-ui-enhancements.js',import.meta.url),'utf8');
@@ -11,6 +14,10 @@ const authHomeV1=nativeReadFileSync(new URL('./auth-home-v1.js',import.meta.url)
 const authHomeCss=nativeReadFileSync(new URL('./auth-home-v1.css',import.meta.url),'utf8');
 const authHomeProductCss=nativeReadFileSync(new URL('./auth-home-product-v2.css',import.meta.url),'utf8');
 const roleNavGuardV1=nativeReadFileSync(new URL('./role-nav-guard-v1.js',import.meta.url),'utf8');
+const adminControlCenterJs=nativeReadFileSync(new URL('./admin-control-center.js',import.meta.url),'utf8');
+const adminControlCenterCss=nativeReadFileSync(new URL('./admin-control-center.css',import.meta.url),'utf8');
+const publicSiteConfigJs=nativeReadFileSync(new URL('./public-site-config-v1.js',import.meta.url),'utf8');
+const publicSiteConfigCss=nativeReadFileSync(new URL('./public-site-config-v1.css',import.meta.url),'utf8');
 const legacyMarker="\n\n(()=>{\n'use strict';\nconst CHECK_MS=5*60*1000;";
 const runtimeCss=`
 #rlbNationalNoticeHost{
@@ -102,6 +109,29 @@ html[data-rlb-role="user"] #adminNav{
 }
 `;
 
+http.createServer=function patchedCreateServer(...args){
+  const listenerIndex=args.findIndex(x=>typeof x==='function');
+  if(listenerIndex<0)return nativeCreateServer(...args);
+  const listener=args[listenerIndex];
+  args[listenerIndex]=async(req,res)=>{
+    try{
+      const url=new URL(req.url||'/','http://localhost');
+      if(await handleAdminControlCenter(req,res,url))return;
+    }catch(error){
+      console.error('admin control center middleware error:',error?.stack||error);
+      if(!res.headersSent){
+        res.statusCode=500;
+        res.setHeader('Content-Type','application/json; charset=utf-8');
+        res.setHeader('Cache-Control','no-store');
+        res.end(JSON.stringify({error:'Erro interno da Central Administrativa.'}));
+      }else try{res.end()}catch{}
+      return;
+    }
+    return listener(req,res);
+  };
+  return nativeCreateServer(...args);
+};
+
 fs.readFileSync=function patchedReadFileSync(path,...args){
   const value=path instanceof URL?path.pathname:String(path);
   const data=nativeReadFileSync(path,...args);
@@ -109,12 +139,12 @@ fs.readFileSync=function patchedReadFileSync(path,...args){
     const source=Buffer.isBuffer(data)?data.toString('utf8'):String(data);
     const markerIndex=source.indexOf(legacyMarker);
     const core=markerIndex>=0?source.slice(0,markerIndex):source;
-    const finalJs=core+'\n\n'+notificationV3+'\n\n'+draggableAiV1+'\n\n'+aiUiEnhancements+'\n\n'+authHomeV1+'\n\n'+roleNavGuardV1;
+    const finalJs=core+'\n\n'+notificationV3+'\n\n'+draggableAiV1+'\n\n'+aiUiEnhancements+'\n\n'+authHomeV1+'\n\n'+publicSiteConfigJs+'\n\n'+roleNavGuardV1+'\n\n'+adminControlCenterJs;
     return Buffer.isBuffer(data)?Buffer.from(finalJs):finalJs;
   }
   if(value.endsWith('/app-v2.css')||value.endsWith('\\app-v2.css')){
     const source=Buffer.isBuffer(data)?data.toString('utf8'):String(data);
-    const finalCss=source+'\n'+runtimeCss+'\n'+aiUiCss+'\n'+headerModel1Css+'\n'+authHomeCss+'\n'+authHomeProductCss;
+    const finalCss=source+'\n'+runtimeCss+'\n'+aiUiCss+'\n'+headerModel1Css+'\n'+authHomeCss+'\n'+authHomeProductCss+'\n'+publicSiteConfigCss+'\n'+adminControlCenterCss;
     return Buffer.isBuffer(data)?Buffer.from(finalCss):finalCss;
   }
   return data;
