@@ -37,6 +37,13 @@ function setBusy(button,on,label=''){
 function refreshView(view){
   const b=$(`#mainNav [data-view="${view}"]`);if(b&&!b.classList.contains('hidden'))b.click();
 }
+async function reloadLegacyDocuments(){
+  const root=$('#documentsList');if(!root)return;
+  try{
+    const d=await request('/api/documents'),items=d.items||[];
+    root.innerHTML=items.map(x=>`<div class="stack-item"><div class="stack-copy"><b>${esc(x.filename)}</b><span>${Math.round(Number(x.size_bytes||0)/1024)} KB • ${esc(when(x.created_at))}</span></div><div class="stack-actions"><a class="btn ghost compact" href="/api/documents/${x.id}/download">Baixar</a><button class="btn danger compact" data-delete-doc="${x.id}">Excluir</button></div></div>`).join('')||'<div class="empty-state">Nenhum documento salvo.</div>';
+  }catch(e){root.innerHTML=`<div class="empty-state">${esc(e.message)}</div>`}
+}
 function when(v){if(!v)return'—';const d=new Date(v);return Number.isNaN(d.getTime())?'—':d.toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'})}
 function brl(v){const n=Number(v);return Number.isFinite(n)?n.toLocaleString('pt-BR',{style:'currency',currency:'BRL'}):'Valor não informado'}
 function org(x){return x?.orgaoEntidade?.razaoSocial||'Órgão não informado'}
@@ -90,7 +97,7 @@ async function alertAction(button,kind){
     if(kind==='delete')await request('/api/alerts/'+button.dataset.deleteAlert,{method:'DELETE',body:'{}'});
     else await request('/api/alerts/'+button.dataset.toggleAlert,{method:'PATCH',body:JSON.stringify({enabled:button.dataset.enabled!=='true'})});
     toast(kind==='delete'?'Alerta excluído.':'Alerta atualizado.');refreshView('alerts');
-  }catch(e){toast(e.message,true);setBusy(button,false)}
+  }catch(e){toast(e.message,true)}finally{if(button.isConnected)setBusy(button,false)}
 }
 async function notificationAction(button,kind){
   const channel=button.dataset.requestVerify||button.dataset.confirmVerify||button.dataset.testNotification;
@@ -113,8 +120,8 @@ async function notificationAction(button,kind){
 async function deleteDocument(button){
   if(!confirm('Excluir este documento?'))return;
   if(!setBusy(button,true,'Excluindo…'))return;
-  try{await request('/api/documents/'+button.dataset.deleteDoc,{method:'DELETE',body:'{}'});toast('Documento excluído.');refreshView('documents')}
-  catch(e){toast(e.message,true);setBusy(button,false)}
+  try{await request('/api/documents/'+button.dataset.deleteDoc,{method:'DELETE',body:'{}'});toast('Documento excluído.');await reloadLegacyDocuments()}
+  catch(e){toast(e.message,true)}finally{if(button.isConnected)setBusy(button,false)}
 }
 async function uploadDocumentInput(input){
   const file=input.files?.[0];if(!file)return;
@@ -124,7 +131,7 @@ async function uploadDocumentInput(input){
   try{
     const content=await new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(String(r.result||'').split(',')[1]||'');r.onerror=reject;r.readAsDataURL(file)});
     await request('/api/documents',{method:'POST',body:JSON.stringify({filename:file.name,mime_type:file.type||'application/octet-stream',content_base64:content})});
-    toast('Documento enviado.');refreshView('documents');
+    toast('Documento enviado.');await reloadLegacyDocuments();
   }catch(e){toast(e.message||'Não foi possível enviar o documento.',true)}finally{
     input.value='';if(label){label.classList.remove('ui-action-busy');label.removeAttribute('aria-busy')}
   }
@@ -153,7 +160,7 @@ function resetAdvancedTab(id){
   };
   setTimeout(tick,30);
 }
-async function loadMe(){try{state.me=(await request('/api/me')).user||null}catch{state.me=null}}
+async function loadMe(){try{state.me=(await request('/api/me')).user||null}catch{state.me=null}finally{normalizeAdminSupport()}}
 function normalizeAdminSupport(){
   const form=$('#accUserForm');const panel=$('#ausPanel');if(!form||!panel)return;
   const target=Number(form.dataset.userId),self=state.me&&Number(state.me.id)===target;
