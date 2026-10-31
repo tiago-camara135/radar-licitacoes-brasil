@@ -1,59 +1,136 @@
 /* Radar de Licitacoes Brasil — Header premium inspirado no Modelo 1
-   Somente camada visual: preserva IDs, data-view e eventos existentes. */
+   Camada exclusivamente visual: preserva IDs, data-view, eventos e funcionalidades existentes. */
+
+/* ---------- tokens do cabecalho: MODO CLARO ---------- */
+.app-shell{
+  --hdr-strip-bg:linear-gradient(90deg,#f7fbff 0%,#eef7ff 50%,#eaf4ff 100%);
+  --hdr-strip-text:#71879b;
+  --hdr-strip-strong:#17344b;
+  --hdr-strip-line:rgba(22,102,164,.14);
+  --hdr-bg:linear-gradient(106deg,#ffffff 0%,#f5fbff 40%,#eaf6ff 72%,#edf8ff 100%);
+  --hdr-line:rgba(22,112,184,.18);
+  --hdr-shadow:0 15px 40px rgba(29,75,111,.10),inset 0 -1px 0 rgba(255,255,255,.7);
+  --hdr-brand:#0f2f49;
+  --hdr-brand-sub:#5e7f98;
+  --hdr-nav-title:#17374f;
+  --hdr-nav-sub:#7790a4;
+  --hdr-nav-divider:rgba(29,108,169,.12);
+  --hdr-nav-hover:linear-gradient(135deg,rgba(0,150,220,.065),rgba(0,177,119,.045));
+  --hdr-nav-active:linear-gradient(135deg,rgba(0,170,119,.09),rgba(0,132,225,.065));
+  --hdr-control-bg:rgba(255,255,255,.74);
+  --hdr-control-line:rgba(35,120,184,.18);
+  --hdr-control-text:#5e7b91;
+  --hdr-user:#35546b;
+  --hdr-map:#188dd7;
+  --hdr-map2:#00a978;
+  --hdr-radar:rgba(24,141,215,.13);
+  --hdr-radar-strong:rgba(24,141,215,.20);
+  --hdr-glow:rgba(0,139,219,.11);
+}
+
+/* ---------- tokens do cabecalho: MODO ESCURO ---------- */
+html[data-theme="dark"] .app-shell{
+  --hdr-strip-bg:linear-gradient(90deg,#071426 0%,#0a1c34 45%,#0b2342 100%);
+  --hdr-strip-text:#7892aa;
+  --hdr-strip-strong:#dcecff;
+  --hdr-strip-line:rgba(80,165,255,.16);
+  --hdr-bg:linear-gradient(104deg,#04111f 0%,#061a2e 46%,#08254a 74%,#071a31 100%);
+  --hdr-line:rgba(55,143,227,.25);
+  --hdr-shadow:0 14px 36px rgba(2,16,31,.18),inset 0 -1px 0 rgba(255,255,255,.035);
+  --hdr-brand:#f7fbff;
+  --hdr-brand-sub:#83a4bf;
+  --hdr-nav-title:#f0f6fc;
+  --hdr-nav-sub:#7895ad;
+  --hdr-nav-divider:rgba(102,169,225,.16);
+  --hdr-nav-hover:linear-gradient(135deg,rgba(0,179,255,.07),rgba(0,245,160,.035));
+  --hdr-nav-active:linear-gradient(135deg,rgba(0,245,160,.075),rgba(0,140,255,.055));
+  --hdr-control-bg:rgba(4,23,43,.78);
+  --hdr-control-line:rgba(65,153,231,.24);
+  --hdr-control-text:#7593ab;
+  --hdr-user:#d6e6f3;
+  --hdr-map:#0b70ff;
+  --hdr-map2:#00d4b0;
+  --hdr-radar:rgba(31,126,255,.13);
+  --hdr-radar-strong:rgba(31,126,255,.20);
+  --hdr-glow:rgba(0,103,255,.18);
+}
 
 .app-shell .platform-strip{
   height:28px!important;
   position:relative;
   z-index:82;
   padding:0 max(20px,calc((100vw - 1360px)/2))!important;
-  background:linear-gradient(90deg,#071426 0%,#0a1c34 45%,#0b2342 100%)!important;
-  border-bottom:1px solid rgba(80,165,255,.16)!important;
-  color:#7892aa!important;
+  background:var(--hdr-strip-bg)!important;
+  border-bottom:1px solid var(--hdr-strip-line)!important;
+  color:var(--hdr-strip-text)!important;
   backdrop-filter:none!important;
   box-shadow:inset 0 -1px 0 rgba(255,255,255,.025);
 }
-.app-shell .platform-strip b{color:#dcecff!important;font-weight:800}
+.app-shell .platform-strip b{color:var(--hdr-strip-strong)!important;font-weight:800}
 .app-shell .platform-strip .pulse-dot{
   width:6px;height:6px;
+  background:#18d89b!important;
+  box-shadow:0 0 0 4px rgba(24,216,155,.09),0 0 15px rgba(24,216,155,.40)!important;
+}
+html[data-theme="dark"] .app-shell .platform-strip .pulse-dot{
   background:#18e7a4!important;
   box-shadow:0 0 0 4px rgba(24,231,164,.08),0 0 15px rgba(24,231,164,.46)!important;
 }
-.app-shell .strip-tech{color:#6f8ba5!important;letter-spacing:.02em}
+.app-shell .strip-tech{color:var(--hdr-strip-text)!important;letter-spacing:.02em}
 
+/* ---------- banner principal ---------- */
 .app-shell .sidebar{
   height:116px!important;
   position:sticky;
   top:0;
+  z-index:80;
   overflow:hidden;
-  border-bottom:1px solid rgba(55,143,227,.25)!important;
+  border-bottom:1px solid var(--hdr-line)!important;
   background:
-    radial-gradient(circle at 74% 50%,rgba(0,102,255,.18) 0 1px,transparent 2px 56px,rgba(0,112,255,.11) 57px 58px,transparent 59px 88px,rgba(0,126,255,.07) 89px 90px,transparent 91px),
-    linear-gradient(104deg,#04111f 0%,#061a2e 46%,#08254a 74%,#071a31 100%)!important;
-  box-shadow:0 14px 36px rgba(2,16,31,.18),inset 0 -1px 0 rgba(255,255,255,.035)!important;
+    radial-gradient(circle at 75% 50%,var(--hdr-radar-strong) 0 1px,transparent 2px 57px,var(--hdr-radar) 58px 59px,transparent 60px 91px,var(--hdr-radar) 92px 93px,transparent 94px),
+    var(--hdr-bg)!important;
+  box-shadow:var(--hdr-shadow)!important;
   backdrop-filter:none!important;
   -webkit-backdrop-filter:none!important;
+  transition:background .22s ease,border-color .22s ease,box-shadow .22s ease;
 }
+
+/* Silhueta estilizada do Brasil — puramente decorativa */
 .app-shell .sidebar::before{
   content:"";
   position:absolute;
-  width:270px;height:270px;
-  right:17%;top:50%;
-  transform:translateY(-50%);
-  border-radius:50%;
+  width:160px;
+  height:152px;
+  right:16.3%;
+  top:50%;
+  transform:translateY(-49%) rotate(-3deg);
   pointer-events:none;
-  opacity:.7;
-  background:
-    linear-gradient(90deg,transparent 49.6%,rgba(31,126,255,.14) 50%,transparent 50.4%),
-    linear-gradient(transparent 49.6%,rgba(31,126,255,.12) 50%,transparent 50.4%),
-    radial-gradient(circle,rgba(5,92,218,.18) 0 8%,transparent 8.5% 25%,rgba(0,111,255,.12) 25.5% 26%,transparent 26.5% 42%,rgba(0,118,255,.08) 42.5% 43%,transparent 43.5%);
-  filter:drop-shadow(0 0 28px rgba(0,103,255,.18));
+  z-index:0;
+  opacity:.17;
+  background:linear-gradient(145deg,var(--hdr-map) 8%,var(--hdr-map2) 92%);
+  clip-path:polygon(36% 3%,52% 1%,62% 9%,75% 12%,78% 23%,90% 31%,85% 43%,94% 52%,84% 62%,80% 75%,67% 83%,62% 96%,50% 91%,44% 80%,31% 76%,26% 64%,14% 58%,18% 46%,12% 37%,21% 27%,24% 16%);
+  filter:drop-shadow(0 0 22px var(--hdr-glow));
 }
+html[data-theme="dark"] .app-shell .sidebar::before{opacity:.25}
+
+/* cruz, varredura e linhas de radar ao redor do mapa */
 .app-shell .sidebar::after{
   content:"";
   position:absolute;
-  inset:0;
+  width:270px;
+  height:270px;
+  right:12.7%;
+  top:50%;
+  transform:translateY(-50%);
+  border-radius:50%;
   pointer-events:none;
-  background:linear-gradient(90deg,transparent 0 60%,rgba(1,12,27,.08) 72%,rgba(1,12,27,.26) 100%);
+  z-index:0;
+  opacity:.8;
+  background:
+    linear-gradient(90deg,transparent 49.7%,var(--hdr-radar) 50%,transparent 50.3%),
+    linear-gradient(transparent 49.7%,var(--hdr-radar) 50%,transparent 50.3%),
+    radial-gradient(circle,transparent 0 10%,var(--hdr-radar-strong) 10.4% 10.8%,transparent 11.2% 28%,var(--hdr-radar) 28.4% 28.8%,transparent 29.2% 43%,var(--hdr-radar) 43.4% 43.8%,transparent 44.2%);
+  filter:drop-shadow(0 0 24px var(--hdr-glow));
 }
 
 .app-shell .sidebar-inner{
@@ -68,12 +145,13 @@
   gap:26px!important;
 }
 
+/* ---------- marca ---------- */
 .app-shell .sidebar-brand{
   min-width:0;
   display:flex!important;
   align-items:center!important;
   gap:14px!important;
-  color:#fff!important;
+  color:var(--hdr-brand)!important;
 }
 .app-shell .sidebar-brand .brand-mark.small{
   width:62px!important;
@@ -82,12 +160,12 @@
   border-radius:18px!important;
   font-size:14px!important;
   letter-spacing:.04em;
-  color:#eafff8!important;
+  color:#edfff9!important;
   background:
     radial-gradient(circle at 32% 25%,rgba(255,255,255,.30),transparent 18%),
     linear-gradient(145deg,#02bd82 0%,#0099c8 58%,#1450dd 100%)!important;
-  border:1px solid rgba(112,232,255,.24);
-  box-shadow:0 13px 34px rgba(0,164,193,.22),inset 0 0 0 1px rgba(255,255,255,.12)!important;
+  border:1px solid rgba(49,174,210,.28)!important;
+  box-shadow:0 13px 34px rgba(0,164,193,.17),inset 0 0 0 1px rgba(255,255,255,.14)!important;
 }
 .app-shell .sidebar-brand strong{
   display:block;
@@ -96,21 +174,22 @@
   line-height:1.04;
   letter-spacing:-.035em;
   font-weight:900;
-  color:#f7fbff!important;
+  color:var(--hdr-brand)!important;
 }
 .app-shell .sidebar-brand span{
   display:block!important;
   margin-top:7px!important;
-  font-size:9px!important;
-  letter-spacing:.015em;
-  color:#83a4bf!important;
+  font-size:0!important;
+  color:var(--hdr-brand-sub)!important;
 }
-.app-shell .sidebar-brand span{font-size:0!important}
 .app-shell .sidebar-brand span::after{
   content:"Inteligência e monitoramento em compras públicas";
   font-size:9px;
+  letter-spacing:.015em;
+  color:var(--hdr-brand-sub);
 }
 
+/* ---------- navegacao / modulos funcionais ---------- */
 .app-shell .main-nav{
   min-width:0;
   margin:0!important;
@@ -125,26 +204,26 @@
   min-height:58px;
   position:relative;
   border:0!important;
-  border-left:1px solid rgba(102,169,225,.16)!important;
+  border-left:1px solid var(--hdr-nav-divider)!important;
   border-radius:0!important;
   padding:7px 13px!important;
   display:flex!important;
   align-items:center!important;
   gap:10px!important;
   background:transparent!important;
-  color:#9cb3c7!important;
+  color:var(--hdr-nav-sub)!important;
   text-align:left;
   box-shadow:none!important;
   transition:background .18s ease,color .18s ease,transform .18s ease!important;
 }
 .app-shell .main-nav button:first-child{border-left:0!important}
 .app-shell .main-nav button:hover{
-  background:linear-gradient(135deg,rgba(0,179,255,.07),rgba(0,245,160,.035))!important;
-  color:#fff!important;
+  background:var(--hdr-nav-hover)!important;
+  color:var(--hdr-nav-title)!important;
 }
 .app-shell .main-nav button.active{
-  background:linear-gradient(135deg,rgba(0,245,160,.075),rgba(0,140,255,.055))!important;
-  color:#fff!important;
+  background:var(--hdr-nav-active)!important;
+  color:var(--hdr-nav-title)!important;
 }
 .app-shell .main-nav button.active::after{
   content:"";
@@ -152,6 +231,10 @@
   left:14px;right:14px;bottom:3px;
   height:2px;
   border-radius:99px;
+  background:linear-gradient(90deg,#00d99a,#008ff0);
+  box-shadow:0 0 12px rgba(0,190,190,.25);
+}
+html[data-theme="dark"] .app-shell .main-nav button.active::after{
   background:linear-gradient(90deg,#00eea6,#00aaf0);
   box-shadow:0 0 12px rgba(0,220,195,.35);
 }
@@ -163,18 +246,34 @@
   display:grid!important;
   place-items:center!important;
   font-size:15px!important;
+  color:#00ad7c!important;
+  background:radial-gradient(circle,rgba(0,190,130,.12),rgba(0,147,225,.055))!important;
+  border:1px solid rgba(0,175,130,.22)!important;
+  box-shadow:inset 0 0 14px rgba(0,180,130,.04),0 0 18px rgba(0,150,210,.04);
+}
+html[data-theme="dark"] .app-shell .main-nav .nav-icon{
   color:#18dca7!important;
   background:radial-gradient(circle,rgba(0,237,166,.12),rgba(0,167,255,.06))!important;
-  border:1px solid rgba(0,230,177,.24)!important;
-  box-shadow:inset 0 0 14px rgba(0,227,174,.05),0 0 18px rgba(0,187,220,.05);
+  border-color:rgba(0,230,177,.24)!important;
 }
 .app-shell .main-nav button:nth-child(2) .nav-icon,
 .app-shell .main-nav button:nth-child(3) .nav-icon{
+  color:#168bd7!important;
+  border-color:rgba(26,139,215,.24)!important;
+  background:radial-gradient(circle,rgba(20,128,255,.10),rgba(9,82,194,.035))!important;
+}
+html[data-theme="dark"] .app-shell .main-nav button:nth-child(2) .nav-icon,
+html[data-theme="dark"] .app-shell .main-nav button:nth-child(3) .nav-icon{
   color:#34a6ff!important;
   border-color:rgba(42,157,255,.28)!important;
   background:radial-gradient(circle,rgba(20,128,255,.14),rgba(9,82,194,.05))!important;
 }
 .app-shell .main-nav button:nth-child(4) .nav-icon{
+  color:#7d66cf!important;
+  border-color:rgba(117,87,216,.20)!important;
+  background:radial-gradient(circle,rgba(117,87,216,.10),rgba(9,82,194,.03))!important;
+}
+html[data-theme="dark"] .app-shell .main-nav button:nth-child(4) .nav-icon{
   color:#b29cff!important;
   border-color:rgba(157,127,255,.25)!important;
   background:radial-gradient(circle,rgba(128,93,255,.14),rgba(9,82,194,.04))!important;
@@ -186,17 +285,18 @@
   text-transform:none!important;
   letter-spacing:.01em!important;
   font-weight:850;
-  color:#f0f6fc!important;
+  color:var(--hdr-nav-title)!important;
   white-space:nowrap;
 }
 .app-shell .main-nav small{
   display:block!important;
   margin-top:3px!important;
   font-size:7.5px!important;
-  color:#7895ad!important;
+  color:var(--hdr-nav-sub)!important;
   white-space:nowrap;
 }
 
+/* ---------- tema, usuario e sair ---------- */
 .app-shell .header-actions{
   margin:0!important;
   display:flex!important;
@@ -208,18 +308,19 @@
 }
 .app-shell .theme-control{
   padding:3px!important;
-  border:1px solid rgba(65,153,231,.24)!important;
-  background:rgba(4,23,43,.78)!important;
-  box-shadow:inset 0 0 0 1px rgba(255,255,255,.025);
+  border:1px solid var(--hdr-control-line)!important;
+  background:var(--hdr-control-bg)!important;
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.035),0 5px 18px rgba(21,75,110,.04);
 }
 .app-shell .theme-control button{
-  width:27px!important;height:27px!important;
-  color:#7593ab!important;
+  width:27px!important;
+  height:27px!important;
+  color:var(--hdr-control-text)!important;
 }
 .app-shell .theme-control button[aria-pressed="true"]{
-  background:linear-gradient(135deg,#0b87d5,#17d9bb)!important;
+  background:linear-gradient(135deg,#0b87d5,#17cdae)!important;
   color:#fff!important;
-  box-shadow:0 3px 12px rgba(0,150,230,.24)!important;
+  box-shadow:0 3px 12px rgba(0,150,230,.20)!important;
 }
 .app-shell .user-pill{
   max-width:205px!important;
@@ -231,46 +332,55 @@
   overflow:hidden;
   text-overflow:ellipsis;
   white-space:nowrap;
-  border:1px solid rgba(53,142,221,.28)!important;
+  border:1px solid var(--hdr-control-line)!important;
   border-radius:12px!important;
-  background:rgba(4,23,43,.72)!important;
-  color:#d6e6f3!important;
+  background:var(--hdr-control-bg)!important;
+  color:var(--hdr-user)!important;
   font-size:8px!important;
-  box-shadow:inset 0 0 0 1px rgba(255,255,255,.02);
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.03),0 5px 18px rgba(21,75,110,.035);
 }
 .app-shell .user-pill::before{
   content:"◯";
   position:absolute;
   left:10px;
-  top:50%;transform:translateY(-50%);
+  top:50%;
+  transform:translateY(-50%);
   width:18px;height:18px;
   display:grid;place-items:center;
-  color:#9fc0d9;
+  color:var(--hdr-control-text);
   font-size:14px;
 }
 .app-shell .logout-btn{
   height:39px;
   padding:0 10px!important;
-  border:1px solid rgba(53,142,221,.24)!important;
+  border:1px solid var(--hdr-control-line)!important;
   border-radius:11px!important;
-  background:rgba(4,23,43,.62)!important;
-  color:#8ca9be!important;
+  background:var(--hdr-control-bg)!important;
+  color:var(--hdr-control-text)!important;
   font-size:8px!important;
 }
 .app-shell .logout-btn:hover{
+  color:#d84c68!important;
+  border-color:rgba(216,76,104,.30)!important;
+  background:rgba(216,76,104,.055)!important;
+}
+html[data-theme="dark"] .app-shell .logout-btn:hover{
   color:#ff7692!important;
   border-color:rgba(255,83,118,.34)!important;
   background:rgba(255,83,118,.06)!important;
 }
 
-/* Faixa de pagina continua funcional, mas visualmente ligada ao novo header. */
+/* Faixa de pagina continua funcional, apenas ligada visualmente ao banner. */
 .app-shell .topbar{
   min-height:48px!important;
   margin-bottom:16px!important;
 }
 
+/* ---------- responsividade ---------- */
 @media(max-width:1180px){
   .app-shell .sidebar{height:102px!important}
+  .app-shell .sidebar::before{right:15%;width:132px;height:128px}
+  .app-shell .sidebar::after{right:11.5%;width:225px;height:225px}
   .app-shell .sidebar-inner{
     width:min(100% - 24px,1360px)!important;
     grid-template-columns:minmax(225px,.95fr) minmax(440px,1.8fr) auto;
@@ -291,7 +401,9 @@
     min-height:88px!important;
     overflow:visible;
   }
-  .app-shell .sidebar::before{right:-40px;opacity:.42}
+  .app-shell .sidebar::before{right:5%;opacity:.10;width:120px;height:115px}
+  html[data-theme="dark"] .app-shell .sidebar::before{opacity:.15}
+  .app-shell .sidebar::after{right:1%;opacity:.42;width:190px;height:190px}
   .app-shell .sidebar-inner{
     width:calc(100% - 20px)!important;
     min-height:88px;
@@ -321,12 +433,12 @@
     flex:0 0 auto!important;
     min-height:43px;
     padding:4px 10px!important;
-    border:1px solid rgba(83,155,214,.13)!important;
+    border:1px solid var(--hdr-control-line)!important;
     border-radius:11px!important;
-    background:rgba(4,24,44,.5)!important;
+    background:var(--hdr-control-bg)!important;
   }
-  .app-shell .main-nav button:first-child{border-left:1px solid rgba(83,155,214,.13)!important}
-  .app-shell .main-nav button.active{border-color:rgba(0,230,177,.28)!important}
+  .app-shell .main-nav button:first-child{border-left:1px solid var(--hdr-control-line)!important}
+  .app-shell .main-nav button.active{border-color:rgba(0,190,140,.28)!important}
   .app-shell .main-nav button.active::after{display:none}
   .app-shell .main-nav .nav-icon{width:29px!important;height:29px!important;flex-basis:29px;font-size:11px!important}
   .app-shell .main-nav b{font-size:8.5px!important}
@@ -337,6 +449,9 @@
   .app-shell .platform-strip{height:25px!important;font-size:7.5px!important}
   .app-shell .sidebar-inner{padding-top:8px!important}
   .app-shell .sidebar-brand strong{font-size:13px!important}
+  .app-shell .sidebar::before{right:-7%;opacity:.07}
+  html[data-theme="dark"] .app-shell .sidebar::before{opacity:.10}
+  .app-shell .sidebar::after{right:-12%;opacity:.28}
   .app-shell .theme-control button{width:25px!important;height:25px!important}
   .app-shell .logout-btn{height:34px!important;padding:0 8px!important}
   .app-shell .main-nav button{padding:4px 8px!important}
