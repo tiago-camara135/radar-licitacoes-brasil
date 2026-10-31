@@ -35,7 +35,7 @@ const runtimeCss=`
   cursor:grab!important;
   transition:opacity .16s ease,transform .16s ease,box-shadow .2s ease!important;
 }
-.ai-fab.ai-widget-dragging{cursor:grabbing!important;transition:none!important;transform:scale(1.02)!important}
+.ai-fab.ai-widget-dragging{cursor:grabbing!important;transition:none!important;transform:none!important}
 .ai-fab.ai-widget-fab-hidden{opacity:0!important;pointer-events:none!important;transform:scale(.9)!important}
 #ai-assistant.ai-assistant,
 #ai-assistant.ai-assistant:target{
