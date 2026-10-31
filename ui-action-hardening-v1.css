@@ -1,0 +1,18 @@
+/* Radar de Licitações Brasil — Action Reliability v1 */
+button svg,button svg *,a.btn svg,a.btn svg *{pointer-events:none}
+.ui-action-busy,[aria-busy="true"]{cursor:wait!important}
+button.ui-action-busy,button[aria-busy="true"]{opacity:.72!important}
+.file-button.ui-action-busy{opacity:.72!important;pointer-events:none!important;cursor:wait!important}
+button:disabled{cursor:not-allowed}
+html.rlb-corporate-v3 .btn:focus-visible,
+html.rlb-corporate-v3 button:focus-visible,
+html.rlb-corporate-v3 a.btn:focus-visible{
+  outline:2px solid color-mix(in srgb,var(--brand) 65%,#fff 35%)!important;
+  outline-offset:2px!important;
+}
+@media(max-width:620px){
+  html.rlb-corporate-v3 .btn.compact{min-height:34px}
+  html.rlb-corporate-v3 .stack-actions .btn,
+  html.rlb-corporate-v3 .hab-doc-actions .btn,
+  html.rlb-corporate-v3 .aus-actions .btn{min-height:34px}
+}
