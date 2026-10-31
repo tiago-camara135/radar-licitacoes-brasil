@@ -2,8 +2,21 @@ import fs from 'node:fs';
 import http from 'node:http';
 import { syncBuiltinESMExports } from 'node:module';
 
+const nativeReadFileSync=fs.readFileSync.bind(fs);
 const nativeCreateServer=http.createServer.bind(http);
-const habilitationBadgeJs=fs.readFileSync(new URL('./habilitation-badge-v2.js',import.meta.url));
+const habilitationBadgeJsText=nativeReadFileSync(new URL('./habilitation-badge-v2.js',import.meta.url),'utf8');
+const habilitationBadgeJs=Buffer.from(habilitationBadgeJsText);
+
+fs.readFileSync=function habilitationBadgeReadFileSync(path,...args){
+  const value=path instanceof URL?path.pathname:String(path);
+  const data=nativeReadFileSync(path,...args);
+  if(value.endsWith('/app-v2.js')||value.endsWith('\\app-v2.js')){
+    const source=Buffer.isBuffer(data)?data.toString('utf8'):String(data);
+    const finalJs=source+'\n\n'+habilitationBadgeJsText;
+    return Buffer.isBuffer(data)?Buffer.from(finalJs):finalJs;
+  }
+  return data;
+};
 
 http.createServer=function habilitationBadgeAssetsCreateServer(...args){
   const listenerIndex=args.findIndex(x=>typeof x==='function');
