@@ -68,8 +68,25 @@ function applyWindowPosition(pos,save=false){
 function sizeWindow(){
   if(!win)return;
   const {w,h}=viewport();
-  const ww=Math.min(w<=620?w-16:390,w-16);
-  const wh=Math.min(w<=620?Math.min(h-16,620):Math.min(h-24,640),h-16);
+  let ww=348;
+  let wh=560;
+
+  if(w<=620){
+    ww=Math.max(286,w-16);
+    wh=Math.min(h-16,500);
+  }else if(w<=1100||h<=760){
+    ww=318;
+    wh=Math.min(h-20,490);
+  }else if(w<=1440||h<=900){
+    ww=332;
+    wh=Math.min(h-24,520);
+  }else if(w>=1800&&h>=1000){
+    ww=356;
+    wh=570;
+  }
+
+  ww=Math.min(ww,w-16);
+  wh=Math.min(wh,h-16);
   win.style.setProperty('width',`${ww}px`,'important');
   win.style.setProperty('height',`${wh}px`,'important');
 }
