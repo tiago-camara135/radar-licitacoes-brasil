@@ -18,6 +18,11 @@ const adminControlCenterJs=nativeReadFileSync(new URL('./admin-control-center.js
 const adminControlCenterCss=nativeReadFileSync(new URL('./admin-control-center.css',import.meta.url),'utf8');
 const publicSiteConfigJs=nativeReadFileSync(new URL('./public-site-config-v1.js',import.meta.url),'utf8');
 const publicSiteConfigCss=nativeReadFileSync(new URL('./public-site-config-v1.css',import.meta.url),'utf8');
+
+/* Falha cedo no deploy se algum dos novos scripts de navegador tiver erro de sintaxe. */
+new Function(adminControlCenterJs);
+new Function(publicSiteConfigJs);
+
 const legacyMarker="\n\n(()=>{\n'use strict';\nconst CHECK_MS=5*60*1000;";
 const runtimeCss=`
 #rlbNationalNoticeHost{
@@ -41,19 +46,12 @@ const runtimeCss=`
   }
 }
 
-/* Autenticacao e dashboard sao telas mutuamente exclusivas. */
-#authScreen.auth-home-v1.hidden{
-  display:none!important;
-}
+#authScreen.auth-home-v1.hidden{display:none!important}
 
-/* Administração só pode aparecer para sessão efetivamente administrativa. */
 #mainNav #adminNav.hidden,
 #mainNav #adminNav[hidden],
-html[data-rlb-role="user"] #adminNav{
-  display:none!important;
-}
+html[data-rlb-role="user"] #adminNav{display:none!important}
 
-/* IA-RLB: widget flutuante, arrastável e sem alterar o dashboard */
 .ai-fab{
   touch-action:none!important;
   user-select:none!important;
@@ -103,9 +101,7 @@ html[data-rlb-role="user"] #adminNav{
 #ai-assistant .ai-window.ai-widget-window-dragging .ai-window-head{cursor:grabbing!important}
 @media(max-width:620px){
   #ai-assistant .ai-window,
-  #ai-assistant:target .ai-window{
-    border-radius:16px!important;
-  }
+  #ai-assistant:target .ai-window{border-radius:16px!important}
 }
 `;
 
@@ -152,3 +148,10 @@ fs.readFileSync=function patchedReadFileSync(path,...args){
 
 syncBuiltinESMExports();
 await import('./production-v2.mjs');
+
+/* Prepara as tabelas administrativas logo após o servidor iniciar. */
+const adminWarmup=setTimeout(()=>{
+  fetch(`http://127.0.0.1:${process.env.PORT||10000}/api/public-config`,{headers:{accept:'application/json'}})
+    .catch(error=>console.error('admin control center warmup:',error?.message||error));
+},800);
+adminWarmup.unref?.();
