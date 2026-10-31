@@ -15,10 +15,11 @@ const nativeReadFileSync=fs.readFileSync.bind(fs);
 const nativeCreateServer=http.createServer.bind(http);
 const cleanHtml=nativeReadFileSync(new URL('./app-clean-v1.html',import.meta.url),'utf8');
 const cleanCss=nativeReadFileSync(new URL('./clean-ui-v1.css',import.meta.url),'utf8');
-const cleanJs=nativeReadFileSync(new URL('./clean-ui-v1.js',import.meta.url),'utf8');
+const cleanJs=nativeReadFileSync(new URL('./clean-ui-v2.js',import.meta.url),'utf8');
+const assetVersion='20261031-0010';
 const finalHtml=cleanHtml
-  .replace('__RLB_CLEAN_CSS__',`<style id="rlb-clean-ui-css">${cleanCss}</style>`)
-  .replace('__RLB_CLEAN_JS__',`<script id="rlb-clean-ui-js">${cleanJs}</script>`);
+  .replace('__RLB_CLEAN_CSS__',`<link rel="stylesheet" href="/assets/clean-ui.css?v=${assetVersion}">`)
+  .replace('__RLB_CLEAN_JS__',`<script src="/assets/clean-ui.js?v=${assetVersion}" defer></script>`);
 
 fs.readFileSync=function cleanReadFileSync(path,...args){
   const value=path instanceof URL?path.pathname:String(path);
@@ -26,10 +27,20 @@ fs.readFileSync=function cleanReadFileSync(path,...args){
   return nativeReadFileSync(path,...args);
 };
 
+function sendAsset(res,type,body){
+  res.statusCode=200;
+  res.setHeader('Content-Type',type);
+  res.setHeader('Cache-Control','no-cache, no-store, must-revalidate');
+  res.setHeader('X-Content-Type-Options','nosniff');
+  res.end(body);
+}
+
 http.createServer=function cleanCreateServer(listener){
   return nativeCreateServer(async(req,res)=>{
     try{
       const url=new URL(req.url||'/','http://localhost');
+      if(req.method==='GET'&&url.pathname==='/assets/clean-ui.css'){sendAsset(res,'text/css; charset=utf-8',cleanCss);return}
+      if(req.method==='GET'&&url.pathname==='/assets/clean-ui.js'){sendAsset(res,'application/javascript; charset=utf-8',cleanJs);return}
       if(await handleAiRlbRoute(req,res,url))return;
       if(await handleLiveRoute(req,res,url))return;
       if(await handleNotificationRoute(req,res,url))return;
