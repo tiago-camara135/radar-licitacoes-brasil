@@ -1,0 +1,8 @@
+.hab-company-card .panel-head p{max-width:660px}
+.hab-company-summary{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:18px 20px;margin-bottom:18px;border:1px solid rgba(114,168,255,.2);border-radius:18px;background:linear-gradient(135deg,rgba(31,73,125,.18),rgba(40,187,150,.07))}
+.hab-company-summary-main{display:flex;align-items:center;gap:16px;min-width:0}
+.hab-company-avatar{width:52px;height:52px;display:grid;place-items:center;flex:0 0 52px;border-radius:16px;border:1px solid rgba(114,168,255,.3);background:rgba(114,168,255,.12);font-size:12px;font-weight:800;letter-spacing:.08em}
+.hab-company-summary-copy{min-width:0}.hab-company-summary-copy h3{margin:4px 0 2px;font-size:20px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.hab-company-trade{margin:0 0 10px;opacity:.72}
+.hab-company-meta{display:flex;flex-wrap:wrap;gap:10px 20px}.hab-company-meta span{display:flex;flex-direction:column;gap:2px;font-size:13px;opacity:.92}.hab-company-meta b{font-size:10px;letter-spacing:.08em;text-transform:uppercase;opacity:.58}
+.hab-company-summary.empty{justify-content:flex-start;border-style:dashed;background:rgba(255,255,255,.025)}.hab-company-summary.empty h3{margin:3px 0 4px}.hab-company-summary.empty p{margin:0;opacity:.7}.hab-company-summary-icon{width:44px;height:44px;display:grid;place-items:center;border-radius:14px;background:rgba(255,255,255,.06);font-size:22px;flex:0 0 44px}
+@media(max-width:760px){.hab-company-summary{align-items:stretch;flex-direction:column}.hab-company-summary-main{align-items:flex-start}.hab-company-meta{display:grid;grid-template-columns:1fr}.hab-company-summary .btn{width:100%}.hab-company-summary-copy h3{white-space:normal}}
