@@ -4,6 +4,8 @@ import { syncBuiltinESMExports } from 'node:module';
 const nativeReadFileSync=fs.readFileSync.bind(fs);
 const notificationV3=nativeReadFileSync(new URL('./onsite-notifications-v3.js',import.meta.url),'utf8');
 const draggableAiV1=nativeReadFileSync(new URL('./draggable-ai-v1.js',import.meta.url),'utf8');
+const aiUiEnhancements=nativeReadFileSync(new URL('./ai-ui-enhancements.js',import.meta.url),'utf8');
+const aiUiCss=nativeReadFileSync(new URL('./ai-ui-enhancements.css',import.meta.url),'utf8');
 const legacyMarker="\n\n(()=>{\n'use strict';\nconst CHECK_MS=5*60*1000;";
 const runtimeCss=`
 #rlbNationalNoticeHost{
@@ -90,12 +92,12 @@ fs.readFileSync=function patchedReadFileSync(path,...args){
     const source=Buffer.isBuffer(data)?data.toString('utf8'):String(data);
     const markerIndex=source.indexOf(legacyMarker);
     const core=markerIndex>=0?source.slice(0,markerIndex):source;
-    const finalJs=core+'\n\n'+notificationV3+'\n\n'+draggableAiV1;
+    const finalJs=core+'\n\n'+notificationV3+'\n\n'+draggableAiV1+'\n\n'+aiUiEnhancements;
     return Buffer.isBuffer(data)?Buffer.from(finalJs):finalJs;
   }
   if(value.endsWith('/app-v2.css')||value.endsWith('\\app-v2.css')){
     const source=Buffer.isBuffer(data)?data.toString('utf8'):String(data);
-    const finalCss=source+'\n'+runtimeCss;
+    const finalCss=source+'\n'+runtimeCss+'\n'+aiUiCss;
     return Buffer.isBuffer(data)?Buffer.from(finalCss):finalCss;
   }
   return data;
