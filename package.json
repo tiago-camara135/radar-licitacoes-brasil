@@ -1,11 +1,11 @@
 {
   "name": "radar-licitacoes-brasil",
-  "version": "2.6.1",
+  "version": "2.6.2",
   "private": true,
   "type": "module",
   "engines": { "node": "24.x" },
   "scripts": {
-    "start": "node production-v11.mjs"
+    "start": "node production-v12.mjs"
   },
   "dependencies": {
     "pdf-parse": "^2.4.5",
