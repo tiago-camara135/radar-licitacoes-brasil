@@ -32,6 +32,11 @@ const runtimeCss=`
   }
 }
 
+/* Autenticacao e dashboard sao telas mutuamente exclusivas. */
+#authScreen.auth-home-v1.hidden{
+  display:none!important;
+}
+
 /* IA-RLB: widget flutuante, arrastável e sem alterar o dashboard */
 .ai-fab{
   touch-action:none!important;
