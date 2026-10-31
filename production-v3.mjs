@@ -25,6 +25,90 @@ const notificationCss=`
     transform:scale(.92);
   }
 }
+
+/* IA-RLB integrada ao dashboard: sem backdrop e sem bloqueio da interface */
+.ai-backdrop{display:none!important}
+@media(min-width:821px){
+  .app-shell:has(#ai-assistant:target){
+    display:grid;
+    grid-template-columns:minmax(0,1fr) clamp(340px,26vw,390px);
+    column-gap:16px;
+    padding:0 18px 18px;
+    align-items:start;
+  }
+  .app-shell:has(#ai-assistant:target)>.platform-strip,
+  .app-shell:has(#ai-assistant:target)>.sidebar{
+    grid-column:1/-1;
+    margin-left:-18px;
+    margin-right:-18px;
+    width:auto;
+  }
+  .app-shell:has(#ai-assistant:target)>.main{
+    grid-column:1;
+    grid-row:3;
+    width:100%;
+    margin:0;
+    min-width:0;
+  }
+  .app-shell:has(#ai-assistant:target) .ai-fab{
+    opacity:0;
+    pointer-events:none;
+    transform:scale(.9);
+  }
+  #ai-assistant.ai-assistant{display:none}
+  #ai-assistant.ai-assistant:target{
+    display:block;
+    position:sticky;
+    grid-column:2;
+    grid-row:3;
+    inset:auto;
+    top:88px;
+    width:100%;
+    height:calc(100vh - 106px);
+    margin-top:18px;
+    z-index:70;
+    opacity:1;
+    pointer-events:auto;
+    transition:none;
+  }
+  #ai-assistant.ai-assistant:target .ai-window{
+    position:relative;
+    inset:auto;
+    right:auto;
+    bottom:auto;
+    width:100%;
+    height:100%;
+    border-radius:18px;
+    transform:none;
+    box-shadow:var(--shadow2);
+  }
+}
+@media(max-width:820px){
+  #ai-assistant.ai-assistant{
+    display:none;
+    position:static;
+    inset:auto;
+    width:calc(100% - 20px);
+    height:min(72vh,620px);
+    margin:12px auto 88px;
+    opacity:1;
+    pointer-events:auto;
+    transition:none;
+  }
+  #ai-assistant.ai-assistant:target{display:block}
+  #ai-assistant.ai-assistant .ai-window{
+    position:relative;
+    inset:auto;
+    right:auto;
+    bottom:auto;
+    width:100%;
+    height:100%;
+    border-radius:18px;
+    transform:none;
+    box-shadow:var(--shadow2);
+  }
+  .app-shell:has(#ai-assistant:target) .ai-fab{display:none}
+}
 `;
 
 fs.readFileSync=function patchedReadFileSync(path,...args){
