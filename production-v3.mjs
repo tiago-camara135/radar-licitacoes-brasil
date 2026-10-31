@@ -3,8 +3,9 @@ import { syncBuiltinESMExports } from 'node:module';
 
 const nativeReadFileSync=fs.readFileSync.bind(fs);
 const notificationV3=nativeReadFileSync(new URL('./onsite-notifications-v3.js',import.meta.url),'utf8');
+const draggableAiV1=nativeReadFileSync(new URL('./draggable-ai-v1.js',import.meta.url),'utf8');
 const legacyMarker="\n\n(()=>{\n'use strict';\nconst CHECK_MS=5*60*1000;";
-const notificationCss=`
+const runtimeCss=`
 #rlbNationalNoticeHost{
   top:72px!important;
   bottom:auto!important;
@@ -26,88 +27,59 @@ const notificationCss=`
   }
 }
 
-/* IA-RLB integrada ao dashboard: sem backdrop e sem bloqueio da interface */
-.ai-backdrop{display:none!important}
-@media(min-width:821px){
-  .app-shell:has(#ai-assistant:target){
-    display:grid;
-    grid-template-columns:minmax(0,1fr) clamp(340px,26vw,390px);
-    column-gap:16px;
-    padding:0 18px 18px;
-    align-items:start;
-  }
-  .app-shell:has(#ai-assistant:target)>.platform-strip,
-  .app-shell:has(#ai-assistant:target)>.sidebar{
-    grid-column:1/-1;
-    margin-left:-18px;
-    margin-right:-18px;
-    width:auto;
-  }
-  .app-shell:has(#ai-assistant:target)>.main{
-    grid-column:1;
-    grid-row:3;
-    width:100%;
-    margin:0;
-    min-width:0;
-  }
-  .app-shell:has(#ai-assistant:target) .ai-fab{
-    opacity:0;
-    pointer-events:none;
-    transform:scale(.9);
-  }
-  #ai-assistant.ai-assistant{display:none}
-  #ai-assistant.ai-assistant:target{
-    display:block;
-    position:sticky;
-    grid-column:2;
-    grid-row:3;
-    inset:auto;
-    top:88px;
-    width:100%;
-    height:calc(100vh - 106px);
-    margin-top:18px;
-    z-index:70;
-    opacity:1;
-    pointer-events:auto;
-    transition:none;
-  }
-  #ai-assistant.ai-assistant:target .ai-window{
-    position:relative;
-    inset:auto;
-    right:auto;
-    bottom:auto;
-    width:100%;
-    height:100%;
-    border-radius:18px;
-    transform:none;
-    box-shadow:var(--shadow2);
-  }
+/* IA-RLB: widget flutuante, arrastável e sem alterar o dashboard */
+.ai-fab{
+  touch-action:none!important;
+  user-select:none!important;
+  -webkit-user-select:none!important;
+  cursor:grab!important;
+  transition:opacity .16s ease,transform .16s ease,box-shadow .2s ease!important;
 }
-@media(max-width:820px){
-  #ai-assistant.ai-assistant{
-    display:none;
-    position:static;
-    inset:auto;
-    width:calc(100% - 20px);
-    height:min(72vh,620px);
-    margin:12px auto 88px;
-    opacity:1;
-    pointer-events:auto;
-    transition:none;
+.ai-fab.ai-widget-dragging{cursor:grabbing!important;transition:none!important;transform:scale(1.02)!important}
+.ai-fab.ai-widget-fab-hidden{opacity:0!important;pointer-events:none!important;transform:scale(.9)!important}
+#ai-assistant.ai-assistant,
+#ai-assistant.ai-assistant:target{
+  position:fixed!important;
+  inset:auto!important;
+  width:0!important;
+  height:0!important;
+  z-index:160!important;
+  opacity:1!important;
+  pointer-events:none!important;
+  transition:none!important;
+  display:block!important;
+  margin:0!important;
+}
+#ai-assistant .ai-backdrop{display:none!important}
+#ai-assistant .ai-window,
+#ai-assistant:target .ai-window{
+  display:none!important;
+  position:fixed!important;
+  inset:auto!important;
+  right:auto!important;
+  bottom:auto!important;
+  max-width:calc(100vw - 12px)!important;
+  max-height:calc(100vh - 12px)!important;
+  margin:0!important;
+  transform:none!important;
+  border-radius:18px!important;
+  box-shadow:0 26px 72px rgba(0,0,0,.34)!important;
+  pointer-events:auto!important;
+}
+#ai-assistant.ai-widget-open .ai-window,
+#ai-assistant.ai-widget-open:target .ai-window{display:flex!important}
+#ai-assistant .ai-window-head{
+  cursor:grab!important;
+  touch-action:none!important;
+  user-select:none!important;
+  -webkit-user-select:none!important;
+}
+#ai-assistant .ai-window.ai-widget-window-dragging .ai-window-head{cursor:grabbing!important}
+@media(max-width:620px){
+  #ai-assistant .ai-window,
+  #ai-assistant:target .ai-window{
+    border-radius:16px!important;
   }
-  #ai-assistant.ai-assistant:target{display:block}
-  #ai-assistant.ai-assistant .ai-window{
-    position:relative;
-    inset:auto;
-    right:auto;
-    bottom:auto;
-    width:100%;
-    height:100%;
-    border-radius:18px;
-    transform:none;
-    box-shadow:var(--shadow2);
-  }
-  .app-shell:has(#ai-assistant:target) .ai-fab{display:none}
 }
 `;
 
@@ -118,12 +90,12 @@ fs.readFileSync=function patchedReadFileSync(path,...args){
     const source=Buffer.isBuffer(data)?data.toString('utf8'):String(data);
     const markerIndex=source.indexOf(legacyMarker);
     const core=markerIndex>=0?source.slice(0,markerIndex):source;
-    const finalJs=core+'\n\n'+notificationV3;
+    const finalJs=core+'\n\n'+notificationV3+'\n\n'+draggableAiV1;
     return Buffer.isBuffer(data)?Buffer.from(finalJs):finalJs;
   }
   if(value.endsWith('/app-v2.css')||value.endsWith('\\app-v2.css')){
     const source=Buffer.isBuffer(data)?data.toString('utf8'):String(data);
-    const finalCss=source+'\n'+notificationCss;
+    const finalCss=source+'\n'+runtimeCss;
     return Buffer.isBuffer(data)?Buffer.from(finalCss):finalCss;
   }
   return data;
