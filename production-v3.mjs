@@ -10,6 +10,7 @@ const headerModel1Css=nativeReadFileSync(new URL('./header-model1.css',import.me
 const authHomeV1=nativeReadFileSync(new URL('./auth-home-v1.js',import.meta.url),'utf8');
 const authHomeCss=nativeReadFileSync(new URL('./auth-home-v1.css',import.meta.url),'utf8');
 const authHomeProductCss=nativeReadFileSync(new URL('./auth-home-product-v2.css',import.meta.url),'utf8');
+const roleNavGuardV1=nativeReadFileSync(new URL('./role-nav-guard-v1.js',import.meta.url),'utf8');
 const legacyMarker="\n\n(()=>{\n'use strict';\nconst CHECK_MS=5*60*1000;";
 const runtimeCss=`
 #rlbNationalNoticeHost{
@@ -35,6 +36,13 @@ const runtimeCss=`
 
 /* Autenticacao e dashboard sao telas mutuamente exclusivas. */
 #authScreen.auth-home-v1.hidden{
+  display:none!important;
+}
+
+/* Administração só pode aparecer para sessão efetivamente administrativa. */
+#mainNav #adminNav.hidden,
+#mainNav #adminNav[hidden],
+html[data-rlb-role="user"] #adminNav{
   display:none!important;
 }
 
@@ -101,7 +109,7 @@ fs.readFileSync=function patchedReadFileSync(path,...args){
     const source=Buffer.isBuffer(data)?data.toString('utf8'):String(data);
     const markerIndex=source.indexOf(legacyMarker);
     const core=markerIndex>=0?source.slice(0,markerIndex):source;
-    const finalJs=core+'\n\n'+notificationV3+'\n\n'+draggableAiV1+'\n\n'+aiUiEnhancements+'\n\n'+authHomeV1;
+    const finalJs=core+'\n\n'+notificationV3+'\n\n'+draggableAiV1+'\n\n'+aiUiEnhancements+'\n\n'+authHomeV1+'\n\n'+roleNavGuardV1;
     return Buffer.isBuffer(data)?Buffer.from(finalJs):finalJs;
   }
   if(value.endsWith('/app-v2.css')||value.endsWith('\\app-v2.css')){
