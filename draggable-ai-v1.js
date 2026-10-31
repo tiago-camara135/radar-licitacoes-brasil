@@ -2,15 +2,17 @@
 'use strict';
 
 const FAB_KEY='rlb-ai-fab-position-v1';
+const WIN_KEY='rlb-ai-window-position-v2';
 const MARGIN=10;
-const DRAG_THRESHOLD=5;
+const DRAG_THRESHOLD=7;
 let fab=null;
 let assistant=null;
 let win=null;
 let head=null;
 let closeBtn=null;
-let suppressFabClick=false;
 let open=false;
+let fabDrag=null;
+let winDrag=null;
 
 const clamp=(n,min,max)=>Math.min(Math.max(n,min),max);
 function readJson(key){try{return JSON.parse(localStorage.getItem(key)||'null')}catch{return null}}
@@ -45,24 +47,46 @@ function defaultFabPosition(){
   const r=fab.getBoundingClientRect();
   return {x:Math.max(MARGIN,w-r.width-24),y:Math.max(MARGIN,h-r.height-24)};
 }
-function placeWindowNearFab(){
-  if(!fab||!win)return;
+function clampWindowPosition(pos){
+  if(!win)return pos;
   const {w,h}=viewport();
-  const f=fab.getBoundingClientRect();
-  const ww=Math.min(w<=620?w-16:390,w-16);
-  const wh=Math.min(w<=620?Math.min(h-16,620):Math.min(h-24,640),h-16);
-  let x;
-  if(f.left+f.width/2>w/2)x=f.left-ww-12;
-  else x=f.right+12;
-  x=clamp(x,8,Math.max(8,w-ww-8));
-  let y=clamp(f.top,8,Math.max(8,h-wh-8));
-  if(f.top>h*.65)y=Math.max(8,h-wh-8);
-  win.style.setProperty('width',`${ww}px`,'important');
-  win.style.setProperty('height',`${wh}px`,'important');
-  win.style.setProperty('left',`${x}px`,'important');
-  win.style.setProperty('top',`${y}px`,'important');
+  const r=win.getBoundingClientRect();
+  return {
+    x:clamp(Number(pos?.x)||6,6,Math.max(6,w-r.width-6)),
+    y:clamp(Number(pos?.y)||6,6,Math.max(6,h-r.height-6))
+  };
+}
+function applyWindowPosition(pos,save=false){
+  if(!win)return;
+  const p=clampWindowPosition(pos);
+  win.style.setProperty('left',`${p.x}px`,'important');
+  win.style.setProperty('top',`${p.y}px`,'important');
   win.style.setProperty('right','auto','important');
   win.style.setProperty('bottom','auto','important');
+  if(save)saveJson(WIN_KEY,p);
+}
+function sizeWindow(){
+  if(!win)return;
+  const {w,h}=viewport();
+  const ww=Math.min(w<=620?w-16:390,w-16);
+  const wh=Math.min(w<=620?Math.min(h-16,620):Math.min(h-24,640),h-16);
+  win.style.setProperty('width',`${ww}px`,'important');
+  win.style.setProperty('height',`${wh}px`,'important');
+}
+function placeWindowNearFab(){
+  if(!fab||!win)return;
+  sizeWindow();
+  const saved=readJson(WIN_KEY);
+  if(saved){applyWindowPosition(saved,false);return}
+  const {w,h}=viewport();
+  const f=fab.getBoundingClientRect();
+  const r=win.getBoundingClientRect();
+  let x=f.left+f.width/2>w/2?f.left-r.width-12:f.right+12;
+  let y=f.top;
+  x=clamp(x,8,Math.max(8,w-r.width-8));
+  y=clamp(y,8,Math.max(8,h-r.height-8));
+  if(f.top>h*.65)y=Math.max(8,h-r.height-8);
+  applyWindowPosition({x,y},false);
 }
 async function refreshAiStatus(){
   const target=document.getElementById('aiStatusText');
@@ -92,77 +116,99 @@ function closeAssistant(){
   assistant.classList.remove('ai-widget-open');
   fab.classList.remove('ai-widget-fab-hidden');
 }
+function resetBodyDragState(){
+  document.documentElement.style.removeProperty('cursor');
+  document.body.style.removeProperty('user-select');
+  document.body.style.removeProperty('-webkit-user-select');
+}
+function beginFabPointer(e){
+  if(!fab||open||!e.isPrimary)return;
+  if(e.pointerType==='mouse'&&e.button!==0)return;
+  e.preventDefault();
+  fab.style.setProperty('transform','none','important');
+  const r=fab.getBoundingClientRect();
+  fabDrag={
+    id:e.pointerId,
+    startX:e.clientX,
+    startY:e.clientY,
+    startLeft:r.left,
+    startTop:r.top,
+    dragged:false
+  };
+}
+function moveFabPointer(e){
+  if(!fabDrag||fabDrag.id!==e.pointerId)return;
+  const dx=e.clientX-fabDrag.startX;
+  const dy=e.clientY-fabDrag.startY;
+  if(!fabDrag.dragged&&Math.hypot(dx,dy)>=DRAG_THRESHOLD){
+    fabDrag.dragged=true;
+    fab.classList.add('ai-widget-dragging');
+    document.documentElement.style.setProperty('cursor','grabbing');
+    document.body.style.setProperty('user-select','none');
+    document.body.style.setProperty('-webkit-user-select','none');
+  }
+  if(!fabDrag.dragged)return;
+  e.preventDefault();
+  applyFabPosition({x:fabDrag.startLeft+dx,y:fabDrag.startTop+dy},false);
+}
+function endFabPointer(e,cancelled=false){
+  if(!fabDrag||fabDrag.id!==e.pointerId)return;
+  const wasDragged=fabDrag.dragged;
+  fabDrag=null;
+  fab.classList.remove('ai-widget-dragging');
+  fab.style.removeProperty('transform');
+  resetBodyDragState();
+  if(wasDragged){
+    const r=fab.getBoundingClientRect();
+    applyFabPosition({x:r.left,y:r.top},true);
+  }else if(!cancelled){
+    openAssistant();
+  }
+}
 function installFabDrag(){
   if(!fab)return;
-  let state=null;
-  fab.addEventListener('pointerdown',e=>{
-    if(e.button!==0&&e.pointerType==='mouse')return;
-    const r=fab.getBoundingClientRect();
-    state={id:e.pointerId,startX:e.clientX,startY:e.clientY,offsetX:e.clientX-r.left,offsetY:e.clientY-r.top,dragged:false};
-    fab.setPointerCapture?.(e.pointerId);
-    fab.classList.add('ai-widget-dragging');
-  });
-  fab.addEventListener('pointermove',e=>{
-    if(!state||state.id!==e.pointerId)return;
-    const dx=e.clientX-state.startX,dy=e.clientY-state.startY;
-    if(!state.dragged&&Math.hypot(dx,dy)>=DRAG_THRESHOLD)state.dragged=true;
-    if(!state.dragged)return;
-    e.preventDefault();
-    applyFabPosition({x:e.clientX-state.offsetX,y:e.clientY-state.offsetY},false);
-  });
-  const end=e=>{
-    if(!state||state.id!==e.pointerId)return;
-    const wasDragged=state.dragged;
-    state=null;
-    fab.classList.remove('ai-widget-dragging');
-    try{fab.releasePointerCapture?.(e.pointerId)}catch{}
-    if(wasDragged){
-      const r=fab.getBoundingClientRect();
-      applyFabPosition({x:r.left,y:r.top},true);
-      suppressFabClick=true;
-      setTimeout(()=>{suppressFabClick=false},120);
-    }
-  };
-  fab.addEventListener('pointerup',end);
-  fab.addEventListener('pointercancel',end);
+  fab.draggable=false;
+  fab.addEventListener('dragstart',e=>e.preventDefault());
+  fab.addEventListener('pointerdown',beginFabPointer,{passive:false});
+  window.addEventListener('pointermove',moveFabPointer,{passive:false});
+  window.addEventListener('pointerup',e=>endFabPointer(e,false));
+  window.addEventListener('pointercancel',e=>endFabPointer(e,true));
   fab.addEventListener('click',e=>{
     e.preventDefault();
-    if(suppressFabClick)return;
-    openAssistant();
+    if(e.detail===0&&!open)openAssistant();
   });
+}
+function beginWindowPointer(e){
+  if(!win||!head||!open||!e.isPrimary)return;
+  if(e.pointerType==='mouse'&&e.button!==0)return;
+  if(e.target.closest('a,button,input,textarea,select'))return;
+  e.preventDefault();
+  const r=win.getBoundingClientRect();
+  winDrag={id:e.pointerId,startX:e.clientX,startY:e.clientY,startLeft:r.left,startTop:r.top};
+  win.classList.add('ai-widget-window-dragging');
+  document.documentElement.style.setProperty('cursor','grabbing');
+  document.body.style.setProperty('user-select','none');
+  document.body.style.setProperty('-webkit-user-select','none');
+}
+function moveWindowPointer(e){
+  if(!winDrag||winDrag.id!==e.pointerId)return;
+  e.preventDefault();
+  applyWindowPosition({x:winDrag.startLeft+(e.clientX-winDrag.startX),y:winDrag.startTop+(e.clientY-winDrag.startY)},false);
+}
+function endWindowPointer(e){
+  if(!winDrag||winDrag.id!==e.pointerId)return;
+  winDrag=null;
+  win.classList.remove('ai-widget-window-dragging');
+  resetBodyDragState();
+  const r=win.getBoundingClientRect();
+  applyWindowPosition({x:r.left,y:r.top},true);
 }
 function installWindowDrag(){
   if(!win||!head)return;
-  let state=null;
-  head.addEventListener('pointerdown',e=>{
-    if(e.button!==0&&e.pointerType==='mouse')return;
-    if(e.target.closest('a,button,input,textarea,select'))return;
-    const r=win.getBoundingClientRect();
-    state={id:e.pointerId,offsetX:e.clientX-r.left,offsetY:e.clientY-r.top};
-    head.setPointerCapture?.(e.pointerId);
-    win.classList.add('ai-widget-window-dragging');
-    e.preventDefault();
-  });
-  head.addEventListener('pointermove',e=>{
-    if(!state||state.id!==e.pointerId)return;
-    e.preventDefault();
-    const {w,h}=viewport();
-    const r=win.getBoundingClientRect();
-    const x=clamp(e.clientX-state.offsetX,6,Math.max(6,w-r.width-6));
-    const y=clamp(e.clientY-state.offsetY,6,Math.max(6,h-r.height-6));
-    win.style.setProperty('left',`${x}px`,'important');
-    win.style.setProperty('top',`${y}px`,'important');
-    win.style.setProperty('right','auto','important');
-    win.style.setProperty('bottom','auto','important');
-  });
-  const end=e=>{
-    if(!state||state.id!==e.pointerId)return;
-    state=null;
-    win.classList.remove('ai-widget-window-dragging');
-    try{head.releasePointerCapture?.(e.pointerId)}catch{}
-  };
-  head.addEventListener('pointerup',end);
-  head.addEventListener('pointercancel',end);
+  head.addEventListener('pointerdown',beginWindowPointer,{passive:false});
+  window.addEventListener('pointermove',moveWindowPointer,{passive:false});
+  window.addEventListener('pointerup',endWindowPointer);
+  window.addEventListener('pointercancel',endWindowPointer);
 }
 function init(){
   fab=document.querySelector('.ai-fab');
@@ -183,20 +229,14 @@ function init(){
     const r=fab.getBoundingClientRect();
     applyFabPosition({x:r.left,y:r.top},false);
     if(open){
+      sizeWindow();
       const wr=win.getBoundingClientRect();
-      const {w,h}=viewport();
-      const x=clamp(wr.left,6,Math.max(6,w-wr.width-6));
-      const y=clamp(wr.top,6,Math.max(6,h-wr.height-6));
-      win.style.setProperty('left',`${x}px`,'important');
-      win.style.setProperty('top',`${y}px`,'important');
+      applyWindowPosition({x:wr.left,y:wr.top},false);
     }
   },{passive:true});
 
-  if(location.hash==='#ai-assistant'){
-    openAssistant();
-  }else{
-    clearHash();
-  }
+  if(location.hash==='#ai-assistant')openAssistant();
+  else clearHash();
 }
 
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
