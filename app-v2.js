@@ -47,3 +47,47 @@ function bind(){fillSelects();initTheme();$('#tabLogin')?.addEventListener('clic
 async function boot(){try{bind();const m=$('#runtimeMessage');if(m){m.textContent='Interface carregada.';m.classList.add('ok')}await checkSession()}catch(e){console.error('RLB boot fatal:',e);const m=$('#runtimeMessage');if(m){m.textContent='Falha ao iniciar a interface. Atualize a página.';m.classList.remove('ok')}const a=$('#authMessage');if(a)a.textContent='Falha ao iniciar a interface.'}}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 })();
+
+(()=>{
+'use strict';
+const CHECK_MS=5*60*1000;
+const FIRST_CHECK_MS=5000;
+const MAX_SEEN=180;
+let checking=false;
+let interval=null;
+let lastCheck=0;
+const getText=(x)=>String(x??'').trim();
+const modality=x=>getText(x?.modalidadeNome||x?._modalidadeConsultada||'Licitação pública');
+const municipality=x=>getText(x?.unidadeOrgao?.municipioNome||x?.unidadeOrgao?.nomeMunicipio||x?.municipioNome||'Brasil');
+const uf=x=>getText(x?.unidadeOrgao?.ufSigla||x?.ufSigla||'');
+const organization=x=>getText(x?.orgaoEntidade?.razaoSocial||'Órgão público');
+const objectText=x=>getText(x?.objetoCompra||'Nova oportunidade disponível no Radar de Licitações.');
+function itemId(x){return getText(x?.numeroControlePNCP||x?._pncpId||[x?.orgaoEntidade?.cnpj,x?.anoCompra,x?.sequencialCompra,x?._modalidadeConsultada||x?.modalidadeId].filter(Boolean).join('-'))}
+function pncpUrl(x){if(x?._pncpUrl)return x._pncpUrl;const c=String(x?.orgaoEntidade?.cnpj||'').replace(/\D/g,''),y=Number(x?.anoCompra),s=Number(x?.sequencialCompra);return c.length===14&&Number.isInteger(y)&&Number.isInteger(s)?`https://pncp.gov.br/app/editais/${c}/${y}/${s}`:''}
+function isAvailable(x){const raw=x?.dataEncerramentoProposta||x?.dataFimRecebimentoProposta||x?._closesAt;if(!raw)return true;const d=new Date(raw);return Number.isNaN(d.getTime())||d.getTime()>=Date.now()}
+function storageKey(userId){return `rlb-national-notifications-seen-v1:${userId}`}
+function readSeen(userId){try{const a=JSON.parse(localStorage.getItem(storageKey(userId))||'[]');return new Set(Array.isArray(a)?a:[])}catch{return new Set()}}
+function saveSeen(userId,seen){try{localStorage.setItem(storageKey(userId),JSON.stringify([...seen].slice(-MAX_SEEN)))}catch{}}
+function host(){let h=document.getElementById('rlbNationalNoticeHost');if(h)return h;h=document.createElement('div');h.id='rlbNationalNoticeHost';h.setAttribute('aria-live','polite');Object.assign(h.style,{position:'fixed',right:innerWidth<600?'12px':'24px',bottom:innerWidth<600?'72px':'88px',zIndex:'145',width:innerWidth<600?'calc(100vw - 24px)':'min(390px, calc(100vw - 48px))',display:'grid',gap:'10px',pointerEvents:'none'});document.body.appendChild(h);return h}
+function reposition(){const h=document.getElementById('rlbNationalNoticeHost');if(!h)return;h.style.right=innerWidth<600?'12px':'24px';h.style.bottom=innerWidth<600?'72px':'88px';h.style.width=innerWidth<600?'calc(100vw - 24px)':'min(390px, calc(100vw - 48px))'}
+function closeCard(card){if(!card)return;try{const a=card.animate([{opacity:1,transform:'translateY(0)'},{opacity:0,transform:'translateY(10px)'}],{duration:160,easing:'ease-in'});a.onfinish=()=>card.remove()}catch{card.remove()}}
+function showNotification(x){const url=pncpUrl(x);if(!url)return;const h=host();while(h.children.length>=2)h.firstElementChild?.remove();const card=document.createElement('article');card.setAttribute('role','status');Object.assign(card.style,{pointerEvents:'auto',position:'relative',padding:'14px 14px 13px',border:'1px solid var(--line)',borderRadius:'16px',background:'color-mix(in srgb, var(--surface) 96%, transparent)',color:'var(--text)',boxShadow:'0 22px 54px rgba(0,0,0,.24)',backdropFilter:'blur(18px)',WebkitBackdropFilter:'blur(18px)',cursor:'pointer',overflow:'hidden'});
+const top=document.createElement('div');Object.assign(top.style,{display:'flex',alignItems:'center',justifyContent:'space-between',gap:'12px',marginBottom:'8px'});
+const label=document.createElement('div');label.textContent='NOVA OPORTUNIDADE • RADAR NACIONAL';Object.assign(label.style,{fontSize:'8px',fontWeight:'950',letterSpacing:'.11em',color:'var(--emerald)'});
+const close=document.createElement('button');close.type='button';close.setAttribute('aria-label','Fechar notificação');close.textContent='×';Object.assign(close.style,{width:'27px',height:'27px',borderRadius:'9px',border:'1px solid var(--line)',background:'var(--surface2)',color:'var(--muted)',fontSize:'18px',lineHeight:'1',padding:'0',cursor:'pointer'});top.append(label,close);
+const title=document.createElement('div');title.textContent=objectText(x);Object.assign(title.style,{fontSize:'12px',fontWeight:'850',lineHeight:'1.45',display:'-webkit-box',WebkitLineClamp:'3',WebkitBoxOrient:'vertical',overflow:'hidden'});
+const meta=document.createElement('div');meta.textContent=`${modality(x)} • ${municipality(x)}${uf(x)?' / '+uf(x):''}`;Object.assign(meta.style,{fontSize:'9px',color:'var(--muted)',marginTop:'7px'});
+const org=document.createElement('div');org.textContent=organization(x);Object.assign(org.style,{fontSize:'9px',color:'var(--muted)',marginTop:'3px',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'});
+const foot=document.createElement('div');Object.assign(foot.style,{display:'flex',justifyContent:'space-between',alignItems:'center',gap:'10px',marginTop:'11px',paddingTop:'10px',borderTop:'1px solid var(--line)'});
+const source=document.createElement('span');source.textContent='Fonte oficial: PNCP';Object.assign(source.style,{fontSize:'8px',color:'var(--muted)'});
+const open=document.createElement('a');open.href=url;open.target='_blank';open.rel='noopener';open.textContent='Abrir licitação ↗';Object.assign(open.style,{fontSize:'9px',fontWeight:'900',color:'var(--emerald)',textDecoration:'none'});foot.append(source,open);card.append(top,title,meta,org,foot);h.appendChild(card);
+close.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();closeCard(card)});open.addEventListener('click',e=>e.stopPropagation());card.addEventListener('click',()=>window.open(url,'_blank','noopener'));
+try{card.animate([{opacity:0,transform:'translateY(12px) scale(.98)'},{opacity:1,transform:'translateY(0) scale(1)'}],{duration:240,easing:'cubic-bezier(.2,.8,.2,1)'})}catch{}
+}
+async function getUser(){const r=await fetch('/api/me',{credentials:'same-origin',cache:'no-store',headers:{accept:'application/json'}});if(!r.ok)return null;const d=await r.json().catch(()=>({}));return d.user||null}
+async function check(){if(checking||document.hidden)return;checking=true;lastCheck=Date.now();try{const user=await getUser();if(!user)return;const r=await fetch('/api/live-feed?limit=100',{credentials:'same-origin',cache:'no-store',headers:{accept:'application/json'}});if(!r.ok)return;const d=await r.json().catch(()=>({}));const items=(d.items||[]).filter(x=>itemId(x)&&pncpUrl(x)&&isAvailable(x));if(!items.length)return;const seen=readSeen(user.id);const next=items.find(x=>!seen.has(itemId(x)));if(!next)return;seen.add(itemId(next));saveSeen(user.id,seen);showNotification(next)}catch(e){console.warn('RLB onsite notification check:',e?.message||e)}finally{checking=false}}
+function schedule(){if(interval)clearInterval(interval);setTimeout(check,FIRST_CHECK_MS);interval=setInterval(check,CHECK_MS)}
+function observeLogin(){const shell=document.getElementById('appShell');if(!shell)return;if(!shell.classList.contains('hidden'))setTimeout(check,1800);new MutationObserver(()=>{if(!shell.classList.contains('hidden'))setTimeout(check,1800)}).observe(shell,{attributes:true,attributeFilter:['class']})}
+function boot(){schedule();observeLogin();addEventListener('resize',reposition,{passive:true});document.addEventListener('visibilitychange',()=>{if(!document.hidden&&Date.now()-lastCheck>=CHECK_MS)check()})}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
+})();
