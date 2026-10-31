@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="pt-BR" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#0b1724">
+  <title>Radar de Licitações Brasil</title>
+  <link rel="stylesheet" href="/assets/app-v2.css?v=20261031-2">
+</head>
+<body>
+  <div id="toast" class="toast" aria-live="polite"></div>
+  <section id="authScreen" class="auth-screen">
+    <div class="auth-shell">
+      <div class="brand-line"><div class="brand-mark">RLB</div><div><strong>Radar de Licitações Brasil</strong><span>Monitoramento nacional de compras públicas</span></div></div>
+      <div class="auth-grid">
+        <div class="auth-copy"><span class="eyebrow invert">INTELIGÊNCIA EM COMPRAS PÚBLICAS</span><h1>Oportunidades públicas em um único ambiente.</h1><p>Busca nacional, feed monitorado, alertas, documentos, IA e administração com uma única interface.</p><div class="feature-grid"><div><b>Feed ao vivo</b><span>Sincronização com a base monitorada.</span></div><div><b>Busca nacional</b><span>PNCP com filtros por UF e modalidade.</span></div><div><b>Alertas</b><span>Radar no site e canais externos quando configurados.</span></div></div></div>
+        <form id="authForm" class="auth-card" novalidate>
+          <div class="auth-tabs" role="tablist"><button type="button" id="tabLogin" class="active">Entrar</button><button type="button" id="tabRegister">Criar conta</button></div>
+          <label class="field"><span>E-mail</span><input id="authEmail" type="email" autocomplete="email" required placeholder="seuemail@empresa.com.br"></label>
+          <label class="field"><span>Senha</span><input id="authPassword" type="password" autocomplete="current-password" required minlength="10" placeholder="Mínimo de 10 caracteres"></label>
+          <button id="authSubmit" class="btn primary full" type="submit">Entrar</button>
+          <div id="authMessage" class="form-message" aria-live="polite"></div><div id="runtimeMessage" class="runtime-message">Interface carregando…</div>
+        </form>
+      </div>
+    </div>
+  </section>
+  <div id="appShell" class="app-shell hidden">
+    <aside class="sidebar">
+      <div class="sidebar-brand"><div class="brand-mark small">RLB</div><div><strong>Radar de Licitações</strong><span>Brasil</span></div></div>
+      <nav id="mainNav" class="main-nav">
+        <button type="button" data-view="radar" class="active"><span class="nav-icon">⌁</span><span><b>Radar</b><small>Busca e feed</small></span></button>
+        <button type="button" data-view="alerts"><span class="nav-icon">◉</span><span><b>Alertas</b><small>Monitoramento</small></span></button>
+        <button type="button" data-view="documents"><span class="nav-icon">▤</span><span><b>Documentos</b><small>Acervo</small></span></button>
+        <button type="button" data-view="ai"><span class="nav-icon">✦</span><span><b>IA RLB</b><small>Assistente</small></span></button>
+        <button type="button" id="adminNav" data-view="admin" class="hidden"><span class="nav-icon">⚙</span><span><b>Administração</b><small>Gestão</small></span></button>
+      </nav><button type="button" id="logoutBtn" class="logout-btn">Sair</button>
+    </aside>
+    <main class="main">
+      <header class="topbar"><div><div id="pageTitle" class="page-title">Radar</div><div id="pageSubtitle" class="page-subtitle">Monitoramento nacional de licitações</div></div><div class="top-actions"><div id="themeControl" class="theme-control" aria-label="Tema da interface"><button type="button" data-theme-choice="light" aria-label="Tema claro" title="Tema claro">☀</button><button type="button" data-theme-choice="dark" aria-label="Tema escuro" title="Tema escuro">☾</button></div><div id="userPill" class="user-pill"></div></div></header>
+      <section id="view-radar" class="view active">
+        <div class="hero-grid"><div class="panel"><div class="panel-head"><div><span class="eyebrow">BUSCA NACIONAL</span><h2>Encontre oportunidades</h2></div><button type="button" id="resetSearch" class="btn ghost compact">Limpar</button></div><div class="search-grid"><label class="field wide"><span>Objeto / palavra-chave</span><input id="searchKeyword" placeholder="Ex.: combustível, obras, ar-condicionado"></label><label class="field"><span>UF</span><select id="searchUf"><option value="">Brasil</option></select></label><label class="field"><span>Modalidade</span><select id="searchModality"><option value="">Todas</option></select></label><label class="field"><span>Período</span><select id="searchDays"><option value="1">24 horas</option><option value="7" selected>7 dias</option><option value="30">30 dias</option></select></label><label class="check-line"><input id="searchOpenOnly" type="checkbox"> Somente propostas abertas</label><button type="button" id="searchBtn" class="btn primary">Pesquisar</button></div></div><div class="panel status-panel"><div class="status-row"><span id="statusDot" class="status-dot"></span><div><b>Monitor nacional</b><small id="monitorStatusText">Carregando…</small></div></div><div class="status-metrics"><div><span>Base</span><b id="metricStored">—</b></div><div><span>Novas</span><b id="metricNew">—</b></div><div><span>Última</span><b id="metricLast">—</b></div></div></div></div>
+        <div class="panel live-panel"><div class="panel-head"><div><span class="eyebrow green">AO VIVO</span><h2>Feed de oportunidades</h2><p id="liveMeta">Sincronizando…</p></div><div class="panel-actions"><select id="liveScope" class="compact-select"><option value="all">Brasil</option><option value="municipal">Municípios</option><option value="chambers">Câmaras</option></select><button type="button" id="refreshLive" class="btn ghost compact">Atualizar</button></div></div><div id="liveList" class="list"><div class="empty-state">Carregando feed…</div></div></div>
+        <div class="panel results-panel"><div class="panel-head"><div><span class="eyebrow">RESULTADOS</span><h2>Pesquisa</h2><p id="searchMeta">Use os filtros acima.</p></div></div><div id="searchResults" class="list"><div class="empty-state">Nenhuma pesquisa realizada nesta sessão.</div></div></div>
+      </section>
+      <section id="view-alerts" class="view"><div class="two-col"><div class="panel"><div class="panel-head"><div><span class="eyebrow">ALERTAS</span><h2>Novo alerta</h2></div></div><div class="form-grid"><label class="field"><span>Nome</span><input id="alertName" placeholder="Ex.: Combustíveis RN"></label><label class="field"><span>Palavra-chave</span><input id="alertKeyword" placeholder="Ex.: gasolina"></label><label class="field"><span>UF</span><select id="alertUf"><option value="">Todas</option></select></label><label class="field"><span>Modalidade</span><select id="alertModality"><option value="">Todas</option></select></label></div><button type="button" id="createAlertBtn" class="btn primary">Criar alerta</button><div id="alertsList" class="list section-gap"></div></div><div class="panel"><div class="panel-head"><div><span class="eyebrow">CANAIS</span><h2>Central de notificações</h2><p>Radar no site, e-mail e WhatsApp.</p></div></div><div id="notificationProfile" class="notification-profile"><div class="empty-state">Carregando…</div></div></div></div></section>
+      <section id="view-documents" class="view"><div class="panel"><div class="panel-head"><div><span class="eyebrow">ACERVO</span><h2>Documentos</h2><p>Arquivos de até 3 MB.</p></div><label class="btn primary compact file-button">Enviar arquivo<input id="docInput" type="file" hidden></label></div><div id="documentsList" class="list"></div></div></section>
+      <section id="view-ai" class="view"><div class="panel ai-panel"><div class="panel-head"><div><span class="eyebrow">IA RLB</span><h2>Assistente de licitações</h2><p id="aiStatusText">Verificando disponibilidade…</p></div></div><div id="aiMessages" class="ai-messages"><div class="empty-state">Pergunte sobre editais, habilitação, recursos, documentos ou oportunidades.</div></div><div class="ai-compose"><textarea id="aiPrompt" rows="3" placeholder="Digite sua pergunta…"></textarea><button type="button" id="aiSend" class="btn primary">Enviar</button></div></div></section>
+      <section id="view-admin" class="view"><div class="kpi-grid"><div class="kpi"><span>Usuários</span><b id="adminUsers">—</b></div><div class="kpi"><span>Ativos</span><b id="adminActive">—</b></div><div class="kpi"><span>Alertas</span><b id="adminAlerts">—</b></div><div class="kpi"><span>Documentos</span><b id="adminDocs">—</b></div></div><div class="two-col"><div class="panel"><div class="panel-head"><div><span class="eyebrow">GESTÃO</span><h2>Usuários</h2></div></div><div id="adminUsersList" class="list"></div></div><div class="panel"><div class="panel-head"><div><span class="eyebrow">AUDITORIA</span><h2>Atividade recente</h2></div></div><div id="adminAuditList" class="list"></div></div></div></section>
+    </main>
+  </div>
+  <script src="/assets/app-v2.js?v=20261031-2" defer></script>
+</body>
+</html>
