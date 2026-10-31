@@ -1,0 +1,566 @@
+/* Radar de Licitações Brasil — Corporate GovTech UI v3
+   Camada exclusivamente visual. Não altera IDs, rotas, dados ou integrações. */
+html.rlb-corporate-v3{
+  --bg:#f4f6f8;
+  --bg2:#eef2f5;
+  --surface:#ffffff;
+  --surface2:#f8fafb;
+  --surface3:#eef3f6;
+  --text:#182735;
+  --muted:#647483;
+  --line:#dce3e8;
+  --line2:#cbd5dc;
+  --emerald:#13795b;
+  --cyan:#1d5d7b;
+  --purple:#5b6470;
+  --coral:#b6464f;
+  --electric:#13795b;
+  --brand:#173f5f;
+  --brand-strong:#10324d;
+  --brand-soft:#eaf1f5;
+  --success:#13795b;
+  --warning:#a86813;
+  --danger:#b6464f;
+  --shadow:0 1px 2px rgba(16,40,58,.05),0 5px 18px rgba(16,40,58,.035);
+  --shadow2:0 8px 28px rgba(16,40,58,.08);
+  --radius:10px;
+  --header:#ffffff;
+  --terminal:#ffffff;
+  --terminal2:#ffffff;
+  --terminalText:#182735;
+  --terminalMuted:#647483;
+}
+html.rlb-corporate-v3[data-theme="dark"]{
+  --bg:#10161c;
+  --bg2:#151d24;
+  --surface:#182129;
+  --surface2:#1d2730;
+  --surface3:#24303a;
+  --text:#edf2f5;
+  --muted:#9cabb7;
+  --line:#2b3944;
+  --line2:#3a4a56;
+  --emerald:#41a884;
+  --cyan:#6d9eb7;
+  --purple:#aab3ba;
+  --coral:#df7178;
+  --electric:#41a884;
+  --brand:#7ca8bf;
+  --brand-strong:#9dc2d3;
+  --brand-soft:#22333e;
+  --success:#41a884;
+  --warning:#d4a052;
+  --danger:#df7178;
+  --shadow:0 1px 2px rgba(0,0,0,.18),0 5px 18px rgba(0,0,0,.12);
+  --shadow2:0 12px 30px rgba(0,0,0,.18);
+  --header:#182129;
+  --terminal:#182129;
+  --terminal2:#182129;
+  --terminalText:#edf2f5;
+  --terminalMuted:#9cabb7;
+}
+
+html.rlb-corporate-v3 body{
+  background:var(--bg)!important;
+  font-family:Inter,"Segoe UI",Roboto,Arial,sans-serif!important;
+  font-size:14px;
+  color:var(--text);
+  letter-spacing:0;
+}
+html.rlb-corporate-v3 body:before,
+html.rlb-corporate-v3 body:after{display:none!important}
+html.rlb-corporate-v3 .gradient-text{
+  background:none!important;
+  -webkit-background-clip:initial!important;
+  background-clip:initial!important;
+  color:inherit!important;
+}
+html.rlb-corporate-v3 .glass-panel{
+  background:var(--surface)!important;
+  border:1px solid var(--line)!important;
+  box-shadow:var(--shadow)!important;
+  backdrop-filter:none!important;
+  -webkit-backdrop-filter:none!important;
+}
+html.rlb-corporate-v3 .eyebrow{
+  color:var(--muted)!important;
+  font-size:10px!important;
+  font-weight:700!important;
+  letter-spacing:.045em!important;
+  text-transform:none!important;
+}
+html.rlb-corporate-v3 .eyebrow.electric{color:var(--brand)!important}
+
+/* Marca e autenticação */
+html.rlb-corporate-v3 .brand-mark{
+  width:42px;height:42px;
+  border-radius:8px!important;
+  color:#fff!important;
+  background:var(--brand-strong)!important;
+  box-shadow:none!important;
+  font-weight:800!important;
+  letter-spacing:.02em!important;
+  border:1px solid color-mix(in srgb,var(--brand-strong) 78%,#fff 22%)!important;
+}
+html.rlb-corporate-v3 .brand-mark.small{width:36px;height:36px;border-radius:7px!important;font-size:10px!important}
+html.rlb-corporate-v3 .brand-line strong,
+html.rlb-corporate-v3 .sidebar-brand strong{font-size:14px!important;font-weight:700!important;letter-spacing:-.01em}
+html.rlb-corporate-v3 .brand-line span,
+html.rlb-corporate-v3 .sidebar-brand span{font-size:10px!important;color:var(--muted)!important}
+html.rlb-corporate-v3 .auth-screen{
+  background:var(--bg)!important;
+  padding:30px 20px!important;
+}
+html.rlb-corporate-v3 .auth-grid{border-radius:12px!important;overflow:hidden!important;box-shadow:0 12px 36px rgba(17,45,64,.08)!important}
+html.rlb-corporate-v3 .auth-copy{
+  padding:48px!important;
+  background:var(--brand-strong)!important;
+  color:#fff!important;
+}
+html.rlb-corporate-v3 .auth-copy:before{display:none!important}
+html.rlb-corporate-v3 .auth-copy h1{
+  font-size:36px!important;
+  line-height:1.12!important;
+  letter-spacing:-.035em!important;
+  font-weight:700!important;
+  max-width:620px!important;
+}
+html.rlb-corporate-v3 .auth-copy p{color:#d7e2e8!important;line-height:1.65!important}
+html.rlb-corporate-v3 .auth-copy .eyebrow{color:#c7d7df!important}
+html.rlb-corporate-v3 .feature-grid{gap:0!important;margin-top:30px!important;border-top:1px solid rgba(255,255,255,.16)}
+html.rlb-corporate-v3 .feature-grid>div{
+  border:0!important;
+  border-bottom:1px solid rgba(255,255,255,.14)!important;
+  background:transparent!important;
+  border-radius:0!important;
+  padding:14px 4px 14px 22px!important;
+}
+html.rlb-corporate-v3 .feature-grid i{
+  left:4px!important;top:20px!important;width:6px!important;height:6px!important;
+  background:#7bc4aa!important;box-shadow:none!important;
+}
+html.rlb-corporate-v3 .feature-grid span{color:#b8c9d2!important;font-size:11px!important}
+html.rlb-corporate-v3 .auth-card{padding:42px!important;background:var(--surface)!important}
+html.rlb-corporate-v3 .auth-card-head h2{font-size:24px!important;font-weight:700!important;letter-spacing:-.025em!important}
+html.rlb-corporate-v3 .auth-tabs{border-radius:8px!important;padding:3px!important}
+html.rlb-corporate-v3 .auth-tabs button{border-radius:6px!important;font-weight:650!important}
+
+/* Campos e botões */
+html.rlb-corporate-v3 .field>span,
+html.rlb-corporate-v3 .acc-form-grid label>span{
+  font-size:11px!important;
+  text-transform:none!important;
+  letter-spacing:0!important;
+  font-weight:600!important;
+  color:var(--muted)!important;
+}
+html.rlb-corporate-v3 .field input,
+html.rlb-corporate-v3 .field select,
+html.rlb-corporate-v3 .field textarea,
+html.rlb-corporate-v3 .compact-select,
+html.rlb-corporate-v3 .channel-grid input,
+html.rlb-corporate-v3 .admin-row select,
+html.rlb-corporate-v3 .acc-form-grid input,
+html.rlb-corporate-v3 .acc-form-grid select,
+html.rlb-corporate-v3 .acc-form-grid textarea,
+html.rlb-corporate-v3 .acc-inline-form input,
+html.rlb-corporate-v3 .acc-inline-form select{
+  border-radius:7px!important;
+  background:var(--surface)!important;
+  border-color:var(--line2)!important;
+  min-height:40px!important;
+  box-shadow:none!important;
+}
+html.rlb-corporate-v3 .field input:focus,
+html.rlb-corporate-v3 .field select:focus,
+html.rlb-corporate-v3 .field textarea:focus,
+html.rlb-corporate-v3 .compact-select:focus,
+html.rlb-corporate-v3 .acc-form-grid input:focus,
+html.rlb-corporate-v3 .acc-form-grid select:focus,
+html.rlb-corporate-v3 .acc-form-grid textarea:focus{
+  border-color:var(--brand)!important;
+  box-shadow:0 0 0 3px color-mix(in srgb,var(--brand) 10%,transparent)!important;
+}
+html.rlb-corporate-v3 .btn{
+  border-radius:7px!important;
+  font-weight:650!important;
+  box-shadow:none!important;
+  transform:none!important;
+  transition:background-color .12s ease,border-color .12s ease,color .12s ease!important;
+}
+html.rlb-corporate-v3 .btn:hover:not(:disabled){transform:none!important;border-color:var(--brand)!important}
+html.rlb-corporate-v3 .btn.primary{
+  background:var(--brand-strong)!important;
+  color:#fff!important;
+  border-color:var(--brand-strong)!important;
+}
+html.rlb-corporate-v3 .btn.primary:hover:not(:disabled){background:var(--brand)!important;border-color:var(--brand)!important}
+html.rlb-corporate-v3 .btn.ghost{background:var(--surface)!important}
+html.rlb-corporate-v3 .btn.danger{color:var(--danger)!important}
+
+/* Cabeçalho e navegação */
+html.rlb-corporate-v3 .platform-strip{
+  height:28px!important;
+  background:var(--brand-strong)!important;
+  color:#cddbe2!important;
+  border-bottom:0!important;
+  backdrop-filter:none!important;
+  font-size:10px!important;
+}
+html.rlb-corporate-v3 .platform-strip b{color:#fff!important;font-weight:600!important}
+html.rlb-corporate-v3 .pulse-dot{
+  width:6px!important;height:6px!important;background:#72c3a5!important;
+  box-shadow:none!important;animation:none!important;
+}
+html.rlb-corporate-v3 .sidebar{
+  height:64px!important;
+  background:var(--header)!important;
+  border-bottom:1px solid var(--line)!important;
+  box-shadow:0 1px 0 rgba(14,40,58,.02)!important;
+  backdrop-filter:none!important;
+  -webkit-backdrop-filter:none!important;
+}
+html.rlb-corporate-v3 .sidebar-inner{gap:22px!important}
+html.rlb-corporate-v3 .main-nav{gap:2px!important}
+html.rlb-corporate-v3 .main-nav button{
+  border-radius:7px!important;
+  padding:7px 10px!important;
+  color:var(--muted)!important;
+  gap:7px!important;
+}
+html.rlb-corporate-v3 .main-nav button:hover{background:var(--surface2)!important;color:var(--text)!important}
+html.rlb-corporate-v3 .main-nav button.active{
+  background:var(--brand-soft)!important;
+  color:var(--brand-strong)!important;
+  box-shadow:none!important;
+}
+html.rlb-corporate-v3[data-theme="dark"] .main-nav button.active{color:var(--text)!important}
+html.rlb-corporate-v3 .main-nav b{
+  font-size:11px!important;
+  text-transform:none!important;
+  letter-spacing:0!important;
+  font-weight:650!important;
+}
+html.rlb-corporate-v3 .main-nav small{font-size:9px!important}
+html.rlb-corporate-v3 .nav-icon{
+  width:25px!important;height:25px!important;
+  border-radius:5px!important;
+  background:transparent!important;
+  color:currentColor!important;
+}
+html.rlb-corporate-v3 .nav-icon svg{width:17px;height:17px;display:block;stroke:currentColor}
+html.rlb-corporate-v3 .header-actions{gap:6px!important}
+html.rlb-corporate-v3 .theme-control{border-radius:7px!important;padding:2px!important;background:var(--surface)!important}
+html.rlb-corporate-v3 .theme-control button{border-radius:5px!important}
+html.rlb-corporate-v3 .user-pill{border-radius:7px!important;background:var(--surface)!important;font-size:10px!important}
+html.rlb-corporate-v3 .logout-btn{border-radius:7px!important;font-size:10px!important}
+
+/* Estrutura principal */
+html.rlb-corporate-v3 .main{padding-bottom:54px!important}
+html.rlb-corporate-v3 .topbar{
+  min-height:60px!important;
+  margin-bottom:20px!important;
+  border-bottom:1px solid var(--line)!important;
+}
+html.rlb-corporate-v3 .page-title{font-size:18px!important;font-weight:700!important;letter-spacing:-.02em!important}
+html.rlb-corporate-v3 .page-subtitle{font-size:11px!important;color:var(--muted)!important}
+html.rlb-corporate-v3 .section-intro h1,
+html.rlb-corporate-v3 .hab-intro h1{
+  font-size:26px!important;
+  line-height:1.2!important;
+  font-weight:700!important;
+  letter-spacing:-.03em!important;
+}
+html.rlb-corporate-v3 .section-intro p,
+html.rlb-corporate-v3 .hab-intro p{font-size:12px!important;line-height:1.6!important;color:var(--muted)!important}
+
+/* Radar / Home */
+html.rlb-corporate-v3 .radar-hero{
+  grid-template-columns:minmax(0,1.1fr) minmax(360px,.9fr)!important;
+  gap:20px!important;
+  padding:2px 0 12px!important;
+}
+html.rlb-corporate-v3 .radar-hero:before{display:none!important}
+html.rlb-corporate-v3 .hero-badge{
+  border:0!important;
+  border-radius:0!important;
+  background:transparent!important;
+  padding:0!important;
+  color:var(--success)!important;
+  font-size:11px!important;
+  letter-spacing:0!important;
+  font-weight:650!important;
+}
+html.rlb-corporate-v3 .hero-badge em{
+  font-size:10px!important;
+  font-weight:500!important;
+  color:var(--muted)!important;
+  border-left:1px solid var(--line)!important;
+}
+html.rlb-corporate-v3 .hero-copy h1{
+  font-size:32px!important;
+  line-height:1.15!important;
+  letter-spacing:-.035em!important;
+  font-weight:700!important;
+  margin:10px 0 8px!important;
+  max-width:720px!important;
+}
+html.rlb-corporate-v3 .hero-copy>p{
+  font-size:13px!important;
+  line-height:1.65!important;
+  max-width:700px!important;
+  margin:0 0 16px!important;
+}
+html.rlb-corporate-v3 .search-console{
+  border-radius:10px!important;
+  padding:18px!important;
+  margin-top:14px!important;
+  box-shadow:var(--shadow)!important;
+}
+html.rlb-corporate-v3 .search-console-head{margin-bottom:14px!important}
+html.rlb-corporate-v3 .search-console-head b{font-size:15px!important;font-weight:700!important}
+html.rlb-corporate-v3 .search-grid{gap:10px!important}
+html.rlb-corporate-v3 .search-footer{margin-top:12px!important}
+html.rlb-corporate-v3 .search-cta{min-width:188px!important}
+html.rlb-corporate-v3 .check-line{font-size:11px!important}
+html.rlb-corporate-v3 .hero-metrics{gap:10px!important;margin-top:12px!important}
+html.rlb-corporate-v3 .hero-metrics>div{
+  background:var(--surface)!important;
+  border:1px solid var(--line)!important;
+  border-radius:8px!important;
+  padding:13px 14px!important;
+  box-shadow:none!important;
+}
+html.rlb-corporate-v3 .hero-metrics span{
+  font-size:10px!important;
+  font-weight:600!important;
+  letter-spacing:0!important;
+  text-transform:none!important;
+}
+html.rlb-corporate-v3 .hero-metrics b{font-size:20px!important;font-weight:700!important}
+
+/* Feed deixa de parecer terminal */
+html.rlb-corporate-v3 .live-terminal{
+  min-height:500px!important;
+  border-radius:10px!important;
+  padding:16px!important;
+  background:var(--surface)!important;
+  color:var(--text)!important;
+  box-shadow:var(--shadow)!important;
+  border:1px solid var(--line)!important;
+}
+html.rlb-corporate-v3 .terminal-head{
+  padding:0 0 13px!important;
+  border-bottom:1px solid var(--line)!important;
+}
+html.rlb-corporate-v3 .terminal-title b{font-size:14px!important;font-weight:700!important}
+html.rlb-corporate-v3 .terminal-title small,
+html.rlb-corporate-v3 .terminal-meta{font-size:10px!important;color:var(--muted)!important}
+html.rlb-corporate-v3 .status-dot,
+html.rlb-corporate-v3 .status-dot.ok{box-shadow:none!important;width:7px!important;height:7px!important;background:var(--success)!important}
+html.rlb-corporate-v3 .live-chip{
+  border-radius:5px!important;
+  background:color-mix(in srgb,var(--success) 9%,var(--surface))!important;
+  border:1px solid color-mix(in srgb,var(--success) 22%,var(--line))!important;
+  color:var(--success)!important;
+  font-size:8px!important;
+  letter-spacing:.04em!important;
+}
+html.rlb-corporate-v3 .live-terminal .compact-select,
+html.rlb-corporate-v3 .live-terminal .btn.ghost{
+  background:var(--surface)!important;
+  color:var(--text)!important;
+  border-color:var(--line2)!important;
+}
+html.rlb-corporate-v3 .live-item{
+  border-radius:0!important;
+  background:transparent!important;
+  border:0!important;
+  border-top:1px solid var(--line)!important;
+  padding:13px 2px!important;
+  box-shadow:none!important;
+}
+html.rlb-corporate-v3 .live-item:first-child{border-top:0!important}
+html.rlb-corporate-v3 .live-item:hover{background:var(--surface2)!important}
+html.rlb-corporate-v3 .item-title{font-weight:650!important}
+html.rlb-corporate-v3 .item-meta{color:var(--muted)!important}
+html.rlb-corporate-v3 .tag{
+  border-radius:4px!important;
+  background:var(--surface2)!important;
+  border:1px solid var(--line)!important;
+  color:var(--muted)!important;
+  box-shadow:none!important;
+}
+html.rlb-corporate-v3 .tag.green{color:var(--success)!important;border-color:color-mix(in srgb,var(--success) 22%,var(--line))!important}
+
+/* Painéis e listas */
+html.rlb-corporate-v3 .panel,
+html.rlb-corporate-v3 .channel-card,
+html.rlb-corporate-v3 .stack-item,
+html.rlb-corporate-v3 .kpi{
+  border-radius:10px!important;
+  box-shadow:none!important;
+}
+html.rlb-corporate-v3 .panel-head h2{font-size:17px!important;font-weight:700!important;letter-spacing:-.02em!important}
+html.rlb-corporate-v3 .panel-head p{font-size:11px!important;color:var(--muted)!important}
+html.rlb-corporate-v3 .stack-item{background:var(--surface)!important;border-color:var(--line)!important}
+
+/* Central de resultados: mantém funcionalidade, reduz estética futurista */
+html.rlb-corporate-v3 .rlb-results-premium{border-radius:10px!important}
+html.rlb-corporate-v3 .rlb-results-head-mark{display:none!important}
+html.rlb-corporate-v3 .rlb-results-title-row h2{font-size:18px!important;font-weight:700!important}
+html.rlb-corporate-v3 .rlb-search-state-badge,
+html.rlb-corporate-v3 .rlb-search-source-row span{
+  border-radius:5px!important;
+  box-shadow:none!important;
+  background:var(--surface2)!important;
+  border-color:var(--line)!important;
+}
+html.rlb-corporate-v3 .rlb-search-source-row i{box-shadow:none!important;background:var(--success)!important}
+html.rlb-corporate-v3 .rlb-search-experience{
+  border-radius:8px!important;
+  background:var(--surface2)!important;
+  border-color:var(--line)!important;
+}
+html.rlb-corporate-v3 .rlb-search-experience.is-loading:before{display:none!important}
+html.rlb-corporate-v3 .rlb-search-orbit{opacity:.35!important;animation-duration:8s!important}
+html.rlb-corporate-v3 .rlb-doc-search{filter:none!important}
+html.rlb-corporate-v3 .rlb-doc-lens,
+html.rlb-corporate-v3 .rlb-doc-scan,
+html.rlb-corporate-v3 .rlb-head-scan{box-shadow:none!important}
+html.rlb-corporate-v3 .rlb-loading-eyebrow{color:var(--success)!important;letter-spacing:.05em!important;font-weight:650!important}
+html.rlb-corporate-v3 .rlb-loading-eyebrow>i{box-shadow:none!important;background:var(--success)!important}
+html.rlb-corporate-v3 .rlb-search-copy h3{font-size:18px!important;font-weight:700!important}
+html.rlb-corporate-v3 .rlb-search-skeleton{border-radius:7px!important;background:var(--surface)!important}
+html.rlb-corporate-v3 .rlb-search-state-icon{border-radius:8px!important;background:var(--surface)!important;color:var(--brand)!important}
+
+/* Habilitação */
+html.rlb-corporate-v3 .hab-health,
+html.rlb-corporate-v3 .hab-kpis article,
+html.rlb-corporate-v3 .hab-doc-card,
+html.rlb-corporate-v3 .hab-control-note,
+html.rlb-corporate-v3 .hab-urgent{
+  border-radius:8px!important;
+  box-shadow:none!important;
+}
+html.rlb-corporate-v3 .hab-kpis article{background:var(--surface)!important;border:1px solid var(--line)!important}
+html.rlb-corporate-v3 .hab-health{background:var(--surface)!important;border:1px solid var(--line)!important}
+html.rlb-corporate-v3 .hab-doc-card{background:var(--surface)!important;border-color:var(--line)!important}
+html.rlb-corporate-v3 .hab-nav-badge{box-shadow:none!important}
+html.rlb-corporate-v3 .hab-status,
+html.rlb-corporate-v3 .hab-history-tag,
+html.rlb-corporate-v3 .hab-category,
+html.rlb-corporate-v3 .hab-status-legend span{border-radius:4px!important}
+
+/* Administração */
+html.rlb-corporate-v3 .acc-shell{gap:14px!important}
+html.rlb-corporate-v3 .acc-hero{
+  border-radius:10px!important;
+  background:var(--surface)!important;
+  box-shadow:var(--shadow)!important;
+  padding:22px 24px!important;
+}
+html.rlb-corporate-v3 .acc-hero:after{display:none!important}
+html.rlb-corporate-v3 .acc-kicker{font-size:10px!important;letter-spacing:.04em!important;color:var(--muted)!important}
+html.rlb-corporate-v3 .acc-hero h1{font-size:26px!important;font-weight:700!important;letter-spacing:-.03em!important}
+html.rlb-corporate-v3 .acc-hero p{font-size:11px!important;line-height:1.6!important}
+html.rlb-corporate-v3 .acc-hero-actions>span{border-radius:5px!important;background:var(--surface2)!important;font-size:9px!important}
+html.rlb-corporate-v3 .acc-nav{
+  border-radius:8px!important;
+  background:var(--surface)!important;
+  padding:4px!important;
+}
+html.rlb-corporate-v3 .acc-nav button{
+  border-radius:6px!important;
+  font-size:9px!important;
+  font-weight:650!important;
+}
+html.rlb-corporate-v3 .acc-nav button:hover,
+html.rlb-corporate-v3 .acc-nav button.active{background:var(--brand-soft)!important;color:var(--text)!important}
+html.rlb-corporate-v3 .acc-nav button.active{box-shadow:none!important}
+html.rlb-corporate-v3 .acc-kpis{gap:9px!important}
+html.rlb-corporate-v3 .acc-kpi{
+  border-radius:8px!important;
+  background:var(--surface)!important;
+  box-shadow:none!important;
+}
+html.rlb-corporate-v3 .acc-kpi:before{width:2px!important}
+html.rlb-corporate-v3 .acc-kpi>span{font-size:9px!important;text-transform:none!important;letter-spacing:0!important;font-weight:600!important}
+html.rlb-corporate-v3 .acc-kpi>b{font-size:22px!important;font-weight:700!important}
+html.rlb-corporate-v3 .acc-kpi>small{font-size:8px!important}
+html.rlb-corporate-v3 .acc-card,
+html.rlb-corporate-v3 .acc-provider,
+html.rlb-corporate-v3 .acc-ticket,
+html.rlb-corporate-v3 .acc-stat-row>div,
+html.rlb-corporate-v3 .acc-modality-grid>div{
+  border-radius:8px!important;
+  background:var(--surface)!important;
+  box-shadow:none!important;
+}
+html.rlb-corporate-v3 .acc-card-head h2{font-size:15px!important;font-weight:700!important}
+html.rlb-corporate-v3 .acc-table-wrap{border-radius:7px!important}
+html.rlb-corporate-v3 .acc-pill,
+html.rlb-corporate-v3 .acc-badge{border-radius:4px!important;box-shadow:none!important}
+html.rlb-corporate-v3 .acc-badge.ok i{box-shadow:none!important}
+html.rlb-corporate-v3 .acc-quick button{border-radius:7px!important;background:var(--surface)!important;transform:none!important}
+html.rlb-corporate-v3 .acc-quick button:hover{transform:none!important;border-color:var(--brand)!important}
+html.rlb-corporate-v3 .acc-quick button>span{border-radius:6px!important;background:var(--brand-soft)!important;color:var(--brand)!important}
+html.rlb-corporate-v3 .acc-editor{box-shadow:none!important;border-color:var(--line2)!important}
+html.rlb-corporate-v3 .aus-shell,
+html.rlb-corporate-v3 .aus-card,
+html.rlb-corporate-v3 .aus-kpi,
+html.rlb-corporate-v3 .aus-row,
+html.rlb-corporate-v3 .aus-alert,
+html.rlb-corporate-v3 .aus-doc,
+html.rlb-corporate-v3 .aus-notification-card{
+  border-radius:8px!important;
+  box-shadow:none!important;
+}
+
+/* IA: ferramenta, não elemento decorativo */
+html.rlb-corporate-v3 .ai-fab{
+  border-radius:8px!important;
+  background:var(--brand-strong)!important;
+  border:1px solid var(--brand-strong)!important;
+  box-shadow:0 5px 16px rgba(16,50,77,.18)!important;
+  color:#fff!important;
+}
+html.rlb-corporate-v3 .ai-fab-glow{display:none!important}
+html.rlb-corporate-v3 .ai-fab-icon svg,
+html.rlb-corporate-v3 .ai-avatar svg{width:17px;height:17px;stroke:currentColor;display:block}
+html.rlb-corporate-v3 .ai-window{border-radius:10px!important;box-shadow:0 16px 44px rgba(10,30,45,.16)!important}
+html.rlb-corporate-v3 .ai-avatar{background:var(--brand-soft)!important;color:var(--brand)!important;border-radius:7px!important;box-shadow:none!important}
+
+/* Toast e estados */
+html.rlb-corporate-v3 .toast{border-radius:7px!important;background:#213746!important;box-shadow:0 8px 26px rgba(0,0,0,.18)!important}
+html.rlb-corporate-v3 .toast.error{background:#8d3540!important}
+html.rlb-corporate-v3 .empty-state{color:var(--muted)!important}
+
+/* Responsividade */
+@media(max-width:1050px){
+  html.rlb-corporate-v3 .radar-hero{grid-template-columns:1fr!important}
+  html.rlb-corporate-v3 .live-terminal{min-height:auto!important}
+}
+@media(max-width:820px){
+  html.rlb-corporate-v3 .auth-copy{padding:34px!important}
+  html.rlb-corporate-v3 .auth-copy h1{font-size:30px!important}
+  html.rlb-corporate-v3 .hero-copy h1{font-size:28px!important}
+  html.rlb-corporate-v3 .sidebar-inner{gap:10px!important}
+  html.rlb-corporate-v3 .main-nav b{font-size:10px!important}
+}
+@media(max-width:620px){
+  html.rlb-corporate-v3 .platform-strip{padding-inline:12px!important}
+  html.rlb-corporate-v3 .sidebar{height:auto!important;min-height:62px!important}
+  html.rlb-corporate-v3 .sidebar-inner{width:calc(100% - 20px)!important;flex-wrap:wrap!important;padding:9px 0!important}
+  html.rlb-corporate-v3 .sidebar-brand{flex:1 1 auto!important}
+  html.rlb-corporate-v3 .main-nav{order:3;width:100%;overflow-x:auto!important;justify-content:flex-start!important;padding-bottom:2px!important}
+  html.rlb-corporate-v3 .main-nav button{flex:0 0 auto!important}
+  html.rlb-corporate-v3 .main{width:calc(100% - 24px)!important}
+  html.rlb-corporate-v3 .topbar{min-height:52px!important}
+  html.rlb-corporate-v3 .search-console{padding:14px!important}
+  html.rlb-corporate-v3 .hero-metrics{grid-template-columns:1fr 1fr!important}
+  html.rlb-corporate-v3 .auth-card{padding:28px!important}
+}
+@media(prefers-reduced-motion:reduce){
+  html.rlb-corporate-v3 *,html.rlb-corporate-v3 *:before,html.rlb-corporate-v3 *:after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
+}
