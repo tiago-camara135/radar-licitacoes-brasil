@@ -1,7 +1,6 @@
 import { Pool } from 'pg';
 import { initAiTables, aiStatus, listAiConversations, listAiMessages, deleteAiConversation, runAiChat } from './ai-rlb-core.mjs';
-import { initHybridTables, hybridStatus, hybridAdminStatus, configureHybridProvider, removeHybridProvider, runHybridChat } from './ai-rlb-hybrid.mjs';
-import { runGeminiDiagnostics } from './ai-rlb-gemini-force-v2.mjs';
+import { initHybridTables, hybridStatus, hybridAdminStatus, configureHybridProvider, removeHybridProvider, runHybridChat, runHybridDiagnostics } from './ai-rlb-hybrid-v2.mjs';
 
 const PORT = Number(process.env.PORT || 10000);
 const DATABASE_URL = process.env.DATABASE_URL || '';
@@ -58,11 +57,12 @@ export async function initAiRlb() {
   await initHybridTables(pool);
   if (BOOT_DIAGNOSTICS) {
     setTimeout(() => {
-      runGeminiDiagnostics(pool).catch(e => console.error('IA RLB diagnostics boot error:', e?.message || e));
+      runHybridDiagnostics(pool).then(r=>console.log('IA RLB diagnostics boot:', JSON.stringify(r))).catch(e => console.error('IA RLB diagnostics boot error:', e?.message || e));
     }, 2500);
   } else {
     console.log('IA RLB boot diagnostics disabled: preserving external free-tier quota');
   }
+  console.log('IA RLB Gemini integration v2 ready: direct official-evidence flow + Gemini document analysis');
 }
 
 export async function handleAiRlbRoute(req, res, url) {
@@ -76,6 +76,13 @@ export async function handleAiRlbRoute(req, res, url) {
 
     if (req.method === 'GET' && url.pathname === '/api/ai-rlb/status') {
       send(res, 200, await hybridStatus(pool, await aiStatus(pool, user.id))); return true;
+    }
+    if (req.method === 'POST' && url.pathname === '/api/ai-rlb/admin/diagnostics') {
+      if (user.role !== 'admin') { send(res, 403, { error: 'Apenas administradores podem executar o diagnóstico.', code: 'admin_required' }); return true; }
+      if (!allow(`ai-diagnostics:${user.id}`, 3, 600000)) { send(res, 429, { error: 'Limite de diagnósticos atingido. Aguarde alguns minutos.', code: 'diagnostics_rate_limited' }); return true; }
+      const result = await runHybridDiagnostics(pool);
+      await audit(user.id, 'ai_rlb.run_gemini_diagnostics', { ok: result.ok, provider: result.provider, model: result.model, checks: result.checks }, ip);
+      send(res, result.configured ? 200 : 503, result); return true;
     }
     if (url.pathname === '/api/ai-rlb/admin/config') {
       if (user.role !== 'admin') { send(res, 403, { error: 'Apenas administradores podem configurar a IA RLB.', code: 'admin_required' }); return true; }
@@ -111,7 +118,7 @@ export async function handleAiRlbRoute(req, res, url) {
       const document = body.document_id ? await ownedDocument(user.id, Number(body.document_id)) : null;
       if (body.document_id && !document) { send(res, 404, { error: 'Documento não encontrado ou sem acesso.', code: 'document_not_found' }); return true; }
       const result = await runHybridChat({ pool, userId: user.id, body, document, fallback: runAiChat });
-      await audit(user.id, 'ai_rlb.chat', { conversation_id: result.conversation_id, document_id: document?.id || null, web_search: body.use_web !== false, provider: result.provider || result.mode || 'official_public_sources', model: result.model || null }, ip);
+      await audit(user.id, 'ai_rlb.chat', { conversation_id: result.conversation_id, document_id: document?.id || null, web_search: body.use_web !== false, provider: result.provider || result.mode || 'official_public_sources', model: result.model || null, interaction_type: result.interaction_type || null }, ip);
       send(res, 200, result); return true;
     }
     send(res, 404, { error: 'Rota da IA RLB não encontrada.', code: 'route_not_found' }); return true;
