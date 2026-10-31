@@ -1,0 +1,344 @@
+/* Radar de Licitacoes Brasil — Header premium inspirado no Modelo 1
+   Somente camada visual: preserva IDs, data-view e eventos existentes. */
+
+.app-shell .platform-strip{
+  height:28px!important;
+  position:relative;
+  z-index:82;
+  padding:0 max(20px,calc((100vw - 1360px)/2))!important;
+  background:linear-gradient(90deg,#071426 0%,#0a1c34 45%,#0b2342 100%)!important;
+  border-bottom:1px solid rgba(80,165,255,.16)!important;
+  color:#7892aa!important;
+  backdrop-filter:none!important;
+  box-shadow:inset 0 -1px 0 rgba(255,255,255,.025);
+}
+.app-shell .platform-strip b{color:#dcecff!important;font-weight:800}
+.app-shell .platform-strip .pulse-dot{
+  width:6px;height:6px;
+  background:#18e7a4!important;
+  box-shadow:0 0 0 4px rgba(24,231,164,.08),0 0 15px rgba(24,231,164,.46)!important;
+}
+.app-shell .strip-tech{color:#6f8ba5!important;letter-spacing:.02em}
+
+.app-shell .sidebar{
+  height:116px!important;
+  position:sticky;
+  top:0;
+  overflow:hidden;
+  border-bottom:1px solid rgba(55,143,227,.25)!important;
+  background:
+    radial-gradient(circle at 74% 50%,rgba(0,102,255,.18) 0 1px,transparent 2px 56px,rgba(0,112,255,.11) 57px 58px,transparent 59px 88px,rgba(0,126,255,.07) 89px 90px,transparent 91px),
+    linear-gradient(104deg,#04111f 0%,#061a2e 46%,#08254a 74%,#071a31 100%)!important;
+  box-shadow:0 14px 36px rgba(2,16,31,.18),inset 0 -1px 0 rgba(255,255,255,.035)!important;
+  backdrop-filter:none!important;
+  -webkit-backdrop-filter:none!important;
+}
+.app-shell .sidebar::before{
+  content:"";
+  position:absolute;
+  width:270px;height:270px;
+  right:17%;top:50%;
+  transform:translateY(-50%);
+  border-radius:50%;
+  pointer-events:none;
+  opacity:.7;
+  background:
+    linear-gradient(90deg,transparent 49.6%,rgba(31,126,255,.14) 50%,transparent 50.4%),
+    linear-gradient(transparent 49.6%,rgba(31,126,255,.12) 50%,transparent 50.4%),
+    radial-gradient(circle,rgba(5,92,218,.18) 0 8%,transparent 8.5% 25%,rgba(0,111,255,.12) 25.5% 26%,transparent 26.5% 42%,rgba(0,118,255,.08) 42.5% 43%,transparent 43.5%);
+  filter:drop-shadow(0 0 28px rgba(0,103,255,.18));
+}
+.app-shell .sidebar::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  background:linear-gradient(90deg,transparent 0 60%,rgba(1,12,27,.08) 72%,rgba(1,12,27,.26) 100%);
+}
+
+.app-shell .sidebar-inner{
+  position:relative;
+  z-index:2;
+  width:min(1360px,calc(100% - 40px))!important;
+  height:100%!important;
+  margin:auto;
+  display:grid!important;
+  grid-template-columns:minmax(260px,1.12fr) minmax(520px,2fr) auto;
+  align-items:center!important;
+  gap:26px!important;
+}
+
+.app-shell .sidebar-brand{
+  min-width:0;
+  display:flex!important;
+  align-items:center!important;
+  gap:14px!important;
+  color:#fff!important;
+}
+.app-shell .sidebar-brand .brand-mark.small{
+  width:62px!important;
+  height:62px!important;
+  flex:0 0 62px;
+  border-radius:18px!important;
+  font-size:14px!important;
+  letter-spacing:.04em;
+  color:#eafff8!important;
+  background:
+    radial-gradient(circle at 32% 25%,rgba(255,255,255,.30),transparent 18%),
+    linear-gradient(145deg,#02bd82 0%,#0099c8 58%,#1450dd 100%)!important;
+  border:1px solid rgba(112,232,255,.24);
+  box-shadow:0 13px 34px rgba(0,164,193,.22),inset 0 0 0 1px rgba(255,255,255,.12)!important;
+}
+.app-shell .sidebar-brand strong{
+  display:block;
+  max-width:270px;
+  font-size:21px!important;
+  line-height:1.04;
+  letter-spacing:-.035em;
+  font-weight:900;
+  color:#f7fbff!important;
+}
+.app-shell .sidebar-brand span{
+  display:block!important;
+  margin-top:7px!important;
+  font-size:9px!important;
+  letter-spacing:.015em;
+  color:#83a4bf!important;
+}
+.app-shell .sidebar-brand span{font-size:0!important}
+.app-shell .sidebar-brand span::after{
+  content:"Inteligência e monitoramento em compras públicas";
+  font-size:9px;
+}
+
+.app-shell .main-nav{
+  min-width:0;
+  margin:0!important;
+  display:grid!important;
+  grid-template-columns:repeat(4,minmax(112px,1fr));
+  align-items:stretch!important;
+  gap:0!important;
+  overflow:visible!important;
+}
+.app-shell .main-nav button{
+  min-width:0;
+  min-height:58px;
+  position:relative;
+  border:0!important;
+  border-left:1px solid rgba(102,169,225,.16)!important;
+  border-radius:0!important;
+  padding:7px 13px!important;
+  display:flex!important;
+  align-items:center!important;
+  gap:10px!important;
+  background:transparent!important;
+  color:#9cb3c7!important;
+  text-align:left;
+  box-shadow:none!important;
+  transition:background .18s ease,color .18s ease,transform .18s ease!important;
+}
+.app-shell .main-nav button:first-child{border-left:0!important}
+.app-shell .main-nav button:hover{
+  background:linear-gradient(135deg,rgba(0,179,255,.07),rgba(0,245,160,.035))!important;
+  color:#fff!important;
+}
+.app-shell .main-nav button.active{
+  background:linear-gradient(135deg,rgba(0,245,160,.075),rgba(0,140,255,.055))!important;
+  color:#fff!important;
+}
+.app-shell .main-nav button.active::after{
+  content:"";
+  position:absolute;
+  left:14px;right:14px;bottom:3px;
+  height:2px;
+  border-radius:99px;
+  background:linear-gradient(90deg,#00eea6,#00aaf0);
+  box-shadow:0 0 12px rgba(0,220,195,.35);
+}
+.app-shell .main-nav .nav-icon{
+  width:40px!important;
+  height:40px!important;
+  flex:0 0 40px;
+  border-radius:50%!important;
+  display:grid!important;
+  place-items:center!important;
+  font-size:15px!important;
+  color:#18dca7!important;
+  background:radial-gradient(circle,rgba(0,237,166,.12),rgba(0,167,255,.06))!important;
+  border:1px solid rgba(0,230,177,.24)!important;
+  box-shadow:inset 0 0 14px rgba(0,227,174,.05),0 0 18px rgba(0,187,220,.05);
+}
+.app-shell .main-nav button:nth-child(2) .nav-icon,
+.app-shell .main-nav button:nth-child(3) .nav-icon{
+  color:#34a6ff!important;
+  border-color:rgba(42,157,255,.28)!important;
+  background:radial-gradient(circle,rgba(20,128,255,.14),rgba(9,82,194,.05))!important;
+}
+.app-shell .main-nav button:nth-child(4) .nav-icon{
+  color:#b29cff!important;
+  border-color:rgba(157,127,255,.25)!important;
+  background:radial-gradient(circle,rgba(128,93,255,.14),rgba(9,82,194,.04))!important;
+}
+.app-shell .main-nav b{
+  display:block!important;
+  font-size:9.5px!important;
+  line-height:1.2;
+  text-transform:none!important;
+  letter-spacing:.01em!important;
+  font-weight:850;
+  color:#f0f6fc!important;
+  white-space:nowrap;
+}
+.app-shell .main-nav small{
+  display:block!important;
+  margin-top:3px!important;
+  font-size:7.5px!important;
+  color:#7895ad!important;
+  white-space:nowrap;
+}
+
+.app-shell .header-actions{
+  margin:0!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:flex-end;
+  gap:7px!important;
+  position:relative;
+  z-index:3;
+}
+.app-shell .theme-control{
+  padding:3px!important;
+  border:1px solid rgba(65,153,231,.24)!important;
+  background:rgba(4,23,43,.78)!important;
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.025);
+}
+.app-shell .theme-control button{
+  width:27px!important;height:27px!important;
+  color:#7593ab!important;
+}
+.app-shell .theme-control button[aria-pressed="true"]{
+  background:linear-gradient(135deg,#0b87d5,#17d9bb)!important;
+  color:#fff!important;
+  box-shadow:0 3px 12px rgba(0,150,230,.24)!important;
+}
+.app-shell .user-pill{
+  max-width:205px!important;
+  min-height:39px;
+  display:flex!important;
+  align-items:center;
+  padding:7px 12px 7px 36px!important;
+  position:relative;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  border:1px solid rgba(53,142,221,.28)!important;
+  border-radius:12px!important;
+  background:rgba(4,23,43,.72)!important;
+  color:#d6e6f3!important;
+  font-size:8px!important;
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.02);
+}
+.app-shell .user-pill::before{
+  content:"◯";
+  position:absolute;
+  left:10px;
+  top:50%;transform:translateY(-50%);
+  width:18px;height:18px;
+  display:grid;place-items:center;
+  color:#9fc0d9;
+  font-size:14px;
+}
+.app-shell .logout-btn{
+  height:39px;
+  padding:0 10px!important;
+  border:1px solid rgba(53,142,221,.24)!important;
+  border-radius:11px!important;
+  background:rgba(4,23,43,.62)!important;
+  color:#8ca9be!important;
+  font-size:8px!important;
+}
+.app-shell .logout-btn:hover{
+  color:#ff7692!important;
+  border-color:rgba(255,83,118,.34)!important;
+  background:rgba(255,83,118,.06)!important;
+}
+
+/* Faixa de pagina continua funcional, mas visualmente ligada ao novo header. */
+.app-shell .topbar{
+  min-height:48px!important;
+  margin-bottom:16px!important;
+}
+
+@media(max-width:1180px){
+  .app-shell .sidebar{height:102px!important}
+  .app-shell .sidebar-inner{
+    width:min(100% - 24px,1360px)!important;
+    grid-template-columns:minmax(225px,.95fr) minmax(440px,1.8fr) auto;
+    gap:14px!important;
+  }
+  .app-shell .sidebar-brand .brand-mark.small{width:52px!important;height:52px!important;flex-basis:52px;border-radius:15px!important}
+  .app-shell .sidebar-brand strong{font-size:17px!important}
+  .app-shell .sidebar-brand span::after{font-size:8px}
+  .app-shell .main-nav button{padding:6px 9px!important;gap:7px!important}
+  .app-shell .main-nav .nav-icon{width:34px!important;height:34px!important;flex-basis:34px;font-size:13px!important}
+  .app-shell .main-nav small{display:none!important}
+  .app-shell .user-pill{max-width:150px!important}
+}
+
+@media(max-width:900px){
+  .app-shell .sidebar{
+    height:auto!important;
+    min-height:88px!important;
+    overflow:visible;
+  }
+  .app-shell .sidebar::before{right:-40px;opacity:.42}
+  .app-shell .sidebar-inner{
+    width:calc(100% - 20px)!important;
+    min-height:88px;
+    padding:10px 0 8px!important;
+    display:flex!important;
+    flex-wrap:wrap!important;
+    gap:8px!important;
+  }
+  .app-shell .sidebar-brand{flex:1 1 auto}
+  .app-shell .sidebar-brand .brand-mark.small{width:43px!important;height:43px!important;flex-basis:43px;border-radius:13px!important;font-size:11px!important}
+  .app-shell .sidebar-brand strong{font-size:14px!important}
+  .app-shell .sidebar-brand span{display:none!important}
+  .app-shell .header-actions{margin-left:auto!important}
+  .app-shell .user-pill{display:none!important}
+  .app-shell .main-nav{
+    order:3;
+    flex:1 0 100%;
+    width:100%;
+    display:flex!important;
+    gap:5px!important;
+    overflow-x:auto!important;
+    scrollbar-width:none;
+    padding:2px 0 0!important;
+  }
+  .app-shell .main-nav::-webkit-scrollbar{display:none}
+  .app-shell .main-nav button{
+    flex:0 0 auto!important;
+    min-height:43px;
+    padding:4px 10px!important;
+    border:1px solid rgba(83,155,214,.13)!important;
+    border-radius:11px!important;
+    background:rgba(4,24,44,.5)!important;
+  }
+  .app-shell .main-nav button:first-child{border-left:1px solid rgba(83,155,214,.13)!important}
+  .app-shell .main-nav button.active{border-color:rgba(0,230,177,.28)!important}
+  .app-shell .main-nav button.active::after{display:none}
+  .app-shell .main-nav .nav-icon{width:29px!important;height:29px!important;flex-basis:29px;font-size:11px!important}
+  .app-shell .main-nav b{font-size:8.5px!important}
+  .app-shell .platform-strip{padding:0 10px!important}
+}
+
+@media(max-width:560px){
+  .app-shell .platform-strip{height:25px!important;font-size:7.5px!important}
+  .app-shell .sidebar-inner{padding-top:8px!important}
+  .app-shell .sidebar-brand strong{font-size:13px!important}
+  .app-shell .theme-control button{width:25px!important;height:25px!important}
+  .app-shell .logout-btn{height:34px!important;padding:0 8px!important}
+  .app-shell .main-nav button{padding:4px 8px!important}
+  .app-shell .main-nav .nav-icon{width:27px!important;height:27px!important;flex-basis:27px}
+}
