@@ -1,0 +1,14 @@
+/* Radar de Licitações Brasil — identidade visual v1
+   Alteração estritamente visual: substitui o monograma textual RLB pelo novo símbolo vetorial. */
+.brand-mark{
+  background:url('/assets/rlb-brand-icon-v1.svg?v=1') center/contain no-repeat!important;
+  color:transparent!important;
+  font-size:0!important;
+  letter-spacing:0!important;
+  box-shadow:0 10px 28px color-mix(in srgb,var(--cyan) 20%,transparent)!important;
+}
+.brand-mark.small{
+  background:url('/assets/rlb-brand-icon-v1.svg?v=1') center/contain no-repeat!important;
+  color:transparent!important;
+  font-size:0!important;
+}
