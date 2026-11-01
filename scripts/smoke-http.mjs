@@ -2,7 +2,7 @@ const base=String(process.env.RLB_BASE_URL||'http://127.0.0.1:10000').replace(/\
 const checks=[
   ['/',200,'Radar de Licitações Brasil'],
   ['/api/health',200,'ok'],
-  ['/api/stability/health',200,'2.10.0'],
+  ['/api/stability/health',200,'2.10.1'],
   ['/assets/stability-ui-v1.js',200,'__rlbStabilityUiV1']
 ];
 let failed=0;
