@@ -7,6 +7,7 @@ const nativeReadFileSync=fs.readFileSync.bind(fs);
 const nativeCreateServer=http.createServer.bind(http);
 const companyDocumentsJs=nativeReadFileSync(new URL('./company-documents-v1.js',import.meta.url),'utf8');
 const companyDocumentsCss=nativeReadFileSync(new URL('./company-documents-v1.css',import.meta.url),'utf8');
+const brandLogoCss=nativeReadFileSync(new URL('./brand-logo-v1.css',import.meta.url),'utf8');
 const legacyMarker="\n\n(()=>{\n'use strict';\nconst CHECK_MS=5*60*1000;";
 
 /* Injeta o módulo antes do bloco legado que o runtime v3 remove do app principal. */
@@ -21,7 +22,7 @@ fs.readFileSync=function companyDocsReadFileSync(path,...args){
   }
   if(value.endsWith('/app-v2.css')||value.endsWith('\\app-v2.css')){
     const source=Buffer.isBuffer(data)?data.toString('utf8'):String(data);
-    const finalCss=source+'\n\n'+companyDocumentsCss;
+    const finalCss=source+'\n\n'+companyDocumentsCss+'\n\n'+brandLogoCss;
     return Buffer.isBuffer(data)?Buffer.from(finalCss):finalCss;
   }
   return data;
