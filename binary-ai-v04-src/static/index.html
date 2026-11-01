@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="theme-color" content="#071018" />
+  <link rel="manifest" href="/static/manifest.json" />
+  <link rel="stylesheet" href="/static/styles.css" />
+  <title>Binary AI Lab</title>
+</head>
+<body>
+<div class="app-shell">
+  <aside class="sidebar">
+    <div class="brand"><div class="brand-mark">AI</div><div><strong>Binary AI</strong><span>Broker Signal Engine</span></div></div>
+    <nav>
+      <button class="nav active" data-view="dashboard">◈ Dashboard</button>
+      <button class="nav" data-view="scanner">⌁ Scanner IA</button>
+      <button class="nav" data-view="history">◫ Histórico</button>
+      <button class="nav" data-view="calibration">◎ Calibração</button>
+      <button class="nav" data-view="settings">⚙ Configurações</button>
+    </nav>
+    <div class="sidebar-footer"><span class="dot" id="feedDot"></span><span id="feedState">Broker Feed desconectado</span><small id="providerName">OTCharts</small></div>
+  </aside>
+
+  <main>
+    <header class="topbar">
+      <div><span class="eyebrow">ANÁLISE MULTITEMPORAL • READ-ONLY</span><h1 id="pageTitle">Central de Sinais</h1></div>
+      <div class="top-actions"><button id="notifyBtn" class="ghost">🔔 Alertas</button><div class="clock" id="clock">--:--:--</div></div>
+    </header>
+
+    <section class="view active" id="view-dashboard">
+      <section class="broker-bar card">
+        <div class="field"><label>Corretora</label><select id="brokerSelect"><option value="quotex">Quotex</option><option value="pocket">Pocket Option</option><option value="iqoption">IQ Option</option><option value="bullex">Bullex</option></select></div>
+        <div class="field"><label>Mercado</label><select id="marketSelect"><option value="otc">OTC</option><option value="real">Real</option></select></div>
+        <div class="field grow"><label>Ativo</label><select id="symbolSelect"><option value="">Conecte o Broker Feed</option></select></div>
+        <div class="field"><label>Payout mínimo</label><div class="suffix"><input id="minPayout" type="number" min="0" max="99" value="80"><span>%</span></div></div>
+        <div class="field"><label>Score mínimo</label><input id="minScore" type="number" min="55" max="95" value="66"></div>
+        <button id="analyzeBtn" class="primary">Analisar agora</button>
+      </section>
+
+      <section class="status-strip">
+        <div><span>Feed</span><strong id="liveStatus">DESCONECTADO</strong></div>
+        <div><span>Mercado</span><strong id="openStatus">--</strong></div>
+        <div><span>Payout</span><strong id="payoutValue">--</strong></div>
+        <div><span>Break-even</span><strong id="breakevenValue">--</strong></div>
+        <div><span>Próxima vela</span><strong id="countdown">00:00</strong></div>
+      </section>
+
+      <section class="main-grid">
+        <div class="chart-card card">
+          <div class="card-head"><div><span class="eyebrow" id="chartBroker">CORRETORA</span><h2 id="chartSymbol">Selecione um ativo</h2></div><div class="timeframes"><button data-tf="1m" class="active">1M</button><button data-tf="5m">5M</button><button data-tf="1h">1H</button></div></div>
+          <div class="price-line"><strong id="lastPrice">--</strong><span id="feedAge">sem dados</span></div>
+          <canvas id="chart" height="390"></canvas>
+          <div class="chart-legend"><span><i class="bull"></i> Alta</span><span><i class="bear"></i> Baixa</span><span>Fonte: <b>feed selecionado da corretora</b></span></div>
+        </div>
+
+        <div class="signal-card card">
+          <div class="card-head"><div><span class="eyebrow">PRÓXIMA VELA • 1 MIN</span><h2>Gerador de sinal</h2></div><span id="qualityBadge" class="badge wait">AGUARDANDO</span></div>
+          <div class="signal-orb wait" id="signalOrb"><span id="signalDirection">AGUARDAR</span><strong id="probability">--%</strong><small id="probabilityLabel">confiança técnica</small></div>
+          <div class="frame-list">
+            <div><span>1H</span><b id="f1h">--</b><em id="s1h">--</em></div>
+            <div><span>5M</span><b id="f5m">--</b><em id="s5m">--</em></div>
+            <div><span>1M</span><b id="f1m">--</b><em id="s1m">--</em></div>
+          </div>
+          <div class="entry-box"><span>Decisão</span><strong id="actionText">SEM ENTRADA</strong><small id="explainText">Conecte o feed e carregue um ativo.</small></div>
+          <div class="edge-box"><div><span>Probabilidade calibrada</span><b id="calibratedValue">Aguardando amostra</b></div><div><span>Margem sobre break-even</span><b id="edgeValue">--</b></div><div><span>EV estimado</span><b id="evValue">--</b></div></div>
+          <p class="disclaimer">O percentual só vira probabilidade calibrada depois de ≥50 resultados na mesma corretora, mercado e faixa de score. Antes disso é apenas confiança técnica.</p>
+        </div>
+      </section>
+
+      <section class="bottom-grid">
+        <div class="card filters-card"><div class="card-head"><div><span class="eyebrow">FILTROS DE QUALIDADE</span><h2>Por que operar ou aguardar</h2></div></div><div id="filterRows" class="filter-rows"><div class="filter-row"><span>Feed</span><b>—</b></div></div></div>
+        <div class="card stats-card"><div class="card-head"><div><span class="eyebrow">FORWARD TEST</span><h2>Validação real</h2></div></div><div class="stat-grid"><div><span>Resolvidos</span><strong id="resolved">0</strong></div><div><span>Wins</span><strong id="wins">0</strong></div><div><span>Losses</span><strong id="losses">0</strong></div><div><span>Acerto</span><strong id="accuracy">--</strong></div></div><div id="recentMini" class="history-mini"></div></div>
+      </section>
+    </section>
+
+    <section class="view" id="view-scanner">
+      <div class="page-grid">
+        <div class="card full"><div class="card-head"><div><span class="eyebrow">SCANNER MANUAL</span><h2>Radar por corretora</h2><p>Escolha até 10 ativos. O scanner respeita payout, feed, tendência e calibração.</p></div><button id="scanBtn" class="primary">Executar scanner</button></div><div id="watchlist" class="watchlist"></div><div id="scannerRows" class="scanner-rows"></div></div>
+      </div>
+    </section>
+
+    <section class="view" id="view-history">
+      <div class="card full"><div class="card-head"><div><span class="eyebrow">PRÓXIMA VELA REAL</span><h2>Histórico de sinais</h2><p>Cada sinal é resolvido usando a abertura e o fechamento da vela alvo de 1 minuto.</p></div><button id="exportBtn" class="ghost">Exportar CSV</button></div><div class="table-wrap"><table><thead><tr><th>Hora alvo</th><th>Corretora</th><th>Ativo</th><th>Sinal</th><th>Score</th><th>Calibrada</th><th>Payout</th><th>Resultado</th></tr></thead><tbody id="historyTable"></tbody></table></div></div>
+    </section>
+
+    <section class="view" id="view-calibration">
+      <div class="card full"><div class="card-head"><div><span class="eyebrow">CALIBRAÇÃO FORWARD</span><h2>Score técnico → probabilidade observada</h2><p>Faixas só são usadas como probabilidade após 50 resultados. Intervalo de confiança de 95% é exibido para evitar falsa precisão.</p></div></div><div class="table-wrap"><table><thead><tr><th>Corretora</th><th>Mercado</th><th>Faixa</th><th>Amostras</th><th>Acerto observado</th><th>Prob. suavizada</th><th>IC 95%</th><th>Status</th></tr></thead><tbody id="calibrationTable"></tbody></table></div></div>
+    </section>
+
+    <section class="view" id="view-settings">
+      <div class="settings-grid">
+        <div class="card"><span class="eyebrow">BROKER FEED</span><h2>Conectar OTCharts</h2><p>A chave é do provedor de dados e não da sua conta na corretora. Ela fica no seu navegador e o servidor mantém apenas uma sessão temporária em memória.</p><label>OTCharts API Key</label><input id="otKey" type="password" autocomplete="off" placeholder="otc_live_..."><div class="button-row"><button id="connectBtn" class="primary">Conectar e testar</button><button id="disconnectBtn" class="ghost">Desconectar</button></div><div id="connectResult" class="connection-result">Não conectado.</div></div>
+        <div class="card"><span class="eyebrow">REGRAS DO MOTOR</span><h2>Filtros mínimos</h2><label>Score técnico mínimo</label><input id="settingsScore" type="number" min="55" max="95" value="66"><label>Payout mínimo</label><input id="settingsPayout" type="number" min="0" max="99" value="80"><button id="saveSettings" class="primary">Salvar preferências</button><p class="muted">Não há martingale, valor de aposta ou execução automática neste aplicativo.</p></div>
+        <div class="card"><span class="eyebrow">STATUS DOS CONECTORES</span><h2>Corretoras</h2><div class="connector-list"><div><b>Quotex</b><span>OTCharts read-only</span></div><div><b>Pocket Option</b><span>OTCharts read-only</span></div><div><b>IQ Option</b><span>OTCharts read-only</span></div><div><b>Bullex</b><span class="pending">Pendente de fonte confiável</span></div></div></div>
+      </div>
+    </section>
+  </main>
+</div>
+<script src="/static/app.js"></script>
+</body>
+</html>
