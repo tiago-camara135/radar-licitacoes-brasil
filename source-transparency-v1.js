@@ -35,37 +35,93 @@ function originUrl(item){
   }catch{return ''}
   return candidate;
 }
-function friendlyPlatform(item){
+function platformInfo(item){
   const origin=originUrl(item);
   let host='';
   try{host=origin?new URL(origin).hostname.replace(/^www\./,'').toLowerCase():''}catch{}
   const direct=clean(item?._sourcePlatform||item?.usuarioNome||item?.nomeSistemaOrigem||item?.sistemaOrigem);
   const source=(direct+' '+host).toLowerCase();
-  if(host.includes('portaldecompraspublicas.com.br')||source.includes('ecustomize'))return 'Portal de Compras Públicas';
-  if(host.includes('licitardigital.com.br')||source.includes('licitar digital'))return 'Licitar Digital';
-  if(host.includes('licitanet.com.br')||source.includes('licitanet'))return 'Licitanet';
-  if(source.includes('bll compras')||host.includes('bll.org.br')||host.includes('bllcompras'))return 'BLL Compras';
-  if(source.includes('bolsa nacional')||source.includes(' - bnc')||host.includes('bnc.org.br')||host.includes('bnccompras'))return 'Bolsa Nacional de Compras - BNC';
-  if(source.includes('bbmnet')||host.includes('bbmnet'))return 'BBMNET';
-  if(source.includes('compras.gov.br')||host.includes('compras.gov.br')||host.includes('comprasnet')||host.includes('cnetmobile.estaleiro.serpro.gov.br'))return 'Compras.gov.br';
-  if(direct)return direct;
-  if(host)return host;
-  return 'Não informada pelo PNCP';
+  if(host.includes('portaldecompraspublicas.com.br')||source.includes('ecustomize'))return{name:'Portal de Compras Públicas',known:true};
+  if(host.includes('licitardigital.com.br')||source.includes('licitar digital'))return{name:'Licitar Digital',known:true};
+  if(host.includes('licitanet.com.br')||source.includes('licitanet'))return{name:'Licitanet',known:true};
+  if(source.includes('bll compras')||host.includes('bll.org.br')||host.includes('bllcompras'))return{name:'BLL Compras',known:true};
+  if(source.includes('bolsa nacional')||source.includes(' - bnc')||host.includes('bnc.org.br')||host.includes('bnccompras'))return{name:'Bolsa Nacional de Compras - BNC',known:true};
+  if(source.includes('bbmnet')||host.includes('bbmnet'))return{name:'BBMNET',known:true};
+  if(source.includes('compras.gov.br')||host.includes('compras.gov.br')||host.includes('comprasnet')||host.includes('cnetmobile.estaleiro.serpro.gov.br'))return{name:'Compras.gov.br',known:true};
+  if(direct)return{name:direct,known:false};
+  if(host)return{name:host,known:false};
+  return{name:'Não informada pelo PNCP',known:false};
 }
-function sourceChip(text,official=false){
+function sourceChip(text,{official=false,known=false,title=''}={}){
   const span=document.createElement('span');
-  span.className='rlb-source-chip'+(official?' official':'');
+  span.className='rlb-source-chip'+(official?' official':'')+(known?' known':'');
   span.textContent=text;
+  if(title)span.title=title;
   return span;
 }
-function actionLink(label,href,kind='ghost'){
+function actionLink(label,href,kind='ghost',aria=''){
   const a=document.createElement('a');
   a.className=`btn ${kind} compact rlb-source-btn`;
   a.href=href;
   a.target='_blank';
   a.rel='noopener noreferrer';
+  a.referrerPolicy='no-referrer';
   a.textContent=label;
+  if(aria)a.setAttribute('aria-label',aria);
+  a.title=aria||label.replace(' ↗','');
   return a;
+}
+function unavailableNote(){
+  const note=document.createElement('span');
+  note.className='rlb-source-unavailable';
+  note.textContent='Acesso direto à plataforma não informado pelo PNCP.';
+  return note;
+}
+function searchTransparency(item){
+  const info=platformInfo(item),official=pncpUrl(item),origin=originUrl(item);
+  const block=document.createElement('div');
+  block.className='rlb-source-transparency';
+  block.setAttribute('aria-label','Transparência da fonte da oportunidade');
+
+  const identity=document.createElement('div');
+  identity.className='rlb-source-identity';
+  const caption=document.createElement('span');
+  caption.className='rlb-source-caption';
+  caption.textContent='Transparência da oportunidade';
+  const chips=document.createElement('div');
+  chips.className='rlb-source-chips';
+  chips.append(
+    sourceChip(`Origem: ${info.name}`,{known:info.known,title:'Plataforma de origem informada nos dados da contratação'}),
+    sourceChip('Fonte oficial: PNCP',{official:true,title:'Registro oficial consultado no Portal Nacional de Contratações Públicas'})
+  );
+  identity.append(caption,chips);
+  block.appendChild(identity);
+
+  const actions=document.createElement('div');
+  actions.className='rlb-source-actions';
+  if(official)actions.appendChild(actionLink('Ver no PNCP ↗',official,'ghost','Abrir esta contratação no PNCP em nova aba'));
+  if(origin)actions.appendChild(actionLink('Ir para plataforma ↗',origin,'primary','Abrir a plataforma de origem da disputa em nova aba'));
+  else actions.appendChild(unavailableNote());
+  block.appendChild(actions);
+  return block;
+}
+function liveTransparency(item){
+  const info=platformInfo(item),official=pncpUrl(item),origin=originUrl(item);
+  const wrap=document.createElement('div');
+  wrap.className='rlb-live-source';
+  wrap.setAttribute('aria-label','Origem e acessos da oportunidade');
+
+  const chip=document.createElement('span');
+  chip.className='rlb-live-source-chip'+(info.known?' known':'');
+  chip.textContent=`Origem: ${info.name}`;
+  wrap.appendChild(chip);
+
+  const actions=document.createElement('span');
+  actions.className='rlb-live-source-actions';
+  if(official)actions.appendChild(actionLink('PNCP ↗',official,'ghost','Abrir esta contratação no PNCP em nova aba'));
+  if(origin)actions.appendChild(actionLink('Plataforma ↗',origin,'ghost','Abrir a plataforma de origem da disputa em nova aba'));
+  if(actions.childElementCount)wrap.appendChild(actions);
+  return wrap;
 }
 function enhanceSearch(){
   const root=document.getElementById('searchResults');
@@ -75,20 +131,7 @@ function enhanceSearch(){
     const item=searchItems[index];
     if(!item)return;
     card.querySelector('.rlb-source-transparency')?.remove();
-    const block=document.createElement('div');
-    block.className='rlb-source-transparency';
-    const chips=document.createElement('div');
-    chips.className='rlb-source-chips';
-    chips.append(sourceChip(`Origem: ${friendlyPlatform(item)}`),sourceChip('Fonte oficial: PNCP',true));
-    block.appendChild(chips);
-
-    const official=pncpUrl(item),origin=originUrl(item);
-    const actions=document.createElement('div');
-    actions.className='rlb-source-actions';
-    if(official)actions.appendChild(actionLink('Ver no PNCP ↗',official,'ghost'));
-    if(origin)actions.appendChild(actionLink('Ir para plataforma ↗',origin,'primary'));
-    if(actions.childElementCount)block.appendChild(actions);
-
+    const block=searchTransparency(item);
     const legacy=[...card.querySelectorAll('.item-meta')].find(el=>el.querySelector('a[href*="pncp.gov.br"]'));
     if(legacy)legacy.replaceWith(block);else card.appendChild(block);
   });
@@ -101,11 +144,9 @@ function enhanceLive(){
     const item=liveItems[index];
     if(!item)return;
     row.querySelector('.rlb-live-source')?.remove();
-    const source=document.createElement('span');
-    source.className='rlb-live-source';
-    source.textContent=`Origem: ${friendlyPlatform(item)}`;
+    const block=liveTransparency(item);
     const copy=row.querySelector('.item-meta');
-    if(copy)copy.insertAdjacentElement('afterend',source);
+    if(copy)copy.insertAdjacentElement('afterend',block);else row.appendChild(block);
   });
 }
 function enhance(){queued=false;enhanceSearch();enhanceLive()}
@@ -132,7 +173,7 @@ function boot(){
   if(search)new MutationObserver(queueEnhance).observe(search,{childList:true,subtree:true});
   if(live)new MutationObserver(queueEnhance).observe(live,{childList:true,subtree:true});
   queueEnhance();
-  console.info('RLB source transparency v1 ready: PNCP + platform origin');
+  console.info('RLB source transparency v1.1 ready: PNCP + platform origin + direct access');
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 })();
