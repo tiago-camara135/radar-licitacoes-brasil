@@ -12,9 +12,9 @@ const clean=v=>String(v??'').trim();
 const digits=v=>String(v??'').replace(/\D/g,'');
 function urlOf(value){
   const raw=clean(value);
-  if(!raw||raw==='#')return '';
+  if(!raw||raw==='#'||!/^https?:\/\//i.test(raw))return '';
   try{
-    const u=new URL(raw,location.origin);
+    const u=new URL(raw);
     if(!['http:','https:'].includes(u.protocol))return '';
     return u.href;
   }catch{return ''}
