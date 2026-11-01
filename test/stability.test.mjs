@@ -64,8 +64,8 @@ test('source transparency distinguishes PNCP from external platform links',()=>{
   const html=read('app-v2.html');
   const source=read('source-transparency-v1.js');
   const server=read('production-v17.mjs');
-  assert.match(html,/source-transparency-v1\.css\?v=2112/);
-  assert.match(html,/source-transparency-v1\.js\?v=2112/);
+  assert.match(html,/source-transparency-v1\.css\?v=2113/);
+  assert.match(html,/source-transparency-v1\.js\?v=2113/);
   assert.match(source,/Fonte oficial: PNCP/);
   assert.match(source,/Ir para plataforma ↗/);
   assert.match(source,/Ver no PNCP ↗/);
