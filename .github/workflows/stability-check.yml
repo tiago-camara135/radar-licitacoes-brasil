@@ -12,6 +12,20 @@ permissions:
 jobs:
   test:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: radar
+          POSTGRES_PASSWORD: radar_test_password
+          POSTGRES_DB: radar_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U radar -d radar_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -28,5 +42,24 @@ jobs:
           node --check stability-ui-v1.js
           node --check onsite-notifications-v3.js
           node --check admin-user-support-v1.js
+          node --check test/integration-smoke.mjs
       - name: Regression tests
         run: npm test
+      - name: Authenticated integration smoke
+        env:
+          DATABASE_URL: postgresql://radar:radar_test_password@127.0.0.1:5432/radar_test?sslmode=disable
+          NODE_ENV: test
+          PORT: "10000"
+          RLB_MIGRATION_RUN: "0"
+          RLB_MIGRATION_FREEZE: "0"
+          PNCP_MAX_RETRIES: "0"
+        run: |
+          npm start > /tmp/rlb-integration.log 2>&1 &
+          echo $! > /tmp/rlb-integration.pid
+          if ! node test/integration-smoke.mjs; then
+            echo "--- server log ---"
+            cat /tmp/rlb-integration.log
+            kill $(cat /tmp/rlb-integration.pid) || true
+            exit 1
+          fi
+          kill $(cat /tmp/rlb-integration.pid) || true
