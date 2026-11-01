@@ -1,5 +1,5 @@
-/* Radar de Licitações Brasil — Responsive Header v1
-   Corrige sobreposição da navegação em celulares, tablets e viewport desktop reduzido. */
+/* Radar de Licitações Brasil — Responsive Layout v2
+   Corrige sobreposições de navegação e ações em celulares, tablets e viewports reduzidos. */
 
 @media (max-width:1180px){
   html.rlb-corporate-v3 .sidebar{
@@ -20,9 +20,7 @@
     flex:0 1 auto!important;
     min-width:0!important;
   }
-  html.rlb-corporate-v3 .sidebar-brand>div:last-child{
-    min-width:0!important;
-  }
+  html.rlb-corporate-v3 .sidebar-brand>div:last-child{min-width:0!important}
   html.rlb-corporate-v3 .sidebar-brand strong,
   html.rlb-corporate-v3 .sidebar-brand span{
     overflow:hidden!important;
@@ -50,17 +48,13 @@
     -webkit-overflow-scrolling:touch;
     scrollbar-width:none;
   }
-  html.rlb-corporate-v3 .main-nav::-webkit-scrollbar{
-    display:none!important;
-  }
+  html.rlb-corporate-v3 .main-nav::-webkit-scrollbar{display:none!important}
   html.rlb-corporate-v3 .main-nav button{
     flex:0 0 auto!important;
     min-width:max-content!important;
     white-space:nowrap!important;
   }
-  html.rlb-corporate-v3 .main-nav button>span:last-child{
-    min-width:0!important;
-  }
+  html.rlb-corporate-v3 .main-nav button>span:last-child{min-width:0!important}
   html.rlb-corporate-v3 #habilitationNav .hab-nav-badge{
     position:static!important;
     transform:none!important;
@@ -69,28 +63,132 @@
   }
 }
 
+/* Fluxo seguro para os dois controles de prontidão documental.
+   Nenhum deles fica fora do fluxo normal do card. */
+html.rlb-corporate-v3 .live-item.has-readiness-trigger{
+  padding-bottom:13px!important;
+  align-items:start!important;
+}
+html.rlb-corporate-v3 .live-item.has-readiness-trigger>.tr-quick-badge{
+  grid-column:1/-1!important;
+  width:100%!important;
+  max-width:100%!important;
+  margin:8px 0 0!important;
+  position:relative!important;
+  inset:auto!important;
+}
+html.rlb-corporate-v3 .live-item.has-readiness-trigger>.tender-ready-trigger{
+  position:static!important;
+  inset:auto!important;
+  grid-column:1/-1!important;
+  justify-self:start!important;
+  align-self:start!important;
+  margin:8px 0 0!important;
+  z-index:2!important;
+}
+html.rlb-corporate-v3 .result-item .tender-ready-trigger{
+  position:static!important;
+  inset:auto!important;
+}
+
+/* Evita estouro horizontal em componentes dinâmicos. */
+html.rlb-corporate-v3 .live-item>*,
+html.rlb-corporate-v3 .result-item>*,
+html.rlb-corporate-v3 .stack-item>*,
+html.rlb-corporate-v3 .panel-head>*,
+html.rlb-corporate-v3 .channel-head>*,
+html.rlb-corporate-v3 .tr-quick-badge>*,
+html.rlb-corporate-v3 .aus-card-head>*,
+html.rlb-corporate-v3 .acc-card-head>*{min-width:0}
+html.rlb-corporate-v3 .tr-quick-badge{max-width:100%!important}
+html.rlb-corporate-v3 .trq-copy{min-width:0!important}
+
 @media (max-width:920px){
-  html.rlb-corporate-v3 .user-pill{
-    display:none!important;
+  html.rlb-corporate-v3 .user-pill{display:none!important}
+}
+
+@media (max-width:720px){
+  html.rlb-corporate-v3 .panel-head,
+  html.rlb-corporate-v3 .channel-head,
+  html.rlb-corporate-v3 .acc-card-head,
+  html.rlb-corporate-v3 .aus-card-head{
+    flex-wrap:wrap!important;
+  }
+  html.rlb-corporate-v3 .stack-item{
+    align-items:stretch!important;
+    flex-direction:column!important;
+  }
+  html.rlb-corporate-v3 .stack-actions{
+    width:100%!important;
+    flex-wrap:wrap!important;
+  }
+  html.rlb-corporate-v3 .stack-actions .btn{
+    flex:1 1 130px!important;
+  }
+  html.rlb-corporate-v3 .channel-grid{
+    grid-template-columns:1fr!important;
+  }
+  html.rlb-corporate-v3 .channel-grid .btn{
+    width:100%!important;
+  }
+  html.rlb-corporate-v3 .admin-row{
+    grid-template-columns:1fr!important;
+  }
+  html.rlb-corporate-v3 .admin-row select,
+  html.rlb-corporate-v3 .admin-row button{
+    width:100%!important;
+  }
+  html.rlb-corporate-v3 .hab-expiry-edit,
+  html.rlb-corporate-v3 .aus-doc-edit{
+    flex-wrap:wrap!important;
+    align-items:stretch!important;
+  }
+  html.rlb-corporate-v3 .hab-expiry-edit input,
+  html.rlb-corporate-v3 .aus-doc-edit input{
+    min-width:0!important;
+    flex:1 1 160px!important;
+  }
+  html.rlb-corporate-v3 .aus-actions,
+  html.rlb-corporate-v3 .aus-doc-actions,
+  html.rlb-corporate-v3 .acc-editor-actions,
+  html.rlb-corporate-v3 .hab-doc-actions{
+    flex-wrap:wrap!important;
+    max-width:100%!important;
   }
 }
 
 @media (max-width:620px){
-  html.rlb-corporate-v3 .sidebar-brand>div:last-child{
-    display:none!important;
-  }
-  html.rlb-corporate-v3 .main-nav{
-    gap:4px!important;
-  }
+  html.rlb-corporate-v3 .sidebar-brand>div:last-child{display:none!important}
+  html.rlb-corporate-v3 .main-nav{gap:4px!important}
   html.rlb-corporate-v3 .main-nav button{
     padding:7px 9px!important;
     gap:6px!important;
   }
-  html.rlb-corporate-v3 .main-nav b{
-    font-size:10px!important;
+  html.rlb-corporate-v3 .main-nav b{font-size:10px!important}
+  html.rlb-corporate-v3 .main-nav small{display:none!important}
+}
+
+@media (max-width:520px){
+  html.rlb-corporate-v3 .tender-ready-trigger{
+    max-width:100%!important;
+    white-space:normal!important;
+    text-align:center!important;
   }
-  html.rlb-corporate-v3 .main-nav small{
-    display:none!important;
+  html.rlb-corporate-v3 .terminal-head,
+  html.rlb-corporate-v3 .search-console-head{
+    flex-wrap:wrap!important;
+  }
+  html.rlb-corporate-v3 .aus-actions .btn,
+  html.rlb-corporate-v3 .aus-doc-actions .btn,
+  html.rlb-corporate-v3 .acc-editor-actions .btn,
+  html.rlb-corporate-v3 .hab-doc-actions .btn{
+    flex:1 1 140px!important;
+  }
+  html.rlb-corporate-v3 .tr-quick-badge{
+    align-items:flex-start!important;
+  }
+  html.rlb-corporate-v3 .trq-score{
+    flex:0 0 auto!important;
   }
 }
 
@@ -100,13 +198,7 @@
     height:24px!important;
     flex:0 0 auto!important;
   }
-  html.rlb-corporate-v3 .main-nav button{
-    padding:6px 8px!important;
-  }
-  html.rlb-corporate-v3 .main-nav b{
-    font-size:9px!important;
-  }
-  html.rlb-corporate-v3 .header-actions{
-    gap:4px!important;
-  }
+  html.rlb-corporate-v3 .main-nav button{padding:6px 8px!important}
+  html.rlb-corporate-v3 .main-nav b{font-size:9px!important}
+  html.rlb-corporate-v3 .header-actions{gap:4px!important}
 }
