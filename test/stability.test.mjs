@@ -16,12 +16,15 @@ test('personalized onsite notifications use delivery queue, not national live fe
   assert.equal(s.includes('/api/live-feed'),false);
 });
 
-test('subscription entitlements enforce alerts, documents and AI',()=>{
+test('subscription entitlements are authoritative for alerts, documents and AI',()=>{
   const s=read('production-v21.mjs');
   assert.match(s,/alert_limit_reached/);
   assert.match(s,/document_limit_reached/);
   assert.match(s,/ai_daily_limit_reached/);
   assert.match(s,/subscription_inactive/);
+  assert.match(s,/createAlertWithPlan/);
+  assert.match(s,/company_documents WHERE user_id=\$1 AND is_current=TRUE/);
+  assert.match(s,/alert_limit_source:'subscription'/);
 });
 
 test('readiness button remains in normal document flow',()=>{
