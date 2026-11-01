@@ -7,7 +7,7 @@ const read=p=>fs.readFileSync(new URL('../'+p,import.meta.url),'utf8');
 test('production starts through global origin guard',()=>{
   const pkg=JSON.parse(read('package.json'));
   const guard=read('production-v24.mjs');
-  assert.equal(pkg.version,'2.11.5');
+  assert.equal(pkg.version,'2.11.6');
   assert.equal(pkg.scripts.start,'node production-v24.mjs');
   assert.match(guard,/await import\('\.\/production-v23\.mjs'\)/);
   assert.match(guard,/origin_not_authorized/);
@@ -18,6 +18,7 @@ test('production starts through global origin guard',()=>{
   assert.match(guard,/process\.env\.APP_ORIGIN=primaryConfiguredOrigin/);
   assert.match(guard,/req\.headers\.origin=primaryConfiguredOrigin/);
   assert.match(guard,/\/api\/security\/origin-health/);
+  assert.match(guard,/frontend_delivery:'composed-runtime-chain'/);
 });
 
 test('browser-origin smoke covers the real Chrome regression',()=>{

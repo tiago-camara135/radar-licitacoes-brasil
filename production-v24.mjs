@@ -1,8 +1,9 @@
+import fs from 'node:fs';
 import http from 'node:http';
-import { readFileSync } from 'node:fs';
 import { syncBuiltinESMExports } from 'node:module';
 import { Pool } from 'pg';
 
+const nativeReadFileSync=fs.readFileSync.bind(fs);
 const nativeCreateServer=http.createServer.bind(http);
 const WRITE_METHODS=new Set(['POST','PUT','PATCH','DELETE']);
 
@@ -24,12 +25,27 @@ const primaryConfiguredOrigin=configuredOrigins[0]||'';
    final/case sem desativar a proteção de origem. */
 if(primaryConfiguredOrigin)process.env.APP_ORIGIN=primaryConfiguredOrigin;
 
-/* Corrige duas sobras de versões antigas da busca sem alterar a regra de
-   negócio: openOnly foi removido e Limpar deve voltar para Todas as ativas. */
-const appJsSource=readFileSync(new URL('./app-v2.js',import.meta.url),'utf8');
-const appJsPatched=appJsSource
-  .replace("openOnly:String($('#searchOpenOnly')?.checked||false),",'')
-  .replace("if($('#searchDays'))$('#searchDays').value='7';if($('#searchOpenOnly'))$('#searchOpenOnly').checked=false;","if($('#searchDays'))$('#searchDays').value='0';");
+function patchBaseAppJs(source){
+  return String(source)
+    .replace("openOnly:String($('#searchOpenOnly')?.checked||false),",'')
+    .replace("if($('#searchDays'))$('#searchDays').value='7';if($('#searchOpenOnly'))$('#searchOpenOnly').checked=false;","if($('#searchDays'))$('#searchDays').value='0';");
+}
+
+/* A camada 2.11.5 servia /assets/app-v2.js diretamente a partir do arquivo-base,
+   o que pulava as injeções históricas feitas pelos runtimes v3-v14 (Habilitação,
+   verificação documental, prontidão, dossiê e maturity suite). A correção aplica
+   somente as normalizações necessárias ao arquivo-base e deixa a cadeia normal
+   compor o bundle final antes de production-v2 armazená-lo em memória. */
+fs.readFileSync=function consistencyReadFileSync(path,...args){
+  const value=path instanceof URL?path.pathname:String(path);
+  const data=nativeReadFileSync(path,...args);
+  if(value.endsWith('/app-v2.js')||value.endsWith('\\app-v2.js')){
+    const source=Buffer.isBuffer(data)?data.toString('utf8'):String(data);
+    const patched=patchBaseAppJs(source);
+    return Buffer.isBuffer(data)?Buffer.from(patched):patched;
+  }
+  return data;
+};
 
 function securityHeaders(res){
   res.setHeader('Cache-Control','no-store');
@@ -85,14 +101,7 @@ http.createServer=function originGuardCreateServer(...args){
       securityHeaders(res);
       res.statusCode=200;
       res.setHeader('Content-Type','application/json; charset=utf-8');
-      return res.end(JSON.stringify({ok:true,guard:'v1',configured_origins:configuredOrigins.length,request_origin_detection:'host+forwarded-proto',runtime:'2.11.5'}));
-    }
-    if(req.method==='GET'&&pathname==='/assets/app-v2.js'){
-      securityHeaders(res);
-      res.statusCode=200;
-      res.setHeader('Content-Type','application/javascript; charset=utf-8');
-      res.setHeader('X-RLB-UI-Build','2.11.5');
-      return res.end(appJsPatched);
+      return res.end(JSON.stringify({ok:true,guard:'v1',configured_origins:configuredOrigins.length,request_origin_detection:'host+forwarded-proto',runtime:'2.11.6',frontend_delivery:'composed-runtime-chain'}));
     }
     if(normalizeTrustedBrowserOrigin(req,res))return;
     return listener(req,res);
@@ -127,5 +136,5 @@ async function ensureCompatibilitySchema(){
 syncBuiltinESMExports();
 await import('./production-v23.mjs');
 await ensureCompatibilitySchema();
-console.log(`origin guard v1 ready: browser same-origin normalization active; configured=${configuredOrigins.length}; runtime=2.11.5`);
-console.log('system consistency v1 ready: active search reset normalized, stale openOnly removed, subscription schema ensured');
+console.log(`origin guard v1 ready: browser same-origin normalization active; configured=${configuredOrigins.length}; runtime=2.11.6`);
+console.log('system consistency v2 ready: composed frontend chain restored, active search reset normalized, stale openOnly removed, subscription schema ensured');
