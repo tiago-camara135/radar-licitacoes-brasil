@@ -1,0 +1,29 @@
+name: Stability Check
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: npm install --omit=dev
+      - name: Syntax checks
+        run: |
+          node --check production-v21.mjs
+          node --check live-monitor-v5.mjs
+          node --check stability-ui-v1.js
+          node --check onsite-notifications-v3.js
+          node --check admin-user-support-v1.js
+      - name: Regression tests
+        run: npm test
