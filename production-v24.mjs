@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import http from 'node:http';
 import { syncBuiltinESMExports } from 'node:module';
 import { Pool } from 'pg';
+import { normalizeTrustedClientIp } from './trusted-client-ip-v1.mjs';
 
 const nativeReadFileSync=fs.readFileSync.bind(fs);
 const nativeCreateServer=http.createServer.bind(http);
@@ -96,12 +97,16 @@ http.createServer=function originGuardCreateServer(...args){
   if(i<0)return nativeCreateServer(...args);
   const listener=args[i];
   args[i]=(req,res)=>{
+    /* Sanitiza o endereço do cliente antes de qualquer módulo legado ler
+       X-Forwarded-For para rate limit, auditoria ou telemetria. */
+    normalizeTrustedClientIp(req);
+
     const pathname=String(req.url||'/').split('?')[0];
     if(req.method==='GET'&&pathname==='/api/security/origin-health'){
       securityHeaders(res);
       res.statusCode=200;
       res.setHeader('Content-Type','application/json; charset=utf-8');
-      return res.end(JSON.stringify({ok:true,guard:'v1',configured_origins:configuredOrigins.length,request_origin_detection:'host+forwarded-proto',runtime:'2.11.6',frontend_delivery:'composed-runtime-chain'}));
+      return res.end(JSON.stringify({ok:true,guard:'v1',configured_origins:configuredOrigins.length,request_origin_detection:'host+forwarded-proto',client_ip_guard:'v1',client_ip_resolution:'cf-connecting-ip>x-forwarded-for-rightmost>socket',runtime:'2.11.6',frontend_delivery:'composed-runtime-chain'}));
     }
     if(normalizeTrustedBrowserOrigin(req,res))return;
     return listener(req,res);
@@ -137,4 +142,5 @@ syncBuiltinESMExports();
 await import('./production-v23.mjs');
 await ensureCompatibilitySchema();
 console.log(`origin guard v1 ready: browser same-origin normalization active; configured=${configuredOrigins.length}; runtime=2.11.6`);
+console.log('trusted client IP guard v1 ready: cf-connecting-ip -> x-forwarded-for rightmost -> socket');
 console.log('system consistency v2 ready: composed frontend chain restored, active search reset normalized, stale openOnly removed, subscription schema ensured');
