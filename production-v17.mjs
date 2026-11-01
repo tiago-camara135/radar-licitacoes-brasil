@@ -31,7 +31,7 @@ http.createServer=function directSearchAssetsCreateServer(...args){
         res.statusCode=200;
         res.setHeader('Content-Type','application/json; charset=utf-8');
         res.setHeader('Cache-Control','no-store');
-        return res.end(JSON.stringify({ok:true,frontend:'2.11.3',search_results:'active-local-first',source_transparency:'v1.1'}));
+        return res.end(JSON.stringify({ok:true,frontend:'2.11.3',search_results:'active-local-first',source_transparency:'v1.2'}));
       }
     }catch(error){
       console.error('direct search assets middleware:',error?.message||error);
@@ -43,4 +43,4 @@ http.createServer=function directSearchAssetsCreateServer(...args){
 
 syncBuiltinESMExports();
 await import('./production-v16.mjs');
-console.log('RLB direct frontend assets ready: active search + source transparency build 2.11.3');
+console.log('RLB direct frontend assets ready: active search + source transparency v1.2 stable actions');

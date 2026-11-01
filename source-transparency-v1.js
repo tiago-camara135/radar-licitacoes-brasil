@@ -52,6 +52,10 @@ function platformInfo(item){
   if(host)return{name:host,known:false};
   return{name:'Não informada pelo PNCP',known:false};
 }
+function sourceKey(item){
+  const info=platformInfo(item);
+  return [pncpUrl(item),originUrl(item),info.name].join('|');
+}
 function sourceChip(text,{official=false,known=false,title=''}={}){
   const span=document.createElement('span');
   span.className='rlb-source-chip'+(official?' official':'')+(known?' known':'');
@@ -66,9 +70,11 @@ function actionLink(label,href,kind='ghost',aria=''){
   a.target='_blank';
   a.rel='noopener noreferrer';
   a.referrerPolicy='no-referrer';
+  a.dataset.rlbExternal='1';
   a.textContent=label;
   if(aria)a.setAttribute('aria-label',aria);
   a.title=aria||label.replace(' ↗','');
+  a.addEventListener('click',event=>event.stopPropagation());
   return a;
 }
 function unavailableNote(){
@@ -81,6 +87,7 @@ function searchTransparency(item){
   const info=platformInfo(item),official=pncpUrl(item),origin=originUrl(item);
   const block=document.createElement('div');
   block.className='rlb-source-transparency';
+  block.dataset.rlbSourceKey=sourceKey(item);
   block.setAttribute('aria-label','Transparência da fonte da oportunidade');
 
   const identity=document.createElement('div');
@@ -109,6 +116,7 @@ function liveTransparency(item){
   const info=platformInfo(item),official=pncpUrl(item),origin=originUrl(item);
   const wrap=document.createElement('div');
   wrap.className='rlb-live-source';
+  wrap.dataset.rlbSourceKey=sourceKey(item);
   wrap.setAttribute('aria-label','Origem e acessos da oportunidade');
 
   const chip=document.createElement('span');
@@ -130,7 +138,10 @@ function enhanceSearch(){
   cards.forEach((card,index)=>{
     const item=searchItems[index];
     if(!item)return;
-    card.querySelector('.rlb-source-transparency')?.remove();
+    const key=sourceKey(item);
+    const existing=card.querySelector('.rlb-source-transparency');
+    if(existing?.dataset.rlbSourceKey===key)return;
+    existing?.remove();
     const block=searchTransparency(item);
     const legacy=[...card.querySelectorAll('.item-meta')].find(el=>el.querySelector('a[href*="pncp.gov.br"]'));
     if(legacy)legacy.replaceWith(block);else card.appendChild(block);
@@ -143,7 +154,10 @@ function enhanceLive(){
   rows.forEach((row,index)=>{
     const item=liveItems[index];
     if(!item)return;
-    row.querySelector('.rlb-live-source')?.remove();
+    const key=sourceKey(item);
+    const existing=row.querySelector('.rlb-live-source');
+    if(existing?.dataset.rlbSourceKey===key)return;
+    existing?.remove();
     const block=liveTransparency(item);
     const copy=row.querySelector('.item-meta');
     if(copy)copy.insertAdjacentElement('afterend',block);else row.appendChild(block);
@@ -173,7 +187,7 @@ function boot(){
   if(search)new MutationObserver(queueEnhance).observe(search,{childList:true,subtree:true});
   if(live)new MutationObserver(queueEnhance).observe(live,{childList:true,subtree:true});
   queueEnhance();
-  console.info('RLB source transparency v1.1 ready: PNCP + platform origin + direct access');
+  console.info('RLB source transparency v1.2 ready: stable source actions + PNCP + platform origin');
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 })();
