@@ -65,8 +65,9 @@ test('source transparency distinguishes PNCP from external platform links',()=>{
   const source=read('source-transparency-v1.js');
   const css=read('source-transparency-v1.css');
   const server=read('production-v17.mjs');
-  assert.match(html,/source-transparency-v1\.css\?v=2113/);
-  assert.match(html,/source-transparency-v1\.js\?v=2113/);
+  assert.match(html,/source-transparency-v1\.css\?v=2114/);
+  assert.match(html,/source-transparency-v1\.js\?v=2114/);
+  assert.match(html,/app-v2\.js\?v=20261101-1/);
   assert.match(source,/Fonte oficial: PNCP/);
   assert.match(source,/Ir para plataforma ↗/);
   assert.match(source,/Ver no PNCP ↗/);
@@ -81,12 +82,32 @@ test('source transparency distinguishes PNCP from external platform links',()=>{
   assert.match(source,/dataset\.rlbSourceKey/);
   assert.match(source,/existing\?\.dataset\.rlbSourceKey===key/);
   assert.match(source,/a\.addEventListener\('click',event=>event\.stopPropagation\(\)\)/);
+  assert.match(source,/a\.addEventListener\('pointerdown',event=>event\.stopPropagation\(\)\)/);
+  assert.equal(source.includes('legacy.replaceWith(block)'),false);
+  assert.match(source,/legacyOfficialLink/);
+  assert.match(source,/link\.remove\(\)/);
   assert.equal(source.includes("card.querySelector('.rlb-source-transparency')?.remove()"),false);
   assert.equal(source.includes("row.querySelector('.rlb-live-source')?.remove()"),false);
   assert.match(css,/pointer-events:auto!important/);
   assert.match(css,/z-index:5/);
-  assert.match(server,/frontend:'2\.11\.3'/);
-  assert.match(server,/source_transparency:'v1\.2'/);
+  assert.match(css,/transform:none!important/);
+  assert.match(css,/\.tr-quick-badge:hover/);
+  assert.match(css,/\.tender-ready-trigger:hover/);
+  assert.match(server,/frontend:'2\.11\.4'/);
+  assert.match(server,/source_transparency:'v1\.3'/);
+  assert.match(server,/card_integration:'non-destructive-self-healing'/);
+});
+
+test('readiness controls self-heal after other card modules mutate the DOM',()=>{
+  const full=read('tender-readiness-v1.js');
+  const quick=read('tender-readiness-quick-v1.js');
+  assert.match(full,/const existing=card\.querySelector\('\.tender-ready-trigger'\)/);
+  assert.match(full,/delete card\.dataset\.readinessEnhanced/);
+  assert.match(full,/card\.appendChild\(trigger\)/);
+  assert.match(quick,/const current=\[\.\.\.card\.querySelectorAll\('\.tr-quick-badge'\)\]/);
+  assert.match(quick,/delete card\.dataset\.quickReadinessEnhanced/);
+  assert.match(quick,/cache\.has\(key\.key\).*renderBadge/);
+  assert.match(quick,/markLoadingForRetry/);
 });
 
 test('document upload hardening validates signatures and blocks executables',()=>{
