@@ -66,3 +66,5 @@ jobs:
             cat /tmp/rlb-integration.log
             exit 1
           fi
+      - name: Production read-only smoke
+        run: node test/production-readonly-smoke.mjs
