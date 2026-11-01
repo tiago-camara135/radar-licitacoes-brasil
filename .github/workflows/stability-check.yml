@@ -22,7 +22,7 @@ jobs:
         run: |
           node --check production-v22.mjs
           node --check production-v21.mjs
-          node --check database-migration-v1.mjs
+          node --check database-migration-v2.mjs
           node --check live-monitor-v5.mjs
           node --check stability-ui-v1.js
           node --check onsite-notifications-v3.js
