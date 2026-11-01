@@ -9,8 +9,10 @@ const svg=fs.readFileSync(new URL('../rlb-brand-icon-v1.svg',import.meta.url),'u
 test('nova identidade visual permanece isolada da lógica da aplicação',()=>{
   assert.match(runtime,/brandLogoCss/);
   assert.match(runtime,/companyDocumentsCss\+'\\n\\n'\+brandLogoCss/);
-  assert.match(css,/rlb-brand-icon-v1\.svg/);
+  assert.match(css,/data:image\/svg\+xml;base64/);
+  assert.match(css,/--rlb-brand-icon/);
   assert.match(css,/\.brand-mark/);
+  assert.doesNotMatch(css,/\/assets\/rlb-brand-icon-v1\.svg/);
   assert.match(svg,/<svg/);
   assert.match(svg,/Radar de Licitações Brasil/);
   assert.match(svg,/Documento com radar/);
