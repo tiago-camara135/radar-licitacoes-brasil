@@ -2,8 +2,8 @@ const PNCP_BASE_URL = process.env.PNCP_BASE_URL || 'https://pncp.gov.br/api/cons
 export const PNCP_MODALITY_CODES = Array.from({length:14},(_,i)=>i+1);
 const PREFERRED_PAGE_SIZE = Math.min(Math.max(Number(process.env.PNCP_PAGE_SIZE || 500),50),500);
 let effectivePageSize = PREFERRED_PAGE_SIZE;
-const REQUEST_SPACING_MS = Math.max(180, Number(process.env.PNCP_REQUEST_SPACING_MS || 320));
-const MAX_RETRIES = Math.min(Math.max(Number(process.env.PNCP_MAX_RETRIES || 1),0),3);
+const REQUEST_SPACING_MS = Math.max(180, Number(process.env.PNCP_REQUEST_SPACING_MS || 450));
+const MAX_RETRIES = Math.min(Math.max(Number(process.env.PNCP_MAX_RETRIES || 2),0),3);
 let gate = Promise.resolve();
 let nextStartAt = 0;
 let cooldownUntil = 0;
@@ -48,7 +48,7 @@ async function fetchJsonWithRetry(url){
     const controller=new AbortController();
     const timeout=setTimeout(()=>controller.abort(),18000);
     try{
-      const r=await fetch(url,{headers:{accept:'application/json','user-agent':'RadarLicitacoesBrasil/3.3'},signal:controller.signal});
+      const r=await fetch(url,{headers:{accept:'application/json','user-agent':'RadarLicitacoesBrasil/4.0'},signal:controller.signal});
       if(r.status===204)return {response:r,body:{data:[],totalPaginas:0,totalRegistros:0}};
       const body=await r.json().catch(()=>({}));
       if(r.ok)return {response:r,body};
@@ -89,6 +89,8 @@ export function normalizeSearchFilters(filters={}){
   const modalities=modalityList(filters.modalities?.length?filters.modalities:(filters.modality??filters.modalidade??''));
   const min=filters.minValue===''||filters.minValue==null?null:Number(filters.minValue);
   const max=filters.maxValue===''||filters.maxValue==null?null:Number(filters.maxValue);
+  const rawDays=Number(filters.days);
+  const days=rawDays===0?0:Math.min(Math.max(Number.isFinite(rawDays)&&rawDays>0?rawDays:7,1),90);
   return {
     keyword:clean(filters.keyword,180),
     uf:clean(filters.uf,2).toUpperCase(),
@@ -101,7 +103,7 @@ export function normalizeSearchFilters(filters={}){
     minValue:Number.isFinite(min)&&min>=0?min:null,
     maxValue:Number.isFinite(max)&&max>=0?max:null,
     openOnly:filters.openOnly===true||String(filters.openOnly)==='true',
-    days:Math.min(Math.max(Number(filters.days)||7,1),30),
+    days,
     order:['newest','value_desc','value_asc','deadline'].includes(filters.order)?filters.order:'newest'
   };
 }
@@ -129,24 +131,25 @@ export function applySearchFilters(items,filters={}){
   return all;
 }
 
-async function fetchPageOnce({code,startDate,endDate,filters,page,pageSize}){
+async function fetchPublicationPageOnce({code,startDate,endDate,filters,page,pageSize}){
   const params=new URLSearchParams({dataInicial:ymd(startDate),dataFinal:ymd(endDate),codigoModalidadeContratacao:String(code),pagina:String(page),tamanhoPagina:String(pageSize),...serverFilterParams(filters)});
   const {body}=await fetchJsonWithRetry(`${PNCP_BASE_URL}/v1/contratacoes/publicacao?${params}`);
   const data=Array.isArray(body?.data)?body.data:Array.isArray(body)?body:[];
-  return {
-    items:data.map(x=>({...x,_modalidadeConsultada:code})),
-    totalPages:Math.max(0,Number(body?.totalPaginas||body?.totalPages||body?.totalDePaginas||0)||0),
-    totalRecords:Math.max(0,Number(body?.totalRegistros||body?.totalRecords||0)||0),
-    pageSize
-  };
+  return {items:data.map(x=>({...x,_modalidadeConsultada:code})),totalPages:Math.max(0,Number(body?.totalPaginas||body?.totalPages||body?.totalDePaginas||0)||0),totalRecords:Math.max(0,Number(body?.totalRegistros||body?.totalRecords||0)||0),pageSize};
 }
-async function fetchPage(args){
-  try{return await fetchPageOnce({...args,pageSize:effectivePageSize})}
+async function fetchOpenPageOnce({code,endDate,filters,page,pageSize}){
+  const params=new URLSearchParams({dataFinal:ymd(endDate),codigoModalidadeContratacao:String(code),pagina:String(page),tamanhoPagina:String(pageSize),...serverFilterParams(filters)});
+  const {body}=await fetchJsonWithRetry(`${PNCP_BASE_URL}/v1/contratacoes/proposta?${params}`);
+  const data=Array.isArray(body?.data)?body.data:Array.isArray(body)?body:[];
+  return {items:data.map(x=>({...x,_modalidadeConsultada:code,_pncpOpenEndpoint:true})),totalPages:Math.max(0,Number(body?.totalPaginas||body?.totalPages||body?.totalDePaginas||0)||0),totalRecords:Math.max(0,Number(body?.totalRegistros||body?.totalRecords||0)||0),pageSize};
+}
+async function fetchWithPageFallback(worker,args){
+  try{return await worker({...args,pageSize:effectivePageSize})}
   catch(e){
     if(e?.status===400&&effectivePageSize>50){
       effectivePageSize=50;
       console.warn('PNCP page-size fallback activated: API rejected larger page; using 50 records/page');
-      return fetchPageOnce({...args,pageSize:effectivePageSize});
+      return worker({...args,pageSize:effectivePageSize});
     }
     throw e;
   }
@@ -164,19 +167,7 @@ async function mapLimit(values,limit,worker){
   async function run(){while(true){const i=cursor++;if(i>=values.length)return;try{output[i]={ok:true,value:await worker(values[i])}}catch(error){output[i]={ok:false,error}}}}
   await Promise.all(Array.from({length:Math.min(limit,values.length)},()=>run()));return output;
 }
-
-export async function fetchPncpRange({startDate,endDate,filters={},codes=PNCP_MODALITY_CODES,maxPagesPerModality=4,concurrency=3}={}){
-  const results=await mapLimit(codes,concurrency,async code=>{
-    const first=await fetchPage({code,startDate,endDate,filters,page:1});
-    const pages=pagePlan(first.totalPages||1,Math.max(1,maxPagesPerModality));
-    const items=[...first.items];
-    for(const page of pages){
-      if(page===1)continue;
-      const extra=await fetchPage({code,startDate,endDate,filters,page});
-      items.push(...extra.items);
-    }
-    return {code,items,totalPages:first.totalPages||1,totalRecords:first.totalRecords,pagesFetched:pages.length,pageSize:first.pageSize,partial:(first.totalPages||1)>pages.length};
-  });
+function collectResults(results,codes){
   const errors=[],meta=[];let items=[];
   for(let i=0;i<results.length;i++){
     const r=results[i];
@@ -186,14 +177,39 @@ export async function fetchPncpRange({startDate,endDate,filters={},codes=PNCP_MO
   const seen=new Set();items=items.filter(x=>{const k=resultKey(x);if(!k||seen.has(k))return false;seen.add(k);return true});
   return {items,errors,meta,partial:errors.length>0||meta.some(x=>x.partial),successfulModalities:meta.length,failedModalities:errors.length};
 }
-
+export async function fetchPncpRange({startDate,endDate,filters={},codes=PNCP_MODALITY_CODES,maxPagesPerModality=4,concurrency=3}={}){
+  const results=await mapLimit(codes,concurrency,async code=>{
+    const first=await fetchWithPageFallback(fetchPublicationPageOnce,{code,startDate,endDate,filters,page:1});
+    const pages=pagePlan(first.totalPages||1,Math.max(1,maxPagesPerModality));
+    const items=[...first.items];
+    for(const page of pages){if(page===1)continue;const extra=await fetchWithPageFallback(fetchPublicationPageOnce,{code,startDate,endDate,filters,page});items.push(...extra.items)}
+    return {code,items,totalPages:first.totalPages||1,totalRecords:first.totalRecords,pagesFetched:pages.length,pageSize:first.pageSize,partial:(first.totalPages||1)>pages.length};
+  });
+  return collectResults(results,codes);
+}
+export async function fetchPncpOpenRange({endDate=new Date(),filters={},codes=PNCP_MODALITY_CODES,maxPagesPerModality=2,concurrency=2}={}){
+  const results=await mapLimit(codes,concurrency,async code=>{
+    const first=await fetchWithPageFallback(fetchOpenPageOnce,{code,endDate,filters,page:1});
+    const pages=pagePlan(first.totalPages||1,Math.max(1,maxPagesPerModality));
+    const items=[...first.items];
+    for(const page of pages){if(page===1)continue;const extra=await fetchWithPageFallback(fetchOpenPageOnce,{code,endDate,filters,page});items.push(...extra.items)}
+    return {code,items,totalPages:first.totalPages||1,totalRecords:first.totalRecords,pagesFetched:pages.length,pageSize:first.pageSize,partial:(first.totalPages||1)>pages.length};
+  });
+  return collectResults(results,codes);
+}
 export async function fetchPncpSearch(filters={}){
-  const f=normalizeSearchFilters(filters),end=new Date(),start=new Date(end.getTime()-f.days*86400000),codes=f.modalities.length?f.modalities:PNCP_MODALITY_CODES;
+  const f=normalizeSearchFilters(filters),end=new Date(),days=f.days||30,start=new Date(end.getTime()-days*86400000),codes=f.modalities.length?f.modalities:PNCP_MODALITY_CODES;
   const restrictive=Boolean(f.uf||f.municipalityIbge||f.cnpj||f.modalities.length);
   const localText=Boolean(f.keyword||f.org||f.municipality);
   const budget=localText?2:1;
   const r=await fetchPncpRange({startDate:start,endDate:end,filters:f,codes,maxPagesPerModality:budget,concurrency:restrictive?1:2});
   return {...r,items:applySearchFilters(r.items,f),filters:f};
 }
-
-export function pncpClientHealth(){return {preferred_page_size:PREFERRED_PAGE_SIZE,effective_page_size:effectivePageSize,request_spacing_ms:REQUEST_SPACING_MS,max_retries:MAX_RETRIES,cooldown_until:cooldownUntil?new Date(cooldownUntil).toISOString():null,base_url:PNCP_BASE_URL};}
+export async function fetchPncpOpenSearch(filters={}){
+  const f={...normalizeSearchFilters(filters),openOnly:true},codes=f.modalities.length?f.modalities:PNCP_MODALITY_CODES;
+  const restrictive=Boolean(f.uf||f.municipalityIbge||f.cnpj||f.modalities.length);
+  const budget=restrictive?3:2;
+  const r=await fetchPncpOpenRange({endDate:new Date(),filters:f,codes,maxPagesPerModality:budget,concurrency:restrictive?1:2});
+  return {...r,items:applySearchFilters(r.items,f),filters:f};
+}
+export function pncpClientHealth(){return {preferred_page_size:PREFERRED_PAGE_SIZE,effective_page_size:effectivePageSize,request_spacing_ms:REQUEST_SPACING_MS,max_retries:MAX_RETRIES,cooldown_until:cooldownUntil?new Date(cooldownUntil).toISOString():null,base_url:PNCP_BASE_URL,open_endpoint:'/v1/contratacoes/proposta'};}
