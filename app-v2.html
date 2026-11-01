@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="theme-color" content="#030712">
-  <meta name="rlb-ui-build" content="2.10.0">
+  <meta name="rlb-ui-build" content="2.11.0">
   <title>Radar de Licitações Brasil</title>
   <link rel="stylesheet" href="/assets/app-v2.css?v=20261031-4">
   <link rel="stylesheet" href="/assets/search-results-v2.css?v=281">
@@ -45,7 +45,7 @@
 
   <div id="appShell" class="app-shell hidden">
     <div class="platform-strip">
-      <div><span class="pulse-dot"></span><b>Radar nacional ativo</b><span>Fonte oficial: PNCP</span></div>
+      <div><span class="pulse-dot"></span><b>Radar nacional ativo</b><span>Fonte oficial: PNCP • plataformas de origem identificadas</span></div>
       <div class="strip-tech"><span>14 modalidades monitoradas</span><span>ciclo de 90s</span></div>
     </div>
 
@@ -75,7 +75,7 @@
           <div class="hero-copy">
             <div class="hero-badge"><span class="pulse-dot"></span><span>MONITORAMENTO NACIONAL</span><em>PNCP • DADOS REAIS</em></div>
             <h1>Encontre oportunidades públicas com <span class="gradient-text">inteligência e velocidade.</span></h1>
-            <p>Pesquise a base monitorada do Radar e acompanhe novas contratações públicas em um ambiente único, conectado às fontes oficiais.</p>
+            <p>Pesquise oportunidades ativas na base sincronizada do Radar e acesse a fonte oficial e a plataforma de origem quando informada pelo PNCP.</p>
 
             <div class="search-console glass-panel">
               <div class="search-console-head"><div><span class="eyebrow electric">BUSCA OFICIAL</span><b>O que você procura?</b></div><button type="button" id="resetSearch" class="btn ghost compact">Limpar</button></div>
@@ -83,9 +83,9 @@
                 <label class="field wide"><span>Objeto / palavra-chave</span><input id="searchKeyword" placeholder="Ex.: combustível, obras, ar-condicionado"></label>
                 <label class="field"><span>UF</span><select id="searchUf"><option value="">Brasil</option></select></label>
                 <label class="field"><span>Modalidade</span><select id="searchModality"><option value="">Todas</option></select></label>
-                <label class="field"><span>Período</span><select id="searchDays"><option value="1">24 horas</option><option value="7" selected>7 dias</option><option value="30">30 dias</option></select></label>
+                <label class="field"><span>Publicação</span><select id="searchDays"><option value="0" selected>Todas as ativas</option><option value="1">Últimas 24 horas</option><option value="7">Últimos 7 dias</option><option value="30">Últimos 30 dias</option><option value="90">Últimos 90 dias</option></select></label>
               </div>
-              <div class="search-footer"><label class="check-line"><input id="searchOpenOnly" type="checkbox"> Somente propostas abertas</label><button type="button" id="searchBtn" class="btn primary search-cta">⌁ Pesquisar oportunidades</button></div>
+              <div class="search-footer"><span class="check-line">✓ Somente oportunidades com prazo vigente</span><button type="button" id="searchBtn" class="btn primary search-cta">⌁ Pesquisar oportunidades</button></div>
             </div>
 
             <div class="hero-metrics">
@@ -98,12 +98,12 @@
           <div class="live-terminal glass-panel">
             <div class="terminal-head"><div class="terminal-title"><span id="statusDot" class="status-dot"></span><div><b>Radar Nacional</b><small id="monitorStatusText">Carregando…</small></div></div><span class="live-chip">AO VIVO</span></div>
             <div class="terminal-toolbar"><select id="liveScope" class="compact-select"><option value="all">Brasil</option><option value="municipal">Municípios</option><option value="chambers">Câmaras</option></select><button type="button" id="refreshLive" class="btn ghost compact">Atualizar</button></div>
-            <p id="liveMeta" class="terminal-meta">Sincronizando feed…</p>
+            <p id="liveMeta" class="terminal-meta">Sincronizando oportunidades ativas…</p>
             <div id="liveList" class="list live-list"><div class="empty-state">Carregando oportunidades…</div></div>
           </div>
         </div>
 
-        <div class="panel results-panel glass-panel"><div class="panel-head"><div><span class="eyebrow electric">RESULTADOS DA BUSCA</span><h2>Oportunidades encontradas</h2><p id="searchMeta">Use os filtros acima para pesquisar.</p></div></div><div id="searchResults" class="list result-grid"><div class="empty-state">Nenhuma pesquisa realizada nesta sessão.</div></div></div>
+        <div class="panel results-panel glass-panel"><div class="panel-head"><div><span class="eyebrow electric">RESULTADOS DA BUSCA</span><h2>Oportunidades ativas encontradas</h2><p id="searchMeta">Use os filtros acima para pesquisar.</p></div></div><div id="searchResults" class="list result-grid"><div class="empty-state">Nenhuma pesquisa realizada nesta sessão.</div></div></div>
       </section>
 
       <section id="view-alerts" class="view">
