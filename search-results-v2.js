@@ -2,7 +2,7 @@
 'use strict';
 if(window.__rlbSearchResultsV2)return;
 window.__rlbSearchResultsV2=true;
-window.__RLB_UI_BUILD__='2.8.1';
+window.__RLB_UI_BUILD__='2.11.0';
 
 const $=(s,r=document)=>r.querySelector(s);
 const root=()=>$('#searchResults');
@@ -12,10 +12,10 @@ const badge=()=>$('#rlbSearchStateBadge');
 let timer=null,longTimer=null,rendering=false,stageIndex=0;
 
 const stages=[
-  ['Preparando a pesquisa','Validando palavra-chave, UF, modalidade, período e demais filtros selecionados.'],
-  ['Consultando o PNCP','Buscando oportunidades compatíveis na principal fonte oficial monitorada pelo Radar.'],
-  ['Cruzando a base do Radar','Comparando a consulta com os registros já indexados pelo monitoramento nacional.'],
-  ['Organizando oportunidades','Ordenando os registros encontrados para apresentar os resultados mais recentes.']
+  ['Preparando a pesquisa','Validando palavra-chave, UF, modalidade e demais filtros selecionados.'],
+  ['Consultando oportunidades ativas','Pesquisando a base sincronizada do Radar somente entre processos com prazo vigente.'],
+  ['Aplicando filtros oficiais','Cruzando os dados do PNCP com os critérios escolhidos e removendo oportunidades encerradas.'],
+  ['Organizando oportunidades','Ordenando os registros ativos para apresentar os resultados mais relevantes e recentes.']
 ];
 
 function clearTimers(){
@@ -41,14 +41,14 @@ function decoratePanel(){
     <div class="rlb-results-head-copy">
       <span class="eyebrow electric">CENTRAL DE OPORTUNIDADES</span>
       <div class="rlb-results-title-row">
-        <h2>Resultados da busca</h2>
+        <h2>Oportunidades ativas</h2>
         <span id="rlbSearchStateBadge" class="rlb-search-state-badge" data-tone="idle">Pronto para buscar</span>
       </div>
       <p id="searchMeta">${oldMeta}</p>
       <div class="rlb-search-source-row" aria-label="Fontes da pesquisa">
-        <span><i></i>PNCP</span>
-        <span><i></i>Base monitorada RLB</span>
-        <span><i></i>Entes públicos indexados</span>
+        <span><i></i>PNCP oficial</span>
+        <span><i></i>Base sincronizada RLB</span>
+        <span><i></i>Plataformas de origem</span>
       </div>
     </div>
     <div class="rlb-results-head-mark" aria-hidden="true">
@@ -68,8 +68,8 @@ function documentVisual(){
 function timeline(){
   return `<div class="rlb-search-timeline" aria-label="Etapas da busca">
     <span class="active"><i>1</i><b>Preparando</b></span>
-    <span><i>2</i><b>PNCP</b></span>
-    <span><i>3</i><b>Base RLB</b></span>
+    <span><i>2</i><b>Ativas</b></span>
+    <span><i>3</i><b>Filtros</b></span>
     <span><i>4</i><b>Resultados</b></span>
   </div>`;
 }
@@ -90,11 +90,11 @@ function loadingMarkup(){
         <span class="rlb-search-orbit o1"></span><span class="rlb-search-orbit o2"></span>
       </div>
       <div class="rlb-search-copy">
-        <span class="rlb-loading-eyebrow"><i></i> BUSCA INTELIGENTE EM ANDAMENTO</span>
+        <span class="rlb-loading-eyebrow"><i></i> BUSCA DE OPORTUNIDADES ATIVAS</span>
         <h3 id="rlbSearchLoadingTitle">${stages[0][0]}</h3>
         <p id="rlbSearchLoadingText">${stages[0][1]}</p>
         ${timeline()}
-        <div class="rlb-search-trust"><span>✓ Fonte oficial</span><span>✓ Filtros aplicados</span><span>✓ Ordenação por atualização</span></div>
+        <div class="rlb-search-trust"><span>✓ Fonte oficial</span><span>✓ Prazo vigente</span><span>✓ Filtros aplicados</span></div>
       </div>
     </div>
     <div class="rlb-search-skeleton-title"><span>Preparando as oportunidades</span><em>Os resultados aparecerão automaticamente.</em></div>
@@ -128,27 +128,27 @@ function renderLoading(){
   stageIndex=0;
   el.classList.add('rlb-search-loading-host');
   el.innerHTML=loadingMarkup();
-  if(meta())meta().textContent='Consultando o PNCP e a base monitorada do Radar com os filtros selecionados.';
+  if(meta())meta().textContent='Consultando a base sincronizada do Radar e validando somente oportunidades com prazo vigente.';
   setBadge('Buscando agora','loading');
   queueMicrotask(()=>{rendering=false;});
   timer=setInterval(()=>{
     if(!document.querySelector('.rlb-search-experience.is-loading')){clearTimers();return;}
     setStage(Math.min(stageIndex+1,stages.length-1));
-  },950);
+  },650);
   longTimer=setTimeout(()=>{
     const title=$('#rlbSearchLoadingTitle'),text=$('#rlbSearchLoadingText');
-    if(title)title.textContent='A busca continua em andamento';
-    if(text)text.textContent='Algumas consultas podem levar mais tempo. O Radar continua processando os registros sem interromper a pesquisa.';
+    if(title)title.textContent='Finalizando a pesquisa';
+    if(text)text.textContent='A base local já foi consultada. Estamos concluindo a organização dos registros compatíveis.';
     setBadge('Processando','loading');
-  },5500);
+  },3000);
 }
 function renderInitial(){
   decoratePanel();
   const el=root();if(!el)return;
   clearTimers();rendering=true;
   el.classList.remove('rlb-search-loading-host');
-  el.innerHTML=stateMarkup('idle','Pronto para encontrar novas oportunidades','Defina os filtros acima e clique em “Pesquisar oportunidades”. O Radar consulta o PNCP e a base monitorada para organizar os registros compatíveis.');
-  if(meta())meta().textContent='Use os filtros acima para iniciar uma pesquisa.';
+  el.innerHTML=stateMarkup('idle','Pronto para encontrar oportunidades vigentes','Defina os filtros acima e clique em “Pesquisar oportunidades”. O Radar consulta a base sincronizada com o PNCP e não exibe processos cujo prazo já terminou.');
+  if(meta())meta().textContent='Use os filtros acima para iniciar uma pesquisa de oportunidades ativas.';
   setBadge('Pronto para buscar','idle');
   queueMicrotask(()=>{rendering=false;});
 }
@@ -156,7 +156,7 @@ function renderEmpty(){
   decoratePanel();const el=root();if(!el)return;
   clearTimers();rendering=true;
   el.classList.remove('rlb-search-loading-host');
-  el.innerHTML=stateMarkup('empty','Nenhuma oportunidade encontrada','Não encontramos registros compatíveis com estes filtros. Amplie o período, remova algum filtro ou tente outra palavra-chave.','<button type="button" class="btn ghost compact rlb-search-reset-action">Limpar filtros</button>');
+  el.innerHTML=stateMarkup('empty','Nenhuma oportunidade ativa encontrada','Não encontramos processos com prazo vigente compatíveis com estes filtros. Remova algum filtro ou tente outra palavra-chave.','<button type="button" class="btn ghost compact rlb-search-reset-action">Limpar filtros</button>');
   setBadge('0 resultados','empty');
   queueMicrotask(()=>{rendering=false;});
 }
@@ -169,7 +169,7 @@ function renderError(message){
   queueMicrotask(()=>{rendering=false;});
 }
 function markResults(){
-  decoratePanel();clearTimers();root()?.classList.remove('rlb-search-loading-host');setBadge('Resultados prontos','success');
+  decoratePanel();clearTimers();root()?.classList.remove('rlb-search-loading-host');setBadge('Oportunidades ativas','success');
 }
 function classify(){
   const el=root();
@@ -185,15 +185,17 @@ function classify(){
 function bind(){
   document.addEventListener('click',e=>{
     if(e.target.closest?.('#searchBtn')){setTimeout(renderLoading,0);return;}
+    if(e.target.closest?.('#resetSearch')){setTimeout(()=>{const days=$('#searchDays');if(days)days.value='0';renderInitial();},0);return;}
     if(e.target.closest?.('.rlb-search-reset-action')){e.preventDefault();$('#resetSearch')?.click();setTimeout(renderInitial,0);return;}
     if(e.target.closest?.('.rlb-search-retry-action')){e.preventDefault();$('#searchBtn')?.click();}
   },true);
 }
 function boot(){
   decoratePanel();bind();
+  const days=$('#searchDays');if(days&&!days.value)days.value='0';
   const el=root();if(el)new MutationObserver(classify).observe(el,{childList:true,subtree:true,characterData:true});
   classify();
-  console.info('RLB Search Results UI 2.8.1 active');
+  console.info('RLB Search Results UI 2.11.0 active-only strategy');
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 })();
