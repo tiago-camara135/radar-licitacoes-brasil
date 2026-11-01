@@ -32,10 +32,32 @@ test('readiness button remains in normal document flow',()=>{
   assert.match(s,/has-readiness-trigger>\.tender-ready-trigger\{position:static/);
 });
 
-test('live monitor uses resilient PNCP client',()=>{
+test('live Radar feed excludes expired and unknown-deadline opportunities',()=>{
   const s=read('live-monitor-v5.mjs');
+  assert.match(s,/closes_at IS NOT NULL AND closes_at>=NOW\(\)/);
+  assert.match(s,/active_feed_only:true/);
   assert.match(s,/fetchPncpRange/);
-  assert.match(s,/pncp-client-v3-resilient/);
+});
+
+test('search is active-only, local-first and refreshes official PNCP open proposals in background',()=>{
+  const router=read('search-router-v3.mjs');
+  const client=read('pncp-client-v3.mjs');
+  assert.match(router,/closes_at IS NOT NULL/);
+  assert.match(router,/closes_at >= NOW\(\)/);
+  assert.match(router,/strategy:'active-local-first'/);
+  assert.match(router,/refreshOpenIndex\(f\)\.catch/);
+  assert.match(router,/active_only:true/);
+  assert.match(client,/\/v1\/contratacoes\/proposta/);
+  assert.match(client,/fetchPncpOpenSearch/);
+});
+
+test('search UI defaults to active opportunities and does not offer expired results mode',()=>{
+  const html=read('app-v2.html');
+  const ui=read('search-results-v2.js');
+  assert.match(html,/value="0" selected>Todas as ativas/);
+  assert.match(html,/Somente oportunidades com prazo vigente/);
+  assert.equal(html.includes('id="searchOpenOnly"'),false);
+  assert.match(ui,/não exibe processos cujo prazo já terminou/);
 });
 
 test('document upload hardening validates signatures and blocks executables',()=>{
