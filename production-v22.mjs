@@ -1,6 +1,6 @@
 import http from 'node:http';
 import { syncBuiltinESMExports } from 'node:module';
-import { runDatabaseMigrationIfRequested } from './database-migration-v1.mjs';
+import { runDatabaseMigrationIfRequested } from './database-migration-v2.mjs';
 
 const FREEZE=String(process.env.RLB_MIGRATION_FREEZE||'0')==='1';
 const RUN=String(process.env.RLB_MIGRATION_RUN||'0')==='1';
@@ -19,5 +19,5 @@ http.createServer=function migrationFreezeCreateServer(...args){
 
 syncBuiltinESMExports();
 await import('./production-v21.mjs');
-console.log(`database migration runtime ready: freeze=${FREEZE?'on':'off'} run=${RUN?'on':'off'}`);
+console.log(`database migration runtime ready: freeze=${FREEZE?'on':'off'} run=${RUN?'on':'off'} engine=v2`);
 if(RUN){setTimeout(()=>runDatabaseMigrationIfRequested().catch(e=>console.error('database migration runtime:',e?.message||e)),1500).unref?.()}
