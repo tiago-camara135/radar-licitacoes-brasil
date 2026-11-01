@@ -1,0 +1,46 @@
+(()=>{
+'use strict';
+if(window.__rlbStabilityUiV1)return;window.__rlbStabilityUiV1=true;
+const $=(s,r=document)=>r.querySelector(s);
+const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot',"'":'&#39;'}[c]));
+const MOD={1:'Leilão - Eletrônico',2:'Diálogo Competitivo',3:'Concurso',4:'Concorrência - Eletrônica',5:'Concorrência - Presencial',6:'Pregão - Eletrônico',7:'Pregão - Presencial',8:'Dispensa de Licitação',9:'Inexigibilidade',10:'Manifestação de Interesse',11:'Pré-qualificação',12:'Credenciamento',13:'Leilão - Presencial',14:'Inaplicabilidade da Lei 14.133/2021'};
+const when=v=>{if(!v)return'—';const d=new Date(v);return Number.isNaN(d.getTime())?'—':d.toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'})};
+const brl=v=>{const n=Number(v);return Number.isFinite(n)?n.toLocaleString('pt-BR',{style:'currency',currency:'BRL'}):'Valor não informado'};
+const modality=x=>x?.modalidadeNome||MOD[Number(x?._modalidadeConsultada||x?.modalidadeId)]||'Modalidade não informada';
+const municipality=x=>x?.unidadeOrgao?.municipioNome||x?.unidadeOrgao?.nomeMunicipio||x?.municipioNome||'Município não informado';
+const uf=x=>x?.unidadeOrgao?.ufSigla||x?.ufSigla||'';
+const org=x=>x?.orgaoEntidade?.razaoSocial||'Órgão não informado';
+function pncp(x){if(x?._pncpUrl)return x._pncpUrl;const c=String(x?.orgaoEntidade?.cnpj||'').replace(/\D/g,''),y=Number(x?.anoCompra),s=Number(x?.sequencialCompra);return c.length===14&&Number.isInteger(y)&&Number.isInteger(s)?`https://pncp.gov.br/app/editais/${c}/${y}/${s}`:'#'}
+async function api(path,opt={}){const r=await fetch(path,{credentials:'same-origin',cache:'no-store',...opt,headers:{accept:'application/json',...(opt.body?{'content-type':'application/json'}:{}),...(opt.headers||{})}});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.error||`Erro ${r.status}`);return d}
+function toast(msg,error=false){const e=$('#toast');if(!e)return;e.textContent=msg;e.className='toast show'+(error?' error':'');clearTimeout(toast.t);toast.t=setTimeout(()=>e.className='toast',3200)}
+
+let searchController=null,searchSeq=0;
+function renderSearch(items){const root=$('#searchResults');if(!root)return;root.innerHTML=(items||[]).map(x=>`<div class="result-item"><div class="item-tags"><span class="tag">${esc(modality(x))}</span><span class="tag green">${esc(municipality(x))}${uf(x)?' / '+esc(uf(x)):''}</span></div><div class="item-title">${esc(x?.objetoCompra||'Objeto não informado')}</div><div class="item-meta">${esc(org(x))} • publicação ${esc(when(x?.dataPublicacaoPncp))} • encerramento ${esc(when(x?.dataEncerramentoProposta||x?.dataFimRecebimentoProposta))}</div><div class="result-value">${esc(brl(x?.valorTotalEstimado))}</div><div class="item-meta"><a href="${esc(pncp(x))}" target="_blank" rel="noopener">Abrir fonte oficial ↗</a></div></div>`).join('')||'<div class="empty-state">Nenhum resultado encontrado.</div>'}
+async function safeSearch(button){
+  const seq=++searchSeq;searchController?.abort();searchController=new AbortController();
+  const p=new URLSearchParams(),vals={keyword:$('#searchKeyword')?.value.trim(),uf:$('#searchUf')?.value,modalidade:$('#searchModality')?.value,days:$('#searchDays')?.value,openOnly:String($('#searchOpenOnly')?.checked||false),order:'newest'};for(const[k,v]of Object.entries(vals))if(v&&v!=='false')p.set(k,v);
+  const root=$('#searchResults');if(root)root.innerHTML='<div class="empty-state">Pesquisando…</div>';if(button){button.disabled=true;button.dataset.loading='1'}
+  try{const r=await fetch('/api/licitacoes?'+p,{credentials:'same-origin',cache:'no-store',headers:{accept:'application/json'},signal:searchController.signal});const d=await r.json().catch(()=>({}));if(seq!==searchSeq)return;if(!r.ok)throw new Error(d.error||`Erro ${r.status}`);const items=d.items||[];if($('#searchMeta'))$('#searchMeta').textContent=`${items.length} resultado(s) • ${d.source||'PNCP / base do Radar'}${d.partial?' • consulta parcial':''}`;renderSearch(items)}catch(e){if(seq!==searchSeq||e?.name==='AbortError')return;if(root)root.innerHTML=`<div class="empty-state">${esc(e.message||'Falha na pesquisa.')}</div>`}finally{if(seq===searchSeq&&button){button.disabled=false;delete button.dataset.loading}}
+}
+function safeReset(){searchSeq++;searchController?.abort();searchController=null;for(const[id,val]of [['searchKeyword',''],['searchUf',''],['searchModality',''],['searchDays','7']]){const e=$('#'+id);if(e)e.value=val}if($('#searchOpenOnly'))$('#searchOpenOnly').checked=false;if($('#searchMeta'))$('#searchMeta').textContent='Use os filtros acima.';if($('#searchResults'))$('#searchResults').innerHTML='<div class="empty-state">Nenhuma pesquisa realizada nesta sessão.</div>';const b=$('#searchBtn');if(b){b.disabled=false;delete b.dataset.loading}}
+function replaceButton(id,handler){const old=$('#'+id);if(!old||old.dataset.stability==='1')return old;const b=old.cloneNode(true);b.dataset.stability='1';old.replaceWith(b);b.addEventListener('click',()=>handler(b));return b}
+
+async function renderAlerts(){const root=$('#alertsList');if(!root)return;try{const d=await api('/api/alerts');root.innerHTML=(d.items||[]).map(a=>`<div class="stack-item"><div class="stack-copy"><b>${esc(a.name)}</b><span>${esc([a.keyword,a.uf,a.municipality,a.modality_code&&'Modalidade '+a.modality_code].filter(Boolean).join(' • ')||'Alerta amplo')}</span></div><div class="stack-actions"><button class="btn ghost compact" data-toggle-alert="${a.id}" data-enabled="${a.enabled}">${a.enabled?'Pausar':'Ativar'}</button><button class="btn danger compact" data-delete-alert="${a.id}">Excluir</button></div></div>`).join('')||'<div class="empty-state">Você ainda não criou alertas.</div>'}catch(e){root.innerHTML=`<div class="empty-state">${esc(e.message)}</div>`}}
+async function safeCreateAlert(button){if(button?.dataset.busy==='1')return;if(button){button.dataset.busy='1';button.disabled=true}try{await api('/api/alerts',{method:'POST',body:JSON.stringify({name:$('#alertName')?.value.trim(),keyword:$('#alertKeyword')?.value.trim(),uf:$('#alertUf')?.value,modality_code:$('#alertModality')?.value||null,enabled:true})});toast('Alerta criado.');if($('#alertName'))$('#alertName').value='';if($('#alertKeyword'))$('#alertKeyword').value='';await renderAlerts()}catch(e){toast(e.message,true)}finally{if(button){button.disabled=false;delete button.dataset.busy}}}
+
+let meId=null,targetUserId=null;
+function fixAdminSupport(){const panel=$('#ausPanel');if(!panel)return;const overview=panel.querySelector('[data-aus-tab="overview"]');if(overview&&!overview.classList.contains('active'))overview.click();if(meId&&Number(targetUserId)===Number(meId))panel.querySelector('[data-aus-revoke-sessions]')?.remove()}
+function installAdminFixes(){
+  api('/api/me').then(d=>{meId=d.user?.id||null}).catch(()=>{});
+  document.addEventListener('click',e=>{const edit=e.target.closest('[data-user-edit]'),go=e.target.closest('[data-go-user]');if(edit)targetUserId=Number(edit.dataset.userEdit);if(go){targetUserId=Number(go.dataset.goUser);setTimeout(()=>{if(!$('#ausPanel'))document.querySelector(`[data-user-edit="${targetUserId}"]`)?.click();},250)}},{passive:true});
+  const root=$('#view-admin');if(root)new MutationObserver(()=>setTimeout(fixAdminSupport,0)).observe(root,{subtree:true,childList:true});
+}
+function install(){
+  replaceButton('searchBtn',safeSearch);replaceButton('resetSearch',()=>safeReset());replaceButton('createAlertBtn',safeCreateAlert);
+  $('#alertsList')?.addEventListener('click',e=>{const b=e.target.closest('[data-toggle-alert],[data-delete-alert]');if(b&&!b.disabled){b.disabled=true;setTimeout(()=>{if(b.isConnected)b.disabled=false},2500)}},true);
+  $('#documentsList')?.addEventListener('click',e=>{const b=e.target.closest('[data-delete-doc]');if(b&&!b.disabled){b.disabled=true;setTimeout(()=>{if(b.isConnected)b.disabled=false},2500)}},true);
+  $('#docInput')?.addEventListener('change',e=>setTimeout(()=>{e.target.value=''},150));
+  installAdminFixes();
+}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(install,0),{once:true});else setTimeout(install,0);
+})();
