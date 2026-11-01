@@ -37,3 +37,12 @@ test('live monitor uses resilient PNCP client',()=>{
   assert.match(s,/fetchPncpRange/);
   assert.match(s,/pncp-client-v3-resilient/);
 });
+
+test('document upload hardening validates signatures and blocks executables',()=>{
+  const s=read('production-v23.mjs');
+  assert.match(s,/%PDF-/);
+  assert.match(s,/0xff&&buf\[1\]===0xd8/);
+  assert.match(s,/0x89,0x50,0x4e,0x47/);
+  assert.match(s,/executable_upload_blocked/);
+  assert.match(s,/invalid_upload_signature/);
+});
