@@ -63,6 +63,7 @@ test('search UI defaults to active opportunities and does not offer expired resu
 test('source transparency distinguishes PNCP from external platform links',()=>{
   const html=read('app-v2.html');
   const source=read('source-transparency-v1.js');
+  const css=read('source-transparency-v1.css');
   const server=read('production-v17.mjs');
   assert.match(html,/source-transparency-v1\.css\?v=2113/);
   assert.match(html,/source-transparency-v1\.js\?v=2113/);
@@ -77,8 +78,15 @@ test('source transparency distinguishes PNCP from external platform links',()=>{
   assert.match(source,/Acesso direto à plataforma não informado pelo PNCP/);
   assert.match(source,/rlb-live-source-actions/);
   assert.match(source,/referrerPolicy='no-referrer'/);
+  assert.match(source,/dataset\.rlbSourceKey/);
+  assert.match(source,/existing\?\.dataset\.rlbSourceKey===key/);
+  assert.match(source,/a\.addEventListener\('click',event=>event\.stopPropagation\(\)\)/);
+  assert.equal(source.includes("card.querySelector('.rlb-source-transparency')?.remove()"),false);
+  assert.equal(source.includes("row.querySelector('.rlb-live-source')?.remove()"),false);
+  assert.match(css,/pointer-events:auto!important/);
+  assert.match(css,/z-index:5/);
   assert.match(server,/frontend:'2\.11\.3'/);
-  assert.match(server,/source_transparency:'v1\.1'/);
+  assert.match(server,/source_transparency:'v1\.2'/);
 });
 
 test('document upload hardening validates signatures and blocks executables',()=>{
