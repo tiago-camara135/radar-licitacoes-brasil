@@ -60,6 +60,22 @@ test('search UI defaults to active opportunities and does not offer expired resu
   assert.match(ui,/não exibe processos cujo prazo já terminou/);
 });
 
+test('source transparency distinguishes PNCP from external platform links',()=>{
+  const html=read('app-v2.html');
+  const source=read('source-transparency-v1.js');
+  const server=read('production-v17.mjs');
+  assert.match(html,/source-transparency-v1\.css\?v=2112/);
+  assert.match(html,/source-transparency-v1\.js\?v=2112/);
+  assert.match(source,/Fonte oficial: PNCP/);
+  assert.match(source,/Ir para plataforma ↗/);
+  assert.match(source,/Ver no PNCP ↗/);
+  assert.match(source,/host==='pncp\.gov\.br'/);
+  assert.match(source,/!\/\^https\?:\\\/\\\//i\.test\(raw\)/);
+  assert.match(source,/Portal de Compras Públicas/);
+  assert.match(source,/Compras\.gov\.br/);
+  assert.match(server,/source_transparency:'v1'/);
+});
+
 test('document upload hardening validates signatures and blocks executables',()=>{
   const s=read('production-v23.mjs');
   assert.match(s,/%PDF-/);
