@@ -70,7 +70,7 @@ test('source transparency distinguishes PNCP from external platform links',()=>{
   assert.match(source,/Ir para plataforma ↗/);
   assert.match(source,/Ver no PNCP ↗/);
   assert.match(source,/host==='pncp\.gov\.br'/);
-  assert.match(source,/!\/\^https\?:\\\/\\\//i\.test\(raw\)/);
+  assert.equal(source.includes("!/^https?:\\/\\//i.test(raw)"),true);
   assert.match(source,/Portal de Compras Públicas/);
   assert.match(source,/Compras\.gov\.br/);
   assert.match(server,/source_transparency:'v1'/);
