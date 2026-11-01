@@ -70,10 +70,12 @@ function actionLink(label,href,kind='ghost',aria=''){
   a.target='_blank';
   a.rel='noopener noreferrer';
   a.referrerPolicy='no-referrer';
+  a.draggable=false;
   a.dataset.rlbExternal='1';
   a.textContent=label;
   if(aria)a.setAttribute('aria-label',aria);
   a.title=aria||label.replace(' ↗','');
+  a.addEventListener('pointerdown',event=>event.stopPropagation());
   a.addEventListener('click',event=>event.stopPropagation());
   return a;
 }
@@ -131,6 +133,21 @@ function liveTransparency(item){
   if(actions.childElementCount)wrap.appendChild(actions);
   return wrap;
 }
+function legacyOfficialLink(card){
+  return [...card.querySelectorAll('.item-meta a[href*="pncp.gov.br"]')].find(a=>!a.classList.contains('rlb-source-btn'))||null;
+}
+function placeSearchTransparency(card,block){
+  const link=legacyOfficialLink(card);
+  const meta=link?.closest('.item-meta')||null;
+  if(link)link.remove();
+  if(meta){
+    const hasOtherContent=meta.childElementCount>0||Boolean(meta.textContent.trim());
+    if(hasOtherContent)meta.insertAdjacentElement('afterend',block);
+    else meta.replaceWith(block);
+    return;
+  }
+  card.appendChild(block);
+}
 function enhanceSearch(){
   const root=document.getElementById('searchResults');
   if(!root||!searchItems.length)return;
@@ -138,13 +155,13 @@ function enhanceSearch(){
   cards.forEach((card,index)=>{
     const item=searchItems[index];
     if(!item)return;
+    const legacyLink=legacyOfficialLink(card);
+    if(legacyLink)legacyLink.remove();
     const key=sourceKey(item);
     const existing=card.querySelector('.rlb-source-transparency');
     if(existing?.dataset.rlbSourceKey===key)return;
     existing?.remove();
-    const block=searchTransparency(item);
-    const legacy=[...card.querySelectorAll('.item-meta')].find(el=>el.querySelector('a[href*="pncp.gov.br"]'));
-    if(legacy)legacy.replaceWith(block);else card.appendChild(block);
+    placeSearchTransparency(card,searchTransparency(item));
   });
 }
 function enhanceLive(){
@@ -187,7 +204,7 @@ function boot(){
   if(search)new MutationObserver(queueEnhance).observe(search,{childList:true,subtree:true});
   if(live)new MutationObserver(queueEnhance).observe(live,{childList:true,subtree:true});
   queueEnhance();
-  console.info('RLB source transparency v1.2 ready: stable source actions + PNCP + platform origin');
+  console.info('RLB source transparency v1.3 ready: non-destructive card integration + stable source actions');
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 })();
