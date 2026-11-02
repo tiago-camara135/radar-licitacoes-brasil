@@ -58,7 +58,25 @@ test('deterministic readiness penalizes missing and expired documents',()=>{
   assert.equal(expired.expired,1);assert.equal(expired.blockers,1);
 });
 
-test('recommendations remain grounded in real saved alerts and active procurement metadata',()=>{
+test('geographic scope accepts Brazil, regions and validated multiple UFs',()=>{
+  const brasil=__test.normalizeGeo({scope:'brasil',ufs:['RN']});
+  assert.deepEqual(brasil,{scope:'brasil',region:null,ufs:[]});
+
+  const nordeste=__test.normalizeGeo({scope:'regiao',region:'Nordeste'});
+  assert.equal(nordeste.scope,'regiao');
+  assert.equal(nordeste.region,'Nordeste');
+  assert.ok(nordeste.ufs.includes('RN'));
+  assert.ok(nordeste.ufs.includes('PE'));
+  assert.equal(nordeste.ufs.includes('SP'),false);
+
+  const ufs=__test.normalizeGeo({scope:'ufs',ufs:['rn','PB','SP','XX','RN']});
+  assert.deepEqual(ufs,{scope:'ufs',region:null,ufs:['RN','PB','SP']});
+
+  const invalid=__test.normalizeGeo({scope:'regiao',region:'Inexistente'});
+  assert.deepEqual(invalid,{scope:'brasil',region:null,ufs:[]});
+});
+
+test('recommendations remain grounded in real saved alerts, active metadata and selected geography',()=>{
   const backend=read('user-dashboard-v1.mjs');
   assert.match(backend,/m\.closes_at>=NOW\(\)/);
   assert.match(backend,/m\.object_text ILIKE '%'\|\|a\.keyword\|\|'%'/);
@@ -67,5 +85,19 @@ test('recommendations remain grounded in real saved alerts and active procuremen
   assert.match(backend,/m\.modality_code=a\.modality_code/);
   assert.match(backend,/m\.estimated_value>=a\.min_value/);
   assert.match(backend,/m\.estimated_value<=a\.max_value/);
+  assert.match(backend,/\$2::text\[\] IS NULL OR UPPER\(m\.uf\)=ANY\(\$2::text\[\]\)/);
+  assert.match(backend,/geo:normalizeGeo\(config\.geo\)/);
+  assert.match(backend,/const geo=b\.geo===undefined\?current\.geo:normalizeGeo\(b\.geo\)/);
   assert.doesNotMatch(backend,/Math\.random\(/);
+});
+
+test('dashboard UI exposes geographic selector and explainable opportunity fit',()=>{
+  const frontend=read('user-dashboard-v2.js');
+  assert.match(frontend,/FILTRAR OPORTUNIDADES/);
+  assert.match(frontend,/Brasil inteiro/);
+  assert.match(frontend,/Por região/);
+  assert.match(frontend,/Estados específicos/);
+  assert.match(frontend,/A preferência fica salva nesta conta/);
+  assert.match(frontend,/Por que esta oportunidade\?/);
+  assert.match(frontend,/\/api\/dashboard\/preferences/);
 });
