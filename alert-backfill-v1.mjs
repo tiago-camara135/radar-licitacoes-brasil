@@ -40,7 +40,7 @@ export function alertBackfillMatches(a,row){
   if(a.modality_code&&Number(a.modality_code)!==Number(row.modality_code))return false;
   if(a.org_name&&!norm([row.org_name,row.unit_name].filter(Boolean).join(' ')).includes(norm(a.org_name)))return false;
   if(a.org_cnpj&&digits(a.org_cnpj)!==digits(row.org_cnpj).slice(0,14))return false;
-  const value=Number(row.estimated_value);
+  const value=row.estimated_value===null||row.estimated_value===undefined||row.estimated_value===''?NaN:Number(row.estimated_value);
   if(a.min_value!==null&&a.min_value!==undefined&&Number.isFinite(value)&&value<Number(a.min_value))return false;
   if(a.max_value!==null&&a.max_value!==undefined&&Number.isFinite(value)&&value>Number(a.max_value))return false;
   return true;
@@ -60,7 +60,7 @@ function payloadFor(a,row){
     org:clean(row.org_name||'Órgão não informado',500),
     municipality:clean(row.municipality,180),
     uf:clean(row.uf,2).toUpperCase(),
-    estimated_value:Number.isFinite(Number(row.estimated_value))?Number(row.estimated_value):null,
+    estimated_value:(row.estimated_value!==null&&row.estimated_value!==undefined&&row.estimated_value!==''&&Number.isFinite(Number(row.estimated_value)))?Number(row.estimated_value):null,
     published_at:toIso(row.published_at),
     closes_at:toIso(row.closes_at),
     pncp_url:safeUrl(row.pncp_url),
