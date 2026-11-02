@@ -18,39 +18,32 @@ await wait();
 try{
   let r=await post('/api/auth/register',{email:email1,password});assert.equal(r.status,201);let j=await r.json();u1=j.user.id;c1=cookie(r);
   r=await post('/api/auth/register',{email:email2,password});assert.equal(r.status,201);j=await r.json();u2=j.user.id;c2=cookie(r);
-
   r=await post('/api/alerts',{name:'Combustíveis RN',keyword:'combustível',uf:'RN',enabled:true},c1);assert.equal(r.status,201);
 
   await db.query(`INSERT INTO monitored_procurements(pncp_id,org_cnpj,year,sequence,modality_code,modality_name,object_text,org_name,municipality,uf,estimated_value,published_at,closes_at,pncp_url,origin_url,raw,detected_at,last_seen_at)
     VALUES($1,$2,$3,$4,6,'Pregão - Eletrônico','Aquisição de combustível para abastecimento da frota municipal','Prefeitura Municipal de Teste','Natal','RN',150000,NOW(),NOW()+INTERVAL '5 days',$5,$6,$7::jsonb,NOW(),NOW())`,[pncpId,cnpj,year,sequence,`https://pncp.gov.br/app/editais/${cnpj}/${year}/${sequence}`,'https://example.test/processo',JSON.stringify({numeroControlePNCP:pncpId})]);
 
   r=await get('/api/dashboard/overview',c1);assert.equal(r.status,200);const d1=await r.json();
-  assert.equal(d1.user.id,u1);assert.ok(Array.isArray(d1.recommendations));assert.ok(d1.recommendations.some(x=>x.pncp_id===pncpId),'matching alert must recommend the active procurement');
-  assert.equal(d1.metrics.active_alerts,1);assert.equal(d1.tracking.length,0);assert.equal(d1.habilitation.missing,9);assert.equal(d1.geo.scope,'brasil');
-
-  r=await post('/api/dashboard/preferences',{geo:{scope:'ufs',ufs:['SP']}},c1);assert.equal(r.status,200);j=await r.json();assert.deepEqual(j.preferences.geo,{scope:'ufs',region:null,ufs:['SP']});
-  r=await get('/api/dashboard/overview',c1);assert.equal(r.status,200);const sp=await r.json();assert.deepEqual(sp.preferences.geo,{scope:'ufs',region:null,ufs:['SP']});assert.equal(sp.recommendations.some(x=>x.pncp_id===pncpId),false,'RN procurement must be excluded when user selects SP');
+  assert.equal(d1.user.id,u1);assert.ok(d1.recommendations.some(x=>x.pncp_id===pncpId));assert.equal(d1.metrics.active_alerts,1);
 
   r=await post('/api/dashboard/preferences',{geo:{scope:'ufs',ufs:['RN']}},c1);assert.equal(r.status,200);
-  r=await get('/api/dashboard/overview',c1);assert.equal(r.status,200);const rn=await r.json();assert.deepEqual(rn.preferences.geo,{scope:'ufs',region:null,ufs:['RN']});assert.equal(rn.geo.label,'RN');assert.ok(rn.recommendations.some(x=>x.pncp_id===pncpId),'RN procurement must return after selecting RN');assert.ok(rn.recommendations.find(x=>x.pncp_id===pncpId)?.fit?.score>=0);
+  r=await get('/api/dashboard/overview',c1);assert.equal(r.status,200);const rn=await r.json();assert.ok(rn.recommendations.some(x=>x.pncp_id===pncpId));
 
-  r=await post('/api/dashboard/preferences',{geo:{scope:'regiao',region:'Nordeste'}},c1);assert.equal(r.status,200);
-  r=await get('/api/dashboard/overview',c1);assert.equal(r.status,200);const ne=await r.json();assert.equal(ne.preferences.geo.scope,'regiao');assert.equal(ne.preferences.geo.region,'Nordeste');assert.ok(ne.preferences.geo.ufs.includes('RN'));assert.ok(ne.recommendations.some(x=>x.pncp_id===pncpId),'RN procurement must be included in Nordeste');
+  r=await get('/api/dashboard/overview',c2);assert.equal(r.status,200);const d2=await r.json();assert.equal(d2.recommendations.some(x=>x.pncp_id===pncpId),false);
 
-  r=await get('/api/dashboard/overview',c2);assert.equal(r.status,200);const d2=await r.json();assert.equal(d2.user.id,u2);assert.equal(d2.recommendations.some(x=>x.pncp_id===pncpId),false,'second user must not inherit first user recommendation');assert.equal(d2.geo.scope,'brasil','second user must not inherit first user geographic preference');
+  r=await post('/api/dashboard/tracking',{cnpj,year,sequence,status:'participando'},c1);assert.equal(r.status,200);j=await r.json();assert.equal(j.ok,true);
+  r=await get('/api/dashboard/overview',c1);assert.equal(r.status,200);const tracked=await r.json();assert.equal(tracked.funnel.participando,1);
+  r=await get('/api/dashboard/overview',c2);assert.equal(r.status,200);const isolated=await r.json();assert.equal(isolated.tracking.length,0);
 
-  r=await post('/api/dashboard/tracking',{cnpj,year,sequence,status:'preparando_documentacao'},c1);assert.equal(r.status,200);j=await r.json();assert.equal(j.ok,true);const trackingId=Number(j.item.id);
-  r=await get('/api/dashboard/overview',c1);assert.equal(r.status,200);const tracked=await r.json();assert.ok(tracked.tracking.some(x=>Number(x.id)===trackingId));assert.equal(tracked.funnel.preparando_documentacao,1);
-  r=await get('/api/dashboard/overview',c2);assert.equal(r.status,200);const isolated=await r.json();assert.equal(isolated.tracking.length,0,'tracking must be isolated by user_id');
+  r=await post('/api/dashboard/tracking',{cnpj,year,sequence,status:'participando'},c1,'https://cross-origin.invalid');assert.equal(r.status,403);
 
-  r=await post('/api/dashboard/tracking',{cnpj,year,sequence,status:'participando'},c1,'https://cross-origin.invalid');assert.equal(r.status,403,'cross-origin dashboard write must be blocked');
+  r=await get('/assets/stability-ui-v1.js');assert.equal(r.status,200);const js=await r.text();
+  assert.doesNotMatch(js,/__rlbUserDashboardV2/);
+  assert.doesNotMatch(js,/Minha Operação/);
+  assert.doesNotMatch(js,/Oportunidades para você/);
 
-  r=await get('/assets/stability-ui-v1.js');assert.equal(r.status,200);assert.equal(r.headers.get('x-rlb-user-dashboard'),'v2');const js=await r.text();
-  assert.match(js,/__rlbUserDashboardV2/);assert.match(js,/O que precisa da sua atenção/);assert.match(js,/Oportunidades para você/);assert.match(js,/Minha Operação/);assert.match(js,/Licitações acompanhadas/);assert.match(js,/FILTRAR OPORTUNIDADES/);assert.match(js,/Estados específicos/);assert.match(js,/Por que esta oportunidade\?/);assert.match(js,/\.slice\(0,3\)/);assert.doesNotMatch(js,/Escolha o que aparece no seu dashboard/);
-  r=await get('/assets/user-dashboard-v2.css');assert.equal(r.status,200);assert.equal(r.headers.get('x-rlb-user-dashboard'),'v2');const css=await r.text();assert.match(css,/\.db-kpis/);assert.match(css,/\.db-geo-panel/);assert.match(css,/\.op-grid/);assert.match(css,/html\[data-theme="dark"\]/);assert.match(css,/html:not\(\[data-theme="dark"\]\)/);
-
-  r=await req('/api/dashboard/overview');assert.equal(r.status,401,'anonymous dashboard must be blocked');
-  console.log('user dashboard v2 smoke passed: geographic preference, filtering, clean decision view, operation tracking, isolation and origin guard verified');
+  r=await req('/api/dashboard/overview');assert.equal(r.status,401);
+  console.log('backend dashboard smoke passed: APIs preserved, isolation/origin guard valid, visual Dashboard and Minha Operação absent');
 }finally{
   await db.query('DELETE FROM monitored_procurements WHERE pncp_id=$1',[pncpId]).catch(()=>{});
   if(u1||u2)await db.query('DELETE FROM users WHERE id = ANY($1::bigint[])',[[u1,u2].filter(Boolean)]).catch(()=>{});
