@@ -44,6 +44,7 @@ jobs:
           PORT: "10000"
           APP_ORIGIN: "https://configured.example.test"
           ACCOUNT_RECOVERY_SECRET: "ci-only-account-recovery-secret-not-for-production"
+          ACCOUNT_RECOVERY_EMAIL_TEST_MODE: "1"
           RLB_MIGRATION_RUN: "0"
           RLB_MIGRATION_FREEZE: "0"
           PNCP_MAX_RETRIES: "0"
