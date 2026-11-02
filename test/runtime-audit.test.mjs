@@ -13,15 +13,20 @@ test('health endpoint performs a real PostgreSQL probe and fails closed',()=>{
   assert.match(runtime,/url\.pathname==='\/api\/health'/);
 });
 
-test('PNCP document requests use bounded retries for transient upstream failures',()=>{
+test('PNCP document requests use bounded retries and backend failover',()=>{
   const runtime=read('production-v31.mjs');
-  assert.match(runtime,/PNCP_MAX_ATTEMPTS=3/);
-  assert.match(runtime,/PNCP_RETRYABLE=new Set\(\[408,425,429,500,502,503,504\]\)/);
-  assert.match(runtime,/u\.hostname==='pncp\.gov\.br'/);
-  assert.match(runtime,/u\.pathname\.startsWith\('\/api\/pncp\/'\)/);
-  assert.match(runtime,/u\.pathname\.includes\('\/arquivos'\)/);
-  assert.match(runtime,/retry-after/);
-  assert.match(runtime,/AbortSignal\.timeout\(22000\)/);
+  const resilience=read('pncp-document-resilience-v1.mjs');
+  assert.match(runtime,/installPncpDocumentResilience\(\)/);
+  assert.match(resilience,/DEFAULT_PRIMARY_ATTEMPTS=3/);
+  assert.match(resilience,/DEFAULT_FALLBACK_ATTEMPTS=2/);
+  assert.match(resilience,/RETRYABLE_STATUSES=new Set\(\[408,425,429,500,502,503,504\]\)/);
+  assert.match(resilience,/u\.hostname==='pncp\.gov\.br'/);
+  assert.match(resilience,/u\.pathname\.startsWith\('\/api\/pncp\/'\)/);
+  assert.match(resilience,/u\.pathname\.includes\('\/arquivos'\)/);
+  assert.match(resilience,/replace\(\/\^\\\/api\\\/pncp\\\/\/,'\/pncp-api\/'\)/);
+  assert.match(resilience,/pncp document fallback: gateway unavailable/);
+  assert.match(resilience,/retry-after/);
+  assert.match(resilience,/AbortSignal\.timeout\(ms\)/);
 });
 
 test('deployment configuration is aligned with the active Node runtime and health endpoint',()=>{
