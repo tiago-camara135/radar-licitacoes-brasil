@@ -22,6 +22,10 @@ assert.match(js,/__rlbSourceTransparency/);
 assert.match(js,/__rlbTenderSourceFallbackV2/);
 assert.match(js,/Continuar sem depender do PNCP/);
 assert.match(js,/\/api\/tender-intelligence\/upload-source/);
+assert.match(js,/__rlbTenderComplianceMatrixV2/);
+assert.match(js,/MATRIZ EMPRESA × EDITAL/);
+assert.match(js,/\/api\/tender-compliance-matrix\/analyze/);
+assert.match(js,/Confiabilidade/);
 assert.match(css,/\.tender-ai-trigger/);
 assert.match(css,/\.tai-modal/);
 assert.match(css,/html\[data-theme="dark"\] \.tai-modal/);
@@ -47,4 +51,9 @@ const uploadNoAuth=await get('/api/tender-intelligence/upload-source',{method:'P
 assert.equal(uploadNoAuth.status,401,'upload temporário exige sessão autenticada');
 const uploadCross=await get('/api/tender-intelligence/upload-source',{method:'POST',headers:{'content-type':'application/json',origin:'https://cross-origin.invalid'},body:payload});
 assert.equal(uploadCross.status,403,'upload temporário mantém proteção de origem');
-console.log('tender intelligence v2.3 runtime smoke passed: report, multifonte, PDF fallback, precision and origin guards active');
+
+const matrixNoAuth=await get('/api/tender-compliance-matrix/analyze',{method:'POST',headers:{'content-type':'application/json',origin:base},body:payload});
+assert.equal(matrixNoAuth.status,401,'matriz Empresa × Edital exige sessão autenticada');
+const matrixCross=await get('/api/tender-compliance-matrix/analyze',{method:'POST',headers:{'content-type':'application/json',origin:'https://cross-origin.invalid'},body:payload});
+assert.equal(matrixCross.status,403,'matriz Empresa × Edital mantém proteção de origem');
+console.log('tender intelligence v2.4 runtime smoke passed: report, multifonte, PDF fallback, compliance matrix, precision and origin guards active');
