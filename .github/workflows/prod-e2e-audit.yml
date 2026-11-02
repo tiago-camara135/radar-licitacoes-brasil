@@ -2,8 +2,7 @@ name: Production Tender Intelligence E2E Audit
 
 on:
   push:
-    branches:
-      - prod-e2e-audit-20261102
+    branches: [prod-e2e-audit-20261102]
 
 permissions:
   contents: read
@@ -17,12 +16,13 @@ jobs:
         shell: bash
         run: |
           node <<'NODE'
+          import crypto from 'node:crypto';
           const base='https://radarlicitacoesbrasil.com.br';
           const origin=base;
-          const tender={cnpj:'28741098000157',year:2026,sequence:134};
-          const officialPdf='https://pncp.gov.br/pncp-api/v1/orgaos/28741098000157/compras/2026/134/arquivos/1';
+          const tender={cnpj:'18348094000150',year:2026,sequence:97};
+          const realPdfMirror='https://licitar-generated-documents.s3.sa-east-1.amazonaws.com/682/55202fef-f1a4-4b6c-93c4-9a628a1c5eaa.pdf';
           const email=`rlb-prod-audit-${Date.now()}@example.test`;
-          const password='RLB-Prod-Audit-2026!X9';
+          const password=`RLB-${crypto.randomUUID()}-Aa9!`;
           let cookie='';
 
           async function req(path,{method='GET',body,headers={},timeout=60000}={}){
@@ -30,16 +30,13 @@ jobs:
             if(body!==undefined)h['content-type']='application/json';
             if(cookie)h.cookie=cookie;
             const r=await fetch(base+path,{method,headers:h,body:body===undefined?undefined:JSON.stringify(body),signal:AbortSignal.timeout(timeout),redirect:'manual'});
-            const set=r.headers.get('set-cookie');
-            if(set)cookie=set.split(';')[0];
-            const text=await r.text();
-            let data={};try{data=text?JSON.parse(text):{}}catch{data={text:text.slice(0,1000)}}
-            return {r,data,text};
+            const set=r.headers.get('set-cookie');if(set)cookie=set.split(';')[0];
+            const text=await r.text();let data={};try{data=text?JSON.parse(text):{}}catch{data={text:text.slice(0,1000)}}
+            return{r,data,text};
           }
-
-          function assert(cond,msg){if(!cond)throw new Error(msg)}
+          const assert=(cond,msg)=>{if(!cond)throw new Error(msg)};
           console.log('E2E target:',base);
-          console.log('Real tender: 28741098000157-1-000134/2026');
+          console.log('Real tender: 18348094000150-1-000097/2026 - Aimorés/MG');
 
           const health=await req('/api/health',{timeout:30000});
           console.log('health:',health.r.status,JSON.stringify(health.data));
@@ -47,49 +44,35 @@ jobs:
 
           const reg=await req('/api/auth/register',{method:'POST',body:{email,password},headers:{origin},timeout:30000});
           console.log('register:',reg.r.status,reg.data?.user?.email||reg.data?.error||'');
-          assert(reg.r.status===201,'registration failed: '+reg.text.slice(0,500));
-          assert(cookie,'session cookie was not issued');
-
+          assert(reg.r.status===201,'registration failed');
+          assert(cookie,'session cookie missing');
           const me=await req('/api/me',{timeout:30000});
-          console.log('me:',me.r.status,me.data?.user?.email||me.data?.error||'');
           assert(me.r.status===200&&me.data?.user?.email===email,'authenticated session failed');
 
           const started=Date.now();
           let analysis=await req('/api/tender-intelligence/analyze',{method:'POST',body:tender,headers:{origin},timeout:240000});
-          console.log('automatic analysis status:',analysis.r.status,'elapsed_ms=',Date.now()-started);
-          if(analysis.r.status===200){
-            const result=analysis.data?.result||{};
-            console.log('automatic result:',JSON.stringify({model:result.model,read_documents:result.diagnostics?.read_documents,source_documents:(result.source_documents||[]).map(x=>x.titulo),coverage:result.diagnostics?.coverage_percent,verification_pass:result.diagnostics?.verification_pass}));
-            assert((result.diagnostics?.read_documents||0)>0,'automatic analysis returned no documents');
-            assert(result.analysis?.executive_summary,'automatic analysis returned no executive summary');
-            console.log('PRODUCTION_E2E_RESULT=AUTOMATIC_SUCCESS');
-          }else{
-            console.log('automatic error:',String(analysis.data?.error||analysis.text).slice(0,1000));
-            console.log('Testing independent PDF fallback with official PNCP document...');
-            const pdfRes=await fetch(officialPdf,{headers:{accept:'application/pdf,*/*','user-agent':'RLB-Production-E2E/1.0'},signal:AbortSignal.timeout(60000),redirect:'follow'});
+          console.log('automatic analysis:',analysis.r.status,'elapsed_ms=',Date.now()-started,analysis.data?.error||'');
+          if(analysis.r.status!==200){
+            const pdfRes=await fetch(realPdfMirror,{headers:{accept:'application/pdf,*/*','user-agent':'RLB-Production-E2E/1.0'},signal:AbortSignal.timeout(60000),redirect:'follow'});
             const pdfBuf=Buffer.from(await pdfRes.arrayBuffer());
-            console.log('official PDF fetch:',pdfRes.status,'bytes=',pdfBuf.length,'content-type=',pdfRes.headers.get('content-type'));
-            assert(pdfRes.ok,'official PDF endpoint failed: '+pdfRes.status);
-            assert(pdfBuf.subarray(0,5).toString()==='%PDF-','official document is not a PDF');
-            assert(pdfBuf.length<=18*1024*1024,'official PDF exceeds upload limit');
-
-            const up=await req('/api/tender-intelligence/upload-source',{method:'POST',headers:{origin},body:{...tender,filename:'EDITAL-SILVA-JARDIM-05-2026.pdf',base64:pdfBuf.toString('base64')},timeout:120000});
-            console.log('upload-source:',up.r.status,JSON.stringify({ok:up.data?.ok,filename:up.data?.filename,size:up.data?.size,error:up.data?.error}));
-            assert(up.r.status===201&&up.data?.token,'upload fallback source failed: '+up.text.slice(0,500));
-
-            const retryStarted=Date.now();
+            console.log('real edital PDF:',pdfRes.status,'bytes=',pdfBuf.length,'type=',pdfRes.headers.get('content-type'));
+            assert(pdfRes.ok,'real edital mirror failed');
+            assert(pdfBuf.subarray(0,5).toString()==='%PDF-','real edital is not a PDF');
+            assert(pdfBuf.length<=18*1024*1024,'real edital exceeds limit');
+            const up=await req('/api/tender-intelligence/upload-source',{method:'POST',headers:{origin},body:{...tender,filename:'EDITAL-CREDENCIAMENTO-009-2026-AIMORES.pdf',base64:pdfBuf.toString('base64')},timeout:120000});
+            console.log('upload-source:',up.r.status,JSON.stringify({ok:up.data?.ok,size:up.data?.size,error:up.data?.error}));
+            assert(up.r.status===201&&up.data?.token,'upload fallback failed');
+            const retry=Date.now();
             analysis=await req('/api/tender-intelligence/analyze',{method:'POST',body:tender,headers:{origin,'x-rlb-upload-token':up.data.token},timeout:240000});
-            console.log('PDF fallback analysis status:',analysis.r.status,'elapsed_ms=',Date.now()-retryStarted);
-            if(analysis.r.status!==200)console.log('PDF fallback error:',String(analysis.data?.error||analysis.text).slice(0,1500));
+            console.log('PDF fallback analysis:',analysis.r.status,'elapsed_ms=',Date.now()-retry,analysis.data?.error||'');
             assert(analysis.r.status===200,'PDF fallback analysis failed');
-            const result=analysis.data?.result||{};
-            console.log('PDF fallback result:',JSON.stringify({model:result.model,read_documents:result.diagnostics?.read_documents,source_documents:(result.source_documents||[]).map(x=>x.titulo),coverage:result.diagnostics?.coverage_percent,verification_pass:result.diagnostics?.verification_pass,evidence_verified:result.diagnostics?.evidence_verified,evidence_rejected:result.diagnostics?.evidence_rejected}));
-            assert((result.diagnostics?.read_documents||0)>0,'PDF fallback returned no documents');
-            assert(result.analysis?.executive_summary,'PDF fallback returned no executive summary');
             console.log('PRODUCTION_E2E_RESULT=PDF_FALLBACK_SUCCESS');
-          }
+          }else console.log('PRODUCTION_E2E_RESULT=AUTOMATIC_SUCCESS');
 
-          const logout=await req('/api/auth/logout',{method:'POST',body:{},headers:{origin},timeout:30000});
-          console.log('logout:',logout.r.status);
+          const result=analysis.data?.result||{};
+          console.log('result:',JSON.stringify({model:result.model,read_documents:result.diagnostics?.read_documents,source_documents:(result.source_documents||[]).map(x=>x.titulo),coverage:result.diagnostics?.coverage_percent,verification_pass:result.diagnostics?.verification_pass,evidence_verified:result.diagnostics?.evidence_verified,evidence_rejected:result.diagnostics?.evidence_rejected,summary_prefix:String(result.analysis?.executive_summary||'').slice(0,180)}));
+          assert((result.diagnostics?.read_documents||0)>0,'analysis returned no documents');
+          assert(String(result.analysis?.executive_summary||'').length>80,'executive summary missing');
+          await req('/api/auth/logout',{method:'POST',body:{},headers:{origin},timeout:30000});
           console.log('PRODUCTION_E2E_COMPLETE=1');
           NODE
