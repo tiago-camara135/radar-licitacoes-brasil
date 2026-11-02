@@ -8,10 +8,14 @@ test('production starts through tender intelligence layer and preserves global o
   const pkg=JSON.parse(read('package.json'));
   const runtime=read('production-v25.mjs');
   const guard=read('production-v24.mjs');
-  assert.equal(pkg.version,'2.12.0');
+  assert.equal(pkg.version,'2.12.1');
   assert.equal(pkg.scripts.start,'node production-v25.mjs');
   assert.match(runtime,/await import\('\.\/production-v24\.mjs'\)/);
   assert.match(runtime,/handleTenderIntelligenceRoute/);
+  assert.match(runtime,/normalizeTenderOrigin/);
+  assert.match(runtime,/configuredOrigins/);
+  assert.match(runtime,/requestOrigin/);
+  assert.match(runtime,/origin_not_authorized/);
   assert.match(guard,/await import\('\.\/production-v23\.mjs'\)/);
   assert.match(guard,/origin_not_authorized/);
   assert.match(guard,/x-forwarded-proto/);
