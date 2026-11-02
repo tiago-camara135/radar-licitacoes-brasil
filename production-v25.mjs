@@ -3,28 +3,26 @@ import http from 'node:http';
 import { syncBuiltinESMExports } from 'node:module';
 import { initTenderIntelligence, handleTenderIntelligenceRoute } from './tender-intelligence-v1.mjs';
 
-const nativeReadFileSync=fs.readFileSync.bind(fs);
 const nativeCreateServer=http.createServer.bind(http);
-const tenderAiJs=nativeReadFileSync(new URL('./tender-intelligence-v1.js',import.meta.url),'utf8');
-const tenderAiCss=nativeReadFileSync(new URL('./tender-intelligence-v1.css',import.meta.url),'utf8');
+const sourceJs=fs.readFileSync(new URL('./source-transparency-v1.js',import.meta.url));
+const sourceCss=fs.readFileSync(new URL('./source-transparency-v1.css',import.meta.url));
+const tenderAiJs=fs.readFileSync(new URL('./tender-intelligence-v1.js',import.meta.url));
+const tenderAiCss=fs.readFileSync(new URL('./tender-intelligence-v1.css',import.meta.url));
+const combinedSourceJs=Buffer.concat([sourceJs,Buffer.from('\n\n'),tenderAiJs]);
+const combinedSourceCss=Buffer.concat([sourceCss,Buffer.from('\n\n'),tenderAiCss]);
 
-new Function(tenderAiJs);
+/* Valida cedo a camada de navegador. A interface é anexada ao asset explícito
+   de transparência, já carregado pelo HTML e servido deterministicamente pelo
+   runtime. Isso evita reabrir a cadeia histórica de composição do app-v2.js. */
+new Function(combinedSourceJs.toString('utf8'));
 
-fs.readFileSync=function tenderIntelligenceReadFileSync(path,...args){
-  const value=path instanceof URL?path.pathname:String(path);
-  const data=nativeReadFileSync(path,...args);
-  if(value.endsWith('/app-v2.js')||value.endsWith('\\app-v2.js')){
-    const source=Buffer.isBuffer(data)?data.toString('utf8'):String(data);
-    const finalJs=source+'\n\n'+tenderAiJs;
-    return Buffer.isBuffer(data)?Buffer.from(finalJs):finalJs;
-  }
-  if(value.endsWith('/app-v2.css')||value.endsWith('\\app-v2.css')){
-    const source=Buffer.isBuffer(data)?data.toString('utf8'):String(data);
-    const finalCss=source+'\n\n'+tenderAiCss;
-    return Buffer.isBuffer(data)?Buffer.from(finalCss):finalCss;
-  }
-  return data;
-};
+function asset(res,type,body){
+  res.statusCode=200;
+  res.setHeader('Content-Type',type);
+  res.setHeader('Cache-Control','no-store, no-cache, must-revalidate, max-age=0');
+  res.setHeader('X-RLB-Tender-Intelligence','v1');
+  res.end(body);
+}
 
 http.createServer=function tenderIntelligenceCreateServer(...args){
   const listenerIndex=args.findIndex(x=>typeof x==='function');
@@ -33,6 +31,8 @@ http.createServer=function tenderIntelligenceCreateServer(...args){
   args[listenerIndex]=async(req,res)=>{
     try{
       const url=new URL(req.url||'/','http://localhost');
+      if(req.method==='GET'&&url.pathname==='/assets/source-transparency-v1.js')return asset(res,'application/javascript; charset=utf-8',combinedSourceJs);
+      if(req.method==='GET'&&url.pathname==='/assets/source-transparency-v1.css')return asset(res,'text/css; charset=utf-8',combinedSourceCss);
       if(await handleTenderIntelligenceRoute(req,res,url))return;
     }catch(error){
       console.error('tender intelligence middleware error:',error?.stack||error);
@@ -47,4 +47,4 @@ http.createServer=function tenderIntelligenceCreateServer(...args){
 syncBuiltinESMExports();
 await import('./production-v24.mjs');
 await initTenderIntelligence();
-console.log('tender intelligence v1 frontend ready: grounded edital analysis modal active');
+console.log('tender intelligence v1 frontend ready: grounded edital analysis modal active via source transparency asset');
