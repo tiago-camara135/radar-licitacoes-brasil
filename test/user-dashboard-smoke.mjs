@@ -34,16 +34,14 @@ try{
   r=await get('/api/dashboard/overview',c1);assert.equal(r.status,200);const tracked=await r.json();assert.ok(tracked.tracking.some(x=>Number(x.id)===trackingId));assert.equal(tracked.funnel.preparando_documentacao,1);
   r=await get('/api/dashboard/overview',c2);assert.equal(r.status,200);const isolated=await r.json();assert.equal(isolated.tracking.length,0,'tracking must be isolated by user_id');
 
-  r=await post('/api/dashboard/preferences',{hidden_widgets:['funnel','ai','passwords']},c1);assert.equal(r.status,200);j=await r.json();assert.deepEqual(j.preferences.hidden_widgets.sort(),['ai','funnel']);
-  r=await get('/api/dashboard/overview',c1);assert.equal(r.status,200);const prefs=await r.json();assert.deepEqual([...prefs.preferences.hidden_widgets].sort(),['ai','funnel']);
-
   r=await post('/api/dashboard/tracking',{cnpj,year,sequence,status:'participando'},c1,'https://cross-origin.invalid');assert.equal(r.status,403,'cross-origin dashboard write must be blocked');
 
-  r=await get('/assets/stability-ui-v1.js');assert.equal(r.status,200);assert.equal(r.headers.get('x-rlb-user-dashboard'),'v1');const js=await r.text();assert.match(js,/__rlbUserDashboardV1/);assert.match(js,/Oportunidades recomendadas/);assert.match(js,/data-view='dashboard'|dataset\.view='dashboard'/);
-  r=await get('/assets/user-dashboard-v1.css');assert.equal(r.status,200);assert.equal(r.headers.get('x-rlb-user-dashboard'),'v1');const css=await r.text();assert.match(css,/\.db-kpis/);assert.match(css,/html\[data-theme="dark"\]/);assert.match(css,/html:not\(\[data-theme="dark"\]\)/);
+  r=await get('/assets/stability-ui-v1.js');assert.equal(r.status,200);assert.equal(r.headers.get('x-rlb-user-dashboard'),'v2');const js=await r.text();
+  assert.match(js,/__rlbUserDashboardV2/);assert.match(js,/O que precisa da sua atenção/);assert.match(js,/Oportunidades para você/);assert.match(js,/Minha Operação/);assert.match(js,/Licitações acompanhadas/);assert.match(js,/\.slice\(0,3\)/);assert.doesNotMatch(js,/Escolha o que aparece no seu dashboard/);
+  r=await get('/assets/user-dashboard-v2.css');assert.equal(r.status,200);assert.equal(r.headers.get('x-rlb-user-dashboard'),'v2');const css=await r.text();assert.match(css,/\.db-kpis/);assert.match(css,/\.op-grid/);assert.match(css,/html\[data-theme="dark"\]/);assert.match(css,/html:not\(\[data-theme="dark"\]\)/);
 
   r=await req('/api/dashboard/overview');assert.equal(r.status,401,'anonymous dashboard must be blocked');
-  console.log('user dashboard smoke passed: grounded recommendations, tracking, preferences, user isolation, adaptive asset and origin guard verified');
+  console.log('user dashboard v2 smoke passed: clean decision view, dedicated operation workspace, tracking, isolation, adaptive asset and origin guard verified');
 }finally{
   await db.query('DELETE FROM monitored_procurements WHERE pncp_id=$1',[pncpId]).catch(()=>{});
   if(u1||u2)await db.query('DELETE FROM users WHERE id = ANY($1::bigint[])',[[u1,u2].filter(Boolean)]).catch(()=>{});
