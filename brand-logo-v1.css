@@ -14,3 +14,40 @@
   color:transparent!important;
   font-size:0!important;
 }
+
+/* Padronização visual do cabeçalho interno com a identidade da tela de login. */
+html body .sidebar .sidebar-inner .sidebar-brand .brand-mark.small{
+  width:42px!important;
+  height:42px!important;
+  flex:0 0 42px!important;
+  border-radius:13px!important;
+  background:var(--rlb-brand-icon) center/contain no-repeat!important;
+  color:transparent!important;
+  font-size:0!important;
+  letter-spacing:0!important;
+  box-shadow:0 8px 22px color-mix(in srgb,var(--cyan) 18%,transparent)!important;
+}
+html body .sidebar .sidebar-inner .sidebar-brand>div:last-child>strong{
+  font-size:0!important;
+  line-height:1.15!important;
+  color:var(--text)!important;
+}
+html body .sidebar .sidebar-inner .sidebar-brand>div:last-child>strong::after{
+  content:"Radar de Licitações Brasil";
+  font-size:15px;
+  font-weight:900;
+  letter-spacing:-.02em;
+  white-space:nowrap;
+}
+html body .sidebar .sidebar-inner .sidebar-brand>div:last-child>span{
+  font-size:0!important;
+  margin-top:2px!important;
+  color:var(--muted)!important;
+}
+html body .sidebar .sidebar-inner .sidebar-brand>div:last-child>span::after{
+  content:"Inteligência para compras públicas";
+  font-size:9px;
+  font-weight:500;
+  letter-spacing:0;
+  white-space:nowrap;
+}
