@@ -14,7 +14,7 @@ test('production starts through recovery history, delivery, recovery email, acco
   const precision=read('tender-intelligence-precision-v1.mjs');
   const resilience=read('gemini-reviewer-resilience-v1.mjs');
   const guard=read('production-v24.mjs');
-  assert.equal(pkg.version,'2.15.0');
+  assert.equal(pkg.version,'2.15.1');
   assert.equal(pkg.scripts.start,'node production-v29.mjs');
   assert.match(historyRuntime,/await import\('\.\/production-v28\.mjs'\)/);
   assert.match(historyRuntime,/handleAccountRecoveryAdminHistoryRoute/);
