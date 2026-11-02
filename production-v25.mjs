@@ -2,6 +2,9 @@ import fs from 'node:fs';
 import http from 'node:http';
 import { syncBuiltinESMExports } from 'node:module';
 import { initTenderIntelligencePrecision, handleTenderIntelligencePrecisionRoute } from './tender-intelligence-precision-v1.mjs';
+import { installGeminiReviewerResilience } from './gemini-reviewer-resilience-v1.mjs';
+
+installGeminiReviewerResilience();
 
 const nativeCreateServer=http.createServer.bind(http);
 const sourceJs=fs.readFileSync(new URL('./source-transparency-v1.js',import.meta.url));
@@ -42,7 +45,7 @@ function asset(res,type,body){
   res.statusCode=200;
   res.setHeader('Content-Type',type);
   res.setHeader('Cache-Control','no-store, no-cache, must-revalidate, max-age=0');
-  res.setHeader('X-RLB-Tender-Intelligence','v2.1');
+  res.setHeader('X-RLB-Tender-Intelligence','v2.2');
   res.end(body);
 }
 
@@ -70,5 +73,5 @@ http.createServer=function tenderIntelligenceCreateServer(...args){
 syncBuiltinESMExports();
 await import('./production-v24.mjs');
 await initTenderIntelligencePrecision();
-console.log('tender intelligence v2.1 frontend ready: verified report + authoritative PNCP reconciliation + adaptive themes');
+console.log('tender intelligence v2.2 frontend ready: verified report + PNCP reconciliation + resilient reviewer fallback + adaptive themes');
 console.log('tender intelligence origin guard v1 ready: runtime-host/configured-origin normalization active');
