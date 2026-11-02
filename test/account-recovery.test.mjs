@@ -39,8 +39,7 @@ test('delivery v3 normalizes recipient without exposing raw email in correlation
 
 test('runtime preserves recovery chain and exposes administrative delivery history safely',()=>{
   const pkg=JSON.parse(read('package.json'));
-  const dashboardV2Runtime=read('production-v31.mjs');
-  const dashboardRuntime=read('production-v30.mjs');
+  const activeRuntime=read('production-v31.mjs');
   const historyRuntime=read('production-v29.mjs');
   const historyBackend=read('account-recovery-admin-history-v1.mjs');
   const historyFrontend=read('account-recovery-admin-history-v1.js');
@@ -53,8 +52,11 @@ test('runtime preserves recovery chain and exposes administrative delivery histo
   const frontend=read('account-recovery-v1.js');
   assert.equal(pkg.version,'2.17.0');
   assert.equal(pkg.scripts.start,'node production-v31.mjs');
-  assert.match(dashboardV2Runtime,/await import\('\.\/production-v30\.mjs'\)/);
-  assert.match(dashboardRuntime,/await import\('\.\/production-v29\.mjs'\)/);
+  assert.match(activeRuntime,/await import\('\.\/production-v29\.mjs'\)/);
+  assert.match(activeRuntime,/handleUserDashboardRoute/);
+  assert.match(activeRuntime,/await initUserDashboard\(\)/);
+  assert.doesNotMatch(activeRuntime,/user-dashboard-v2\.js/);
+  assert.doesNotMatch(activeRuntime,/user-operation-pipeline-v1/);
   assert.match(historyRuntime,/await import\('\.\/production-v28\.mjs'\)/);
   assert.match(historyRuntime,/handleAccountRecoveryAdminHistoryRoute/);
   assert.match(historyRuntime,/X-RLB-Recovery-History/);
