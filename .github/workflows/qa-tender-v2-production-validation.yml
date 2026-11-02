@@ -12,12 +12,12 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 8
     steps:
-      - name: Execute authenticated V2 analysis against production
+      - name: Execute authenticated V2.1 analysis against production
         env:
           BASE_URL: https://radar-licitacoes-brasil-app.onrender.com
         run: |
           set -euo pipefail
-          export EMAIL="qa-v2-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}@example.com"
+          export EMAIL="qa-v21-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}@example.com"
           export PASSWORD="$(node -e "console.log(require('crypto').randomBytes(32).toString('base64url')+'Aa1!')")"
 
           node -e "require('fs').writeFileSync('/tmp/register.json', JSON.stringify({email:process.env.EMAIL,password:process.env.PASSWORD}))"
@@ -28,7 +28,7 @@ jobs:
             --data-binary @/tmp/register.json)
           test "$REGISTER_STATUS" = "201"
 
-          ANALYSIS_STATUS=$(curl -sS --max-time 210 -b /tmp/cookies.txt -c /tmp/cookies.txt -o /tmp/analysis.json -w '%{http_code}' \
+          ANALYSIS_STATUS=$(curl -sS --max-time 210 -b /tmp/cookies.txt -c /tmp/cookies.txt -D /tmp/headers.txt -o /tmp/analysis.json -w '%{http_code}' \
             -X POST "$BASE_URL/api/tender-intelligence/analyze" \
             -H "Origin: $BASE_URL" \
             -H 'Content-Type: application/json' \
@@ -38,33 +38,38 @@ jobs:
             node -e "const d=require('/tmp/analysis.json'); console.log(JSON.stringify({error:d.error||'unknown'}))"
             exit 1
           fi
+          grep -qi 'x-rlb-authoritative-reconciliation: pncp-metadata-v1' /tmp/headers.txt
 
           node <<'NODE'
           const fs=require('fs');
           const d=JSON.parse(fs.readFileSync('/tmp/analysis.json','utf8'));
-          const r=d.result||{}; const a=r.analysis||{}; const q=r.diagnostics||{};
+          const r=d.result||{}; const a=r.analysis||{}; const q=r.diagnostics||{}; const rd=r.readiness||{};
           const n=v=>Array.isArray(v)?v.length:0;
+          if(!r.analysis) throw new Error('resultado sem análise');
+          if(a.tender_overview?.estimated_value!==undefined) throw new Error('valor estimado não publicado foi mantido indevidamente');
+          if(r.procurement?.estimated_value!==undefined) throw new Error('valor estimado 0/ausente permaneceu no payload como oficial');
+          if(a.tender_overview?.estimated_value_source!=='not_published_in_pncp_metadata') throw new Error('origem do valor não foi marcada corretamente');
+          if(q.authoritative_reconciliation!=='pncp-metadata-v1') throw new Error('reconciliação autoritativa não executada');
+          const cat=(rd.requirements||[]).filter(x=>x.type==='acervo_tecnico');
+          if(cat.length) throw new Error('falso positivo CAT/Acervo Técnico ainda presente: '+JSON.stringify(cat));
           const report={
-            ok:Boolean(r.analysis),
+            ok:true,
             pncp_key:r.procurement?.pncp_key||null,
             model:r.model||null,
             confidence:a.confidence||null,
             source_documents:n(r.source_documents),
-            executive_summary_chars:String(a.executive_summary||'').length,
-            requirements:n(a.requirements),
-            critical_points:n(a.critical_points),
-            deadlines:n(a.deadlines),
-            sections:Object.keys(a).filter(k=>Array.isArray(a[k])?a[k].length>0:Boolean(a[k])).length,
-            analysis_version:q.analysis_version||q.version||null,
-            verification_pass:q.verification_pass??q.second_pass??null,
-            verified_evidence_count:q.verified_evidence_count??q.verified_evidence??null,
-            unverified_evidence_count:q.unverified_evidence_count??q.unverified_evidence??null,
-            coverage:q.coverage_percent??q.coverage??null,
-            has_readiness:Boolean(r.readiness)
+            analysis_version:q.analysis_version||null,
+            verification_pass:q.verification_pass??null,
+            evidence_verified:q.evidence_verified??null,
+            evidence_rejected:q.evidence_rejected??null,
+            coverage:q.coverage_percent??null,
+            authoritative_reconciliation:q.authoritative_reconciliation||null,
+            estimated_value_source:a.tender_overview?.estimated_value_source||null,
+            cat_false_positive_present:false,
+            readiness_requirements:n(rd.requirements)
           };
-          if(!report.ok) process.exit(2);
-          console.log('QA_ANALYSIS_RESULT='+JSON.stringify(report));
+          console.log('QA_V21_RESULT='+JSON.stringify(report));
           NODE
 
           curl -sS --max-time 20 -b /tmp/cookies.txt -X POST "$BASE_URL/api/auth/logout" -H "Origin: $BASE_URL" >/dev/null || true
-          rm -f /tmp/register.json /tmp/register-response.json /tmp/analysis.json /tmp/cookies.txt
+          rm -f /tmp/register.json /tmp/register-response.json /tmp/analysis.json /tmp/headers.txt /tmp/cookies.txt
