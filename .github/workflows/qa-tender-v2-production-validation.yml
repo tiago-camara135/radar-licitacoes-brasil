@@ -1,0 +1,70 @@
+name: QA Tender Intelligence V2 Production
+
+on:
+  push:
+    branches: [qa/tender-v2-production-validation]
+
+permissions:
+  contents: read
+
+jobs:
+  production-validation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Execute authenticated V2 analysis against production
+        env:
+          BASE_URL: https://radar-licitacoes-brasil-app.onrender.com
+        run: |
+          set -euo pipefail
+          export EMAIL="qa-v2-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}@example.com"
+          export PASSWORD="$(node -e "console.log(require('crypto').randomBytes(32).toString('base64url')+'Aa1!')")"
+
+          node -e "require('fs').writeFileSync('/tmp/register.json', JSON.stringify({email:process.env.EMAIL,password:process.env.PASSWORD}))"
+          REGISTER_STATUS=$(curl -sS --fail-with-body --max-time 30 -c /tmp/cookies.txt -o /tmp/register-response.json -w '%{http_code}' \
+            -X POST "$BASE_URL/api/auth/register" \
+            -H "Origin: $BASE_URL" \
+            -H 'Content-Type: application/json' \
+            --data-binary @/tmp/register.json)
+          test "$REGISTER_STATUS" = "201"
+
+          ANALYSIS_STATUS=$(curl -sS --max-time 210 -b /tmp/cookies.txt -c /tmp/cookies.txt -o /tmp/analysis.json -w '%{http_code}' \
+            -X POST "$BASE_URL/api/tender-intelligence/analyze" \
+            -H "Origin: $BASE_URL" \
+            -H 'Content-Type: application/json' \
+            --data '{"cnpj":"04532057000192","year":2026,"sequence":9}')
+          if [ "$ANALYSIS_STATUS" != "200" ]; then
+            echo "analysis HTTP $ANALYSIS_STATUS"
+            node -e "const d=require('/tmp/analysis.json'); console.log(JSON.stringify({error:d.error||'unknown'}))"
+            exit 1
+          fi
+
+          node <<'NODE'
+          const fs=require('fs');
+          const d=JSON.parse(fs.readFileSync('/tmp/analysis.json','utf8'));
+          const r=d.result||{}; const a=r.analysis||{}; const q=r.diagnostics||{};
+          const n=v=>Array.isArray(v)?v.length:0;
+          const report={
+            ok:Boolean(r.analysis),
+            pncp_key:r.procurement?.pncp_key||null,
+            model:r.model||null,
+            confidence:a.confidence||null,
+            source_documents:n(r.source_documents),
+            executive_summary_chars:String(a.executive_summary||'').length,
+            requirements:n(a.requirements),
+            critical_points:n(a.critical_points),
+            deadlines:n(a.deadlines),
+            sections:Object.keys(a).filter(k=>Array.isArray(a[k])?a[k].length>0:Boolean(a[k])).length,
+            analysis_version:q.analysis_version||q.version||null,
+            verification_pass:q.verification_pass??q.second_pass??null,
+            verified_evidence_count:q.verified_evidence_count??q.verified_evidence??null,
+            unverified_evidence_count:q.unverified_evidence_count??q.unverified_evidence??null,
+            coverage:q.coverage_percent??q.coverage??null,
+            has_readiness:Boolean(r.readiness)
+          };
+          if(!report.ok) process.exit(2);
+          console.log('QA_ANALYSIS_RESULT='+JSON.stringify(report));
+          NODE
+
+          curl -sS --max-time 20 -b /tmp/cookies.txt -X POST "$BASE_URL/api/auth/logout" -H "Origin: $BASE_URL" >/dev/null || true
+          rm -f /tmp/register.json /tmp/register-response.json /tmp/analysis.json /tmp/cookies.txt
