@@ -1,0 +1,13 @@
+#dbRoot [data-db-analyze]{display:none!important}
+#opRoot .op-funnel{grid-template-columns:repeat(9,minmax(92px,1fr));gap:7px;overflow-x:auto;padding:2px 1px 7px;scrollbar-width:thin}
+#opRoot .op-funnel button{min-width:92px;transition:border-color .16s ease,background .16s ease,box-shadow .16s ease,transform .16s ease}
+#opRoot .op-funnel button:hover{transform:translateY(-1px);border-color:rgba(45,212,191,.38)}
+#opRoot .op-funnel button.active{border-color:rgba(45,212,191,.65);background:rgba(45,212,191,.10);box-shadow:0 0 0 2px rgba(45,212,191,.08) inset}
+#opRoot .op-funnel button.active span{color:#5eead4;font-weight:850}
+#opRoot .op-funnel button.active b{color:#5eead4}
+#opRoot .op-funnel-foot{margin-top:7px;font-size:9px;line-height:1.4}
+#opRoot .op-stage-control{display:grid;gap:4px;min-width:185px}
+#opRoot .op-stage-control>span{font-size:8px;font-weight:850;letter-spacing:.05em;text-transform:uppercase;color:var(--muted,#94a3b8)}
+#opRoot .op-stage-control select{width:100%;max-width:none!important;min-width:185px;font-size:9px!important;font-weight:700}
+@media(max-width:900px){#opRoot .op-funnel{grid-template-columns:repeat(9,minmax(105px,1fr))}}
+@media(max-width:620px){#opRoot .op-stage-control{width:100%;min-width:0}#opRoot .op-stage-control select{min-width:0}#opRoot .op-row-actions{align-items:flex-end}}
