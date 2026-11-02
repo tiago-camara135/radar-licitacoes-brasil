@@ -49,7 +49,7 @@ test('runtime preserves recovery chain and exposes administrative delivery histo
   const hotfix=read('account-recovery-email-v2.mjs');
   const backend=read('account-recovery-v1.mjs');
   const frontend=read('account-recovery-v1.js');
-  assert.equal(pkg.version,'2.15.0');
+  assert.equal(pkg.version,'2.15.1');
   assert.equal(pkg.scripts.start,'node production-v29.mjs');
   assert.match(historyRuntime,/await import\('\.\/production-v28\.mjs'\)/);
   assert.match(historyRuntime,/handleAccountRecoveryAdminHistoryRoute/);
@@ -61,6 +61,11 @@ test('runtime preserves recovery chain and exposes administrative delivery histo
   assert.match(historyFrontend,/Histórico de recuperação/);
   assert.match(historyFrontend,/Consultar Resend/);
   assert.match(historyFrontend,/Aceito pelo Resend/);
+  assert.match(historyFrontend,/data-rh-tab/);
+  assert.match(historyFrontend,/\.acc-nav/);
+  assert.match(historyFrontend,/#accPanel/);
+  assert.match(historyFrontend,/Recuperações/);
+  assert.doesNotMatch(historyFrontend,/view\.appendChild\(/,'history must not be appended outside the native Admin shell');
   assert.match(historyCss,/html:not\(\[data-theme="dark"\]\)/);
   assert.match(historyCss,/html\[data-theme="dark"\]/);
   assert.match(deliveryRuntime,/await import\('\.\/production-v27\.mjs'\)/);
