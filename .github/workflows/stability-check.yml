@@ -43,6 +43,7 @@ jobs:
           NODE_ENV: test
           PORT: "10000"
           APP_ORIGIN: "https://configured.example.test"
+          ACCOUNT_RECOVERY_SECRET: "ci-only-account-recovery-secret-not-for-production"
           RLB_MIGRATION_RUN: "0"
           RLB_MIGRATION_FREEZE: "0"
           PNCP_MAX_RETRIES: "0"
@@ -72,6 +73,11 @@ jobs:
             exit 1
           fi
           if ! node test/tender-intelligence-runtime-smoke.mjs; then
+            echo "--- server log ---"
+            cat /tmp/rlb-integration.log
+            exit 1
+          fi
+          if ! node test/account-recovery-smoke.mjs; then
             echo "--- server log ---"
             cat /tmp/rlb-integration.log
             exit 1
