@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import http from 'node:http';
 import { syncBuiltinESMExports } from 'node:module';
-import { initTenderIntelligenceV2, handleTenderIntelligenceV2Route } from './tender-intelligence-v2.mjs';
+import { initTenderIntelligencePrecision, handleTenderIntelligencePrecisionRoute } from './tender-intelligence-precision-v1.mjs';
 
 const nativeCreateServer=http.createServer.bind(http);
 const sourceJs=fs.readFileSync(new URL('./source-transparency-v1.js',import.meta.url));
@@ -42,7 +42,7 @@ function asset(res,type,body){
   res.statusCode=200;
   res.setHeader('Content-Type',type);
   res.setHeader('Cache-Control','no-store, no-cache, must-revalidate, max-age=0');
-  res.setHeader('X-RLB-Tender-Intelligence','v2');
+  res.setHeader('X-RLB-Tender-Intelligence','v2.1');
   res.end(body);
 }
 
@@ -56,7 +56,7 @@ http.createServer=function tenderIntelligenceCreateServer(...args){
       if(req.method==='GET'&&url.pathname==='/assets/source-transparency-v1.js')return asset(res,'application/javascript; charset=utf-8',combinedSourceJs);
       if(req.method==='GET'&&url.pathname==='/assets/source-transparency-v1.css')return asset(res,'text/css; charset=utf-8',combinedSourceCss);
       if(normalizeTenderOrigin(req,res,url))return;
-      if(await handleTenderIntelligenceV2Route(req,res,url))return;
+      if(await handleTenderIntelligencePrecisionRoute(req,res,url))return;
     }catch(error){
       console.error('tender intelligence middleware error:',error?.stack||error);
       if(!res.headersSent){res.statusCode=500;res.setHeader('Content-Type','application/json; charset=utf-8');res.setHeader('Cache-Control','no-store');res.end(JSON.stringify({error:'Erro interno na Análise Inteligente de Edital.'}))}else try{res.end()}catch{}
@@ -69,6 +69,6 @@ http.createServer=function tenderIntelligenceCreateServer(...args){
 
 syncBuiltinESMExports();
 await import('./production-v24.mjs');
-await initTenderIntelligenceV2();
-console.log('tender intelligence v2 frontend ready: complete verified report + adaptive light/dark theme');
+await initTenderIntelligencePrecision();
+console.log('tender intelligence v2.1 frontend ready: verified report + authoritative PNCP reconciliation + adaptive themes');
 console.log('tender intelligence origin guard v1 ready: runtime-host/configured-origin normalization active');
