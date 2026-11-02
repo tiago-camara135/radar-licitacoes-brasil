@@ -14,7 +14,7 @@ const combinedAdminJs=Buffer.concat([adminJs,Buffer.from('\n\n'),recoveryJs,Buff
 const combinedAdminCss=Buffer.concat([adminCss,Buffer.from('\n\n'),recoveryCss,Buffer.from('\n\n'),historyCss]);
 new Function(combinedAdminJs.toString('utf8'));
 
-function asset(res,type,body){res.statusCode=200;res.setHeader('Content-Type',type);res.setHeader('Cache-Control','no-store, no-cache, must-revalidate, max-age=0');res.setHeader('X-Content-Type-Options','nosniff');res.setHeader('X-RLB-Recovery-History','v1');res.end(body)}
+function asset(res,type,body){res.statusCode=200;res.setHeader('Content-Type',type);res.setHeader('Cache-Control','no-store, no-cache, must-revalidate, max-age=0');res.setHeader('X-Content-Type-Options','nosniff');res.setHeader('X-RLB-Account-Recovery','v1');res.setHeader('X-RLB-Recovery-History','v1');res.end(body)}
 
 http.createServer=function recoveryHistoryCreateServer(...args){
   const listenerIndex=args.findIndex(x=>typeof x==='function');
