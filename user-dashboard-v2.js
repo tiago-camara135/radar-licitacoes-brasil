@@ -2,7 +2,7 @@
 'use strict';
 if(window.__rlbUserDashboardV2)return;window.__rlbUserDashboardV2=true;
 const $=(s,r=document)=>r.querySelector(s),$$=(s,r=document)=>Array.from(r.querySelectorAll(s));
-const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot',"'":'&#39;'}[c]));
 const num=v=>Number(v||0).toLocaleString('pt-BR');
 const money=v=>v==null||!Number.isFinite(Number(v))?'Valor não informado':Number(v).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
 const when=v=>{if(!v)return'—';const d=new Date(v);return Number.isNaN(d.getTime())?'—':d.toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'})};
@@ -19,7 +19,7 @@ function installNav(){const root=$('#mainNav');if(!root)return{};const first=roo
 function makeView(id,rootId,placeholder){let v=$('#'+id);if(v)return v;const main=$('main.main');if(!main)return null;v=document.createElement('section');v.id=id;v.className='view db-view';v.innerHTML=`<div id="${rootId}"><div class="db-loading"><i></i><b>${esc(placeholder)}</b></div></div>`;const radar=$('#view-radar');main.insertBefore(v,radar||main.firstChild);return v}
 function installViews(){return{dashboard:makeView('view-dashboard','dbRoot','Preparando seu resumo…'),operation:makeView('view-operation','opRoot','Preparando sua operação…')}}
 function openView(name){const b=$(`#mainNav [data-view="${name}"]`);if(b){b.click();return}const v=$('#view-'+name);if(v){$$('.view').forEach(x=>x.classList.remove('active'));v.classList.add('active')}}
-function setHeader(title,subtitle){if($('#pageTitle'))$('#pageTitle'].textContent=title;if($('#pageSubtitle'))$('#pageSubtitle'].textContent=subtitle}
+function setHeader(title,subtitle){if($('#pageTitle'))$('#pageTitle').textContent=title;if($('#pageSubtitle'))$('#pageSubtitle').textContent=subtitle}
 function scoreClass(n){return Number(n)>=85?'good':Number(n)>=70?'warn':'bad'}
 function daysUntil(v){const t=new Date(v).getTime()-Date.now();return Number.isFinite(t)?Math.ceil(t/86400000):null}
 function metric(label,value,sub,tone=''){return `<article class="db-stat ${tone}"><span>${esc(label)}</span><b>${esc(value)}</b><small>${esc(sub)}</small></article>`}
