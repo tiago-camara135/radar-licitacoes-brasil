@@ -1,0 +1,38 @@
+name: PNCP Direct Diagnostic
+
+on:
+  push:
+    branches: [prod-e2e-audit-20261102]
+
+permissions:
+  contents: read
+
+jobs:
+  pncp-direct:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Probe PNCP document endpoints directly
+        shell: bash
+        run: |
+          set +e
+          urls=(
+            "https://pncp.gov.br/api/pncp/v1/orgaos/18348094000150/compras/2026/97/arquivos"
+            "https://www.pncp.gov.br/api/pncp/v1/orgaos/18348094000150/compras/2026/97/arquivos"
+            "https://pncp.gov.br/pncp-api/v1/orgaos/18348094000150/compras/2026/97/arquivos"
+            "https://www.pncp.gov.br/pncp-api/v1/orgaos/18348094000150/compras/2026/97/arquivos"
+            "https://pncp.gov.br/api/consulta/v1/orgaos/18348094000150/compras/2026/97"
+          )
+          for u in "${urls[@]}"; do
+            echo "===== $u ====="
+            curl -sS -L --max-time 25 -D /tmp/h -o /tmp/b -A 'Mozilla/5.0 RadarLicitacoesBrasil-Diagnostic/1.0' -H 'Accept: */*' "$u"
+            rc=$?
+            echo "curl_exit=$rc"
+            head -40 /tmp/h || true
+            echo "body_bytes=$(wc -c </tmp/b 2>/dev/null || echo 0)"
+            head -c 500 /tmp/b 2>/dev/null || true
+            echo
+          done
+          echo '===== DNS ====='
+          getent ahosts pncp.gov.br || true
+          getent ahosts www.pncp.gov.br || true
