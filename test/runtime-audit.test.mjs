@@ -13,10 +13,12 @@ test('health endpoint performs a real PostgreSQL probe and fails closed',()=>{
   assert.match(runtime,/url\.pathname==='\/api\/health'/);
 });
 
-test('PNCP document requests use bounded retries and backend failover',()=>{
+test('PNCP document requests use bounded retries, backend failover and independent source fallback',()=>{
   const runtime=read('production-v31.mjs');
   const resilience=read('pncp-document-resilience-v1.mjs');
-  assert.match(runtime,/installPncpDocumentResilience\(\)/);
+  assert.match(runtime,/createResilientPncpDocumentFetch\(nativeFetch/);
+  assert.match(runtime,/discoverOriginDocuments/);
+  assert.match(runtime,/upload-source/);
   assert.match(resilience,/DEFAULT_PRIMARY_ATTEMPTS=3/);
   assert.match(resilience,/DEFAULT_FALLBACK_ATTEMPTS=2/);
   assert.match(resilience,/RETRYABLE_STATUSES=new Set\(\[408,425,429,500,502,503,504\]\)/);
