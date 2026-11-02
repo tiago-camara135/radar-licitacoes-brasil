@@ -6,6 +6,11 @@ import { initAccountRecovery,handleAccountRecoveryRoute } from './account-recove
 const nativeCreateServer=http.createServer.bind(http);
 const recoveryJs=fs.readFileSync(new URL('./account-recovery-v1.js',import.meta.url));
 const recoveryCss=fs.readFileSync(new URL('./account-recovery-v1.css',import.meta.url));
+const adminJs=fs.readFileSync(new URL('./admin-user-support-v1.js',import.meta.url));
+const adminCss=fs.readFileSync(new URL('./admin-user-support-v1.css',import.meta.url));
+const combinedAdminJs=Buffer.concat([adminJs,Buffer.from('\n\n'),recoveryJs]);
+const combinedAdminCss=Buffer.concat([adminCss,Buffer.from('\n\n'),recoveryCss]);
+new Function(combinedAdminJs.toString('utf8'));
 
 function asset(res,type,body){res.statusCode=200;res.setHeader('Content-Type',type);res.setHeader('Cache-Control','no-store, no-cache, must-revalidate, max-age=0');res.setHeader('X-Content-Type-Options','nosniff');res.setHeader('X-RLB-Account-Recovery','v1');res.end(body)}
 
@@ -16,6 +21,8 @@ http.createServer=function accountRecoveryCreateServer(...args){
   args[listenerIndex]=async(req,res)=>{
     try{
       const url=new URL(req.url||'/','http://localhost');
+      if(req.method==='GET'&&url.pathname==='/assets/admin-user-support-v1.js')return asset(res,'application/javascript; charset=utf-8',combinedAdminJs);
+      if(req.method==='GET'&&url.pathname==='/assets/admin-user-support-v1.css')return asset(res,'text/css; charset=utf-8',combinedAdminCss);
       if(req.method==='GET'&&url.pathname==='/assets/account-recovery-v1.js')return asset(res,'application/javascript; charset=utf-8',recoveryJs);
       if(req.method==='GET'&&url.pathname==='/assets/account-recovery-v1.css')return asset(res,'text/css; charset=utf-8',recoveryCss);
       if(await handleAccountRecoveryRoute(req,res,url))return;
