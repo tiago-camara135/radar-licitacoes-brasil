@@ -20,8 +20,17 @@ assert.match(css,/\.tender-ai-trigger/);
 assert.match(css,/\.tai-modal/);
 assert.match(css,/source-transparency/i);
 
-const unauth=await get('/api/tender-intelligence/analyze',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({cnpj:'00000000000000',year:2026,sequence:1})});
-assert.equal(unauth.status,401);
-const body=await unauth.json();
-assert.match(String(body.error||''),/login/i);
-console.log('tender intelligence runtime smoke passed');
+const payload=JSON.stringify({cnpj:'00000000000000',year:2026,sequence:1});
+const browserOrigin=await get('/api/tender-intelligence/analyze',{method:'POST',headers:{'content-type':'application/json',origin:base},body:payload});
+assert.equal(browserOrigin.status,401,'origem do host real deve passar pelo guard e chegar à autenticação');
+const browserBody=await browserOrigin.json();
+assert.match(String(browserBody.error||''),/login/i);
+
+const crossOrigin=await get('/api/tender-intelligence/analyze',{method:'POST',headers:{'content-type':'application/json',origin:'https://cross-origin.invalid'},body:payload});
+assert.equal(crossOrigin.status,403,'origem externa deve permanecer bloqueada');
+const crossBody=await crossOrigin.json();
+assert.equal(crossBody.code,'origin_not_authorized');
+
+const noOrigin=await get('/api/tender-intelligence/analyze',{method:'POST',headers:{'content-type':'application/json'},body:payload});
+assert.equal(noOrigin.status,401,'cliente interno sem Origin continua compatível e autenticado pelo handler final');
+console.log('tender intelligence runtime smoke passed: host real aceito, cross-origin bloqueado');
