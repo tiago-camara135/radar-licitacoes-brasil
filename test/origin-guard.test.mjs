@@ -4,10 +4,9 @@ import fs from 'node:fs';
 
 const read=p=>fs.readFileSync(new URL('../'+p,import.meta.url),'utf8');
 
-test('production starts through dashboard v2, dashboard backend, recovery history, delivery, recovery email, account recovery, tender intelligence and reviewer resilience layers',()=>{
+test('production starts through backend-only tracking, recovery history, delivery, recovery email, account recovery, tender intelligence and reviewer resilience layers',()=>{
   const pkg=JSON.parse(read('package.json'));
-  const dashboardV2Runtime=read('production-v31.mjs');
-  const dashboardRuntime=read('production-v30.mjs');
+  const activeRuntime=read('production-v31.mjs');
   const historyRuntime=read('production-v29.mjs');
   const deliveryRuntime=read('production-v28.mjs');
   const recoveryEmailRuntime=read('production-v27.mjs');
@@ -18,11 +17,12 @@ test('production starts through dashboard v2, dashboard backend, recovery histor
   const guard=read('production-v24.mjs');
   assert.equal(pkg.version,'2.17.0');
   assert.equal(pkg.scripts.start,'node production-v31.mjs');
-  assert.match(dashboardV2Runtime,/await import\('\.\/production-v30\.mjs'\)/);
-  assert.match(dashboardV2Runtime,/user-dashboard-v2\.js/);
-  assert.match(dashboardV2Runtime,/combinedStabilityJs/);
-  assert.match(dashboardRuntime,/await import\('\.\/production-v29\.mjs'\)/);
-  assert.match(dashboardRuntime,/handleUserDashboardRoute/);
+  assert.match(activeRuntime,/await import\('\.\/production-v29\.mjs'\)/);
+  assert.match(activeRuntime,/handleUserDashboardRoute/);
+  assert.match(activeRuntime,/initUserDashboard/);
+  assert.doesNotMatch(activeRuntime,/user-dashboard-v2\.js/);
+  assert.doesNotMatch(activeRuntime,/combinedStabilityJs/);
+  assert.doesNotMatch(activeRuntime,/user-operation-pipeline-v1/);
   assert.match(historyRuntime,/await import\('\.\/production-v28\.mjs'\)/);
   assert.match(historyRuntime,/handleAccountRecoveryAdminHistoryRoute/);
   assert.match(deliveryRuntime,/await import\('\.\/production-v27\.mjs'\)/);
