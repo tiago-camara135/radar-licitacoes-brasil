@@ -7,9 +7,11 @@ const read=p=>fs.readFileSync(new URL('../'+p,import.meta.url),'utf8');
 
 test('Dashboard e Minha Operação deixam de ser injetados sem remover backend e isolamento',()=>{
   const pkg=JSON.parse(read('package.json'));
+  const entry=read('production-v33.mjs');
   const runtime=read('production-v31.mjs');
   const backend=read('user-dashboard-v1.mjs');
-  assert.equal(pkg.scripts.start,'node production-v31.mjs');
+  assert.equal(pkg.scripts.start,'node production-v33.mjs');
+  assert.match(entry,/await import\('\.\/production-v32\.mjs'\)/);
   assert.match(runtime,/await import\('\.\/production-v29\.mjs'\)/);
   assert.match(runtime,/handleUserDashboardRoute/);
   assert.match(runtime,/await initUserDashboard\(\)/);
@@ -17,6 +19,7 @@ test('Dashboard e Minha Operação deixam de ser injetados sem remover backend e
   assert.doesNotMatch(runtime,/user-dashboard-v2\.js/);
   assert.doesNotMatch(runtime,/user-dashboard-v2\.css/);
   assert.doesNotMatch(runtime,/user-operation-pipeline-v1/);
+  assert.doesNotMatch(entry,/user-dashboard-v2\.js|user-operation-pipeline-v1/);
   assert.match(backend,/saved_alerts a ON a\.user_id=\$1/);
   assert.match(backend,/WHERE t\.user_id=\$1/);
   assert.match(backend,/tender_intelligence_analyses WHERE user_id=\$1/);
