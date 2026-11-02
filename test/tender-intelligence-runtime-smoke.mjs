@@ -10,6 +10,7 @@ const cssRes=await get('/assets/source-transparency-v1.css');
 assert.equal(jsRes.status,200);
 assert.equal(cssRes.status,200);
 assert.equal(jsRes.headers.get('x-rlb-tender-intelligence'),'v2.2');
+assert.equal(jsRes.headers.get('x-rlb-tender-source-resilience'),'v2');
 const js=await jsRes.text();
 const css=await cssRes.text();
 assert.match(js,/__rlbTenderIntelligenceV2/);
@@ -18,6 +19,9 @@ assert.match(js,/Evidências confirmadas/);
 assert.match(js,/Revisão dupla/);
 assert.match(js,/\/api\/tender-intelligence\/analyze/);
 assert.match(js,/__rlbSourceTransparency/);
+assert.match(js,/__rlbTenderSourceFallbackV2/);
+assert.match(js,/Continuar sem depender do PNCP/);
+assert.match(js,/\/api\/tender-intelligence\/upload-source/);
 assert.match(css,/\.tender-ai-trigger/);
 assert.match(css,/\.tai-modal/);
 assert.match(css,/html\[data-theme="dark"\] \.tai-modal/);
@@ -38,4 +42,9 @@ assert.equal(crossBody.code,'origin_not_authorized');
 
 const noOrigin=await get('/api/tender-intelligence/analyze',{method:'POST',headers:{'content-type':'application/json'},body:payload});
 assert.equal(noOrigin.status,401,'cliente interno sem Origin continua compatível e autenticado pelo handler final');
-console.log('tender intelligence v2.2 runtime smoke passed: report, themes, precision, resilient reviewer and origin guard active');
+
+const uploadNoAuth=await get('/api/tender-intelligence/upload-source',{method:'POST',headers:{'content-type':'application/json',origin:base},body:payload});
+assert.equal(uploadNoAuth.status,401,'upload temporário exige sessão autenticada');
+const uploadCross=await get('/api/tender-intelligence/upload-source',{method:'POST',headers:{'content-type':'application/json',origin:'https://cross-origin.invalid'},body:payload});
+assert.equal(uploadCross.status,403,'upload temporário mantém proteção de origem');
+console.log('tender intelligence v2.3 runtime smoke passed: report, multifonte, PDF fallback, precision and origin guards active');
