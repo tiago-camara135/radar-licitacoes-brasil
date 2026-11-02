@@ -9,7 +9,7 @@ const jsRes=await get('/assets/source-transparency-v1.js');
 const cssRes=await get('/assets/source-transparency-v1.css');
 assert.equal(jsRes.status,200);
 assert.equal(cssRes.status,200);
-assert.equal(jsRes.headers.get('x-rlb-tender-intelligence'),'v2.1');
+assert.equal(jsRes.headers.get('x-rlb-tender-intelligence'),'v2.2');
 const js=await jsRes.text();
 const css=await cssRes.text();
 assert.match(js,/__rlbTenderIntelligenceV2/);
@@ -38,4 +38,4 @@ assert.equal(crossBody.code,'origin_not_authorized');
 
 const noOrigin=await get('/api/tender-intelligence/analyze',{method:'POST',headers:{'content-type':'application/json'},body:payload});
 assert.equal(noOrigin.status,401,'cliente interno sem Origin continua compatível e autenticado pelo handler final');
-console.log('tender intelligence v2.1 runtime smoke passed: report, themes, precision layer and origin guard active');
+console.log('tender intelligence v2.2 runtime smoke passed: report, themes, precision, resilient reviewer and origin guard active');
