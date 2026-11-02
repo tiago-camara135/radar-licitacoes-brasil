@@ -39,6 +39,7 @@ test('delivery v3 normalizes recipient without exposing raw email in correlation
 
 test('runtime preserves recovery chain and exposes administrative delivery history safely',()=>{
   const pkg=JSON.parse(read('package.json'));
+  const dashboardV2Runtime=read('production-v31.mjs');
   const dashboardRuntime=read('production-v30.mjs');
   const historyRuntime=read('production-v29.mjs');
   const historyBackend=read('account-recovery-admin-history-v1.mjs');
@@ -50,8 +51,9 @@ test('runtime preserves recovery chain and exposes administrative delivery histo
   const hotfix=read('account-recovery-email-v2.mjs');
   const backend=read('account-recovery-v1.mjs');
   const frontend=read('account-recovery-v1.js');
-  assert.equal(pkg.version,'2.16.0');
-  assert.equal(pkg.scripts.start,'node production-v30.mjs');
+  assert.equal(pkg.version,'2.17.0');
+  assert.equal(pkg.scripts.start,'node production-v31.mjs');
+  assert.match(dashboardV2Runtime,/await import\('\.\/production-v30\.mjs'\)/);
   assert.match(dashboardRuntime,/await import\('\.\/production-v29\.mjs'\)/);
   assert.match(historyRuntime,/await import\('\.\/production-v28\.mjs'\)/);
   assert.match(historyRuntime,/handleAccountRecoveryAdminHistoryRoute/);
