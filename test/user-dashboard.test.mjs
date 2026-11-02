@@ -5,39 +5,45 @@ import {__test} from '../user-dashboard-v1.mjs';
 
 const read=p=>fs.readFileSync(new URL('../'+p,import.meta.url),'utf8');
 
-test('dashboard v1 preserves runtime chain and is isolated by user',()=>{
+test('dashboard v2 preserves backend isolation and moves detailed operation out of the home dashboard',()=>{
   const pkg=JSON.parse(read('package.json'));
-  const runtime=read('production-v30.mjs');
+  const runtime=read('production-v31.mjs');
+  const previousRuntime=read('production-v30.mjs');
   const backend=read('user-dashboard-v1.mjs');
-  const frontend=read('user-dashboard-v1.js');
-  const css=read('user-dashboard-v1.css');
-  assert.equal(pkg.version,'2.16.0');
-  assert.equal(pkg.scripts.start,'node production-v30.mjs');
-  assert.match(runtime,/await import\('\.\/production-v29\.mjs'\)/);
-  assert.match(runtime,/handleUserDashboardRoute/);
-  assert.match(runtime,/combinedStabilityJs/);
-  assert.match(runtime,/X-RLB-User-Dashboard/);
+  const frontend=read('user-dashboard-v2.js');
+  const css=read('user-dashboard-v2.css');
+  assert.equal(pkg.version,'2.17.0');
+  assert.equal(pkg.scripts.start,'node production-v31.mjs');
+  assert.match(runtime,/await import\('\.\/production-v30\.mjs'\)/);
+  assert.match(runtime,/user-dashboard-v2\.js/);
+  assert.match(runtime,/X-RLB-User-Dashboard','v2/);
+  assert.match(previousRuntime,/handleUserDashboardRoute/);
   assert.match(backend,/saved_alerts a ON a\.user_id=\$1/);
   assert.match(backend,/WHERE t\.user_id=\$1/);
   assert.match(backend,/tender_intelligence_analyses WHERE user_id=\$1/);
   assert.match(backend,/company_documents WHERE user_id=\$1/);
   assert.match(backend,/DELETE FROM user_tender_tracking WHERE id=\$1 AND user_id=\$2/);
-  assert.match(frontend,/data-view='dashboard'|data\.view='dashboard'|dataset\.view='dashboard'/);
-  assert.match(frontend,/Oportunidades recomendadas/);
-  assert.match(frontend,/Ações prioritárias/);
-  assert.match(frontend,/Minhas licitações/);
-  assert.match(frontend,/Análises recentes da IA-RLB/);
+  assert.match(frontend,/Dashboard','Prioridades e decisões/);
+  assert.match(frontend,/Minha Operação','Licitações em andamento/);
+  assert.match(frontend,/O que precisa da sua atenção/);
+  assert.match(frontend,/Oportunidades para você/);
+  assert.match(frontend,/Próximos prazos/);
+  assert.match(frontend,/Habilitação/);
+  assert.match(frontend,/\.slice\(0,3\)/,'dashboard must limit recommendations to three');
+  assert.match(frontend,/\.slice\(0,4\)/,'dashboard must limit priorities and agenda');
+  assert.match(frontend,/Pipeline/);
+  assert.match(frontend,/Licitações acompanhadas/);
+  assert.match(frontend,/Sinais da IA-RLB/);
   assert.match(frontend,/Relatório assistivo\. Confirme requisitos críticos/);
+  assert.doesNotMatch(frontend,/Personalizar/,'default dashboard should not depend on personalization to be clean');
   assert.match(css,/html:not\(\[data-theme="dark"\]\)/);
   assert.match(css,/html\[data-theme="dark"\]/);
-  assert.match(css,/@media\(max-width:620px\)/);
+  assert.match(css,/@media\(max-width:520px\)/);
 });
 
-test('tracking statuses and widgets are constrained',()=>{
+test('tracking statuses remain constrained',()=>{
   for(const x of ['analisar','preparando_documentacao','proposta_pronta','participando','recurso','vencida','perdida','arquivada'])assert.equal(__test.STATUSES.has(x),true);
-  for(const x of ['recommendations','priorities','agenda','habilitation','tracking','funnel','ai'])assert.equal(__test.WIDGETS.has(x),true);
   assert.equal(__test.STATUSES.has('admin'),false);
-  assert.equal(__test.WIDGETS.has('passwords'),false);
 });
 
 test('deterministic readiness penalizes missing and expired documents',()=>{
