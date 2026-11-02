@@ -4,14 +4,19 @@ import fs from 'node:fs';
 
 const read=p=>fs.readFileSync(new URL('../'+p,import.meta.url),'utf8');
 
-test('production starts through tender intelligence precision and reviewer resilience layers',()=>{
+test('production starts through account recovery, tender intelligence and reviewer resilience layers',()=>{
   const pkg=JSON.parse(read('package.json'));
+  const recoveryRuntime=read('production-v26.mjs');
   const runtime=read('production-v25.mjs');
   const precision=read('tender-intelligence-precision-v1.mjs');
   const resilience=read('gemini-reviewer-resilience-v1.mjs');
   const guard=read('production-v24.mjs');
-  assert.equal(pkg.version,'2.13.2');
-  assert.equal(pkg.scripts.start,'node production-v25.mjs');
+  assert.equal(pkg.version,'2.14.0');
+  assert.equal(pkg.scripts.start,'node production-v26.mjs');
+  assert.match(recoveryRuntime,/await import\('\.\/production-v25\.mjs'\)/);
+  assert.match(recoveryRuntime,/handleAccountRecoveryRoute/);
+  assert.match(recoveryRuntime,/account-recovery-v1\.mjs/);
+  assert.match(recoveryRuntime,/combinedAdminJs/);
   assert.match(runtime,/await import\('\.\/production-v24\.mjs'\)/);
   assert.match(runtime,/handleTenderIntelligencePrecisionRoute/);
   assert.match(runtime,/installGeminiReviewerResilience/);
