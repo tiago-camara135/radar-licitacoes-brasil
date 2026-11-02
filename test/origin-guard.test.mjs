@@ -4,20 +4,26 @@ import fs from 'node:fs';
 
 const read=p=>fs.readFileSync(new URL('../'+p,import.meta.url),'utf8');
 
-test('production starts through tender intelligence precision layer and preserves global origin guard',()=>{
+test('production starts through tender intelligence precision and reviewer resilience layers',()=>{
   const pkg=JSON.parse(read('package.json'));
   const runtime=read('production-v25.mjs');
   const precision=read('tender-intelligence-precision-v1.mjs');
+  const resilience=read('gemini-reviewer-resilience-v1.mjs');
   const guard=read('production-v24.mjs');
-  assert.equal(pkg.version,'2.13.1');
+  assert.equal(pkg.version,'2.13.2');
   assert.equal(pkg.scripts.start,'node production-v25.mjs');
   assert.match(runtime,/await import\('\.\/production-v24\.mjs'\)/);
   assert.match(runtime,/handleTenderIntelligencePrecisionRoute/);
+  assert.match(runtime,/installGeminiReviewerResilience/);
+  assert.match(runtime,/gemini-reviewer-resilience-v1\.mjs/);
   assert.match(runtime,/tender-intelligence-precision-v1\.mjs/);
   assert.match(runtime,/tender-intelligence-v2\.js/);
   assert.match(runtime,/tender-intelligence-v2\.css/);
   assert.match(precision,/handleTenderIntelligenceV2Route/);
   assert.match(precision,/authoritative_reconciliation/);
+  assert.match(resilience,/SEGUNDA PASSAGEM DE AUDITORIA/);
+  assert.match(resilience,/RETRYABLE_STATUS/);
+  assert.match(resilience,/reviewerFallbackModels/);
   assert.match(runtime,/normalizeTenderOrigin/);
   assert.match(runtime,/configuredOrigins/);
   assert.match(runtime,/requestOrigin/);
