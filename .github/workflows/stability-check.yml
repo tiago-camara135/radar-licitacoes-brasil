@@ -83,3 +83,8 @@ jobs:
             cat /tmp/rlb-integration.log
             exit 1
           fi
+          if ! node test/account-recovery-history-smoke.mjs; then
+            echo "--- server log ---"
+            cat /tmp/rlb-integration.log
+            exit 1
+          fi
