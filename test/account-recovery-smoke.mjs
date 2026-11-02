@@ -9,6 +9,7 @@ async function req(path,opt={}){return fetch(base+path,{redirect:'manual',...opt
 async function wait(){for(let i=0;i<50;i++){try{const r=await req('/api/health');if(r.ok)return}catch{}await new Promise(r=>setTimeout(r,250))}throw new Error('Servidor não ficou pronto')}
 function cookieFrom(r){return String(r.headers.get('set-cookie')||'').split(';')[0]}
 async function post(path,body,cookie=''){return req(path,{method:'POST',headers:{'content-type':'application/json',origin,...(cookie?{cookie}:{})},body:JSON.stringify(body)})}
+const sha256=v=>crypto.createHash('sha256').update(v).digest('hex');
 
 await wait();
 const suffix=crypto.randomBytes(5).toString('hex');
@@ -16,6 +17,8 @@ const userEmail=`recovery-user-${suffix}@example.com`;
 const adminEmail=`recovery-admin-${suffix}@example.com`;
 const oldPass='InitialPassword!123';
 const newPass='NovaSenhaSegura!456';
+const oldAdminPass='AdminPassword!123';
+const newAdminPass='NovaSenhaAdmin!789';
 let userCookie='',adminCookie='',userId=null,adminId=null;
 try{
   const asset=await req('/assets/admin-user-support-v1.js');
@@ -27,7 +30,7 @@ try{
 
   let r=await post('/api/auth/register',{email:userEmail,password:oldPass});
   assert.equal(r.status,201);userCookie=cookieFrom(r);userId=(await r.json()).user.id;
-  r=await post('/api/auth/register',{email:adminEmail,password:'AdminPassword!123'});
+  r=await post('/api/auth/register',{email:adminEmail,password:oldAdminPass});
   assert.equal(r.status,201);adminCookie=cookieFrom(r);adminId=(await r.json()).user.id;
   await db.query("UPDATE users SET role='admin' WHERE id=$1",[adminId]);
 
@@ -35,6 +38,14 @@ try{
   const unknown=await post('/api/account-recovery/request-reset',{email:`unknown-${suffix}@example.com`});
   assert.equal(known.status,200);assert.equal(unknown.status,200);
   assert.equal((await known.json()).message,(await unknown.json()).message,'public reset response must not enumerate users');
+
+  const adminRequest=await post('/api/account-recovery/request-reset',{email:adminEmail});
+  assert.equal(adminRequest.status,200);
+  const adminIssued=await db.query(`SELECT id FROM password_reset_tokens WHERE user_id=$1 AND used_at IS NULL AND revoked_at IS NULL AND expires_at>NOW() ORDER BY id DESC LIMIT 1`,[adminId]);
+  assert.equal(adminIssued.rows.length,1,'admin self-service request must issue a reset token');
+  const adminDeliveryAudit=await db.query(`SELECT metadata FROM audit_logs WHERE user_id=$1 AND action='user.password_reset_requested' ORDER BY id DESC LIMIT 1`,[adminId]);
+  assert.equal(adminDeliveryAudit.rows[0]?.metadata?.delivery_status,'accepted');
+  assert.equal(adminDeliveryAudit.rows[0]?.metadata?.provider,'resend');
 
   const pdf=Buffer.from('%PDF-1.4\n1 0 obj\n<<>>\nendobj\n%%EOF');
   r=await post('/api/account-recovery/assisted-request',{email:userEmail,full_name:'Usuário de QA',reason:'Teste autorizado de recuperação assistida de conta.',document_filename:'identificacao.pdf',document_content_base64:pdf.toString('base64'),consent:true});
@@ -65,11 +76,21 @@ try{
   r=await post('/api/auth/login',{email:userEmail,password:newPass});assert.equal(r.status,200,'new password must work');
 
   r=await post('/api/account-recovery/complete-reset',{token,password:'OutraSenhaSegura!789',confirm_password:'OutraSenhaSegura!789'});assert.equal(r.status,400,'reset token must be single-use');
+
+  await db.query('UPDATE password_reset_tokens SET revoked_at=NOW() WHERE user_id=$1 AND used_at IS NULL AND revoked_at IS NULL',[adminId]);
+  const rawAdminToken=crypto.randomBytes(32).toString('base64url');
+  await db.query(`INSERT INTO password_reset_tokens(user_id,token_hash,purpose,expires_at) VALUES($1,$2,'self_service',NOW()+INTERVAL '30 minutes')`,[adminId,sha256(rawAdminToken)]);
+  r=await req('/api/account-recovery/token-status?token='+encodeURIComponent(rawAdminToken));assert.equal(r.status,200);assert.equal((await r.json()).valid,true,'admin reset token must be accepted');
+  r=await post('/api/account-recovery/complete-reset',{token:rawAdminToken,password:newAdminPass,confirm_password:newAdminPass});assert.equal(r.status,200,'admin reset completion must succeed');
+  r=await req('/api/me',{headers:{cookie:adminCookie}});assert.equal(r.status,401,'admin sessions must be revoked after reset');
+  r=await post('/api/auth/login',{email:adminEmail,password:oldAdminPass});assert.equal(r.status,401,'old admin password must stop working');
+  r=await post('/api/auth/login',{email:adminEmail,password:newAdminPass});assert.equal(r.status,200,'new admin password must work');
+
   r=await fetch(base+'/api/account-recovery/assisted-request',{method:'POST',headers:{'content-type':'application/json',origin:'https://cross-origin.invalid'},body:JSON.stringify({})});assert.equal(r.status,403,'cross-origin recovery writes must be blocked');
 
-  const audits=await db.query(`SELECT action FROM audit_logs WHERE user_id IN($1,$2) AND action IN('admin.recovery_document_view','admin.recovery_approved','user.password_reset_completed')`,[userId,adminId]);
-  const actions=new Set(audits.rows.map(x=>x.action));assert.ok(actions.has('admin.recovery_document_view'));assert.ok(actions.has('admin.recovery_approved'));assert.ok(actions.has('user.password_reset_completed'));
-  console.log('account recovery smoke passed: encrypted document, admin approval, single-use reset, session revocation and audit verified');
+  const audits=await db.query(`SELECT action FROM audit_logs WHERE user_id IN($1,$2) AND action IN('admin.recovery_document_view','admin.recovery_approved','user.password_reset_completed','user.password_reset_requested')`,[userId,adminId]);
+  const actions=new Set(audits.rows.map(x=>x.action));assert.ok(actions.has('admin.recovery_document_view'));assert.ok(actions.has('admin.recovery_approved'));assert.ok(actions.has('user.password_reset_completed'));assert.ok(actions.has('user.password_reset_requested'));
+  console.log('account recovery smoke passed: user/admin email reset, encrypted document, single-use reset, session revocation and audit verified');
 }finally{
   if(userId||adminId)await db.query('DELETE FROM users WHERE id = ANY($1::bigint[])',[[userId,adminId].filter(Boolean)]).catch(()=>{});
   await db.end();
