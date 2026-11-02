@@ -88,3 +88,8 @@ jobs:
             cat /tmp/rlb-integration.log
             exit 1
           fi
+          if ! node test/user-dashboard-smoke.mjs; then
+            echo "--- server log ---"
+            cat /tmp/rlb-integration.log
+            exit 1
+          fi
