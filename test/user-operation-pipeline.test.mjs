@@ -3,26 +3,20 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 const read=p=>fs.readFileSync(new URL('../'+p,import.meta.url),'utf8');
 
-test('operation pipeline patch removes dashboard analyze action and exposes every operational stage',()=>{
+test('Pipeline visual não é carregado no runtime ativo',()=>{
   const runtime=read('production-v31.mjs');
-  const patch=read('user-operation-pipeline-v1.js');
-  const css=read('user-operation-pipeline-v1.css');
-  assert.match(runtime,/user-operation-pipeline-v1\.js/);
-  assert.match(runtime,/user-operation-pipeline-v1\.css/);
-  assert.match(patch,/\[data-db-analyze\]/);
-  assert.match(patch,/\.remove\(\)/);
-  for(const status of ['analisar','preparando_documentacao','proposta_pronta','participando','recurso','vencida','perdida','arquivada'])assert.match(patch,new RegExp(status));
-  assert.match(patch,/classList\.toggle\('active'/);
-  assert.match(patch,/Etapa atual/);
-  assert.match(css,/\.op-funnel button\.active/);
-  assert.match(css,/\[data-db-analyze\]\{display:none!important\}/);
+  assert.doesNotMatch(runtime,/user-operation-pipeline-v1\.js/);
+  assert.doesNotMatch(runtime,/user-operation-pipeline-v1\.css/);
+  assert.doesNotMatch(runtime,/user-dashboard-v2\.js/);
+  assert.doesNotMatch(runtime,/user-dashboard-v2\.css/);
 });
 
-test('operation pipeline observer is idempotent and cannot self-trigger continuously',()=>{
-  const patch=read('user-operation-pipeline-v1.js');
-  assert.match(patch,/foot&&foot\.textContent!==PIPELINE_HINT/,'footer DOM write must be conditional');
-  assert.match(patch,/enhanceScheduled/,'observer work must be coalesced');
-  assert.match(patch,/requestAnimationFrame/,'enhancement must be scheduled outside the mutation callback');
-  assert.match(patch,/new MutationObserver\(scheduleEnhance\)/);
-  assert.doesNotMatch(patch,/new MutationObserver\(\(\)=>enhance\(\)\)/,'direct recursive observer callback is forbidden');
+test('backend de acompanhamento continua preservado',()=>{
+  const runtime=read('production-v31.mjs');
+  const backend=read('user-dashboard-v1.mjs');
+  assert.match(runtime,/handleUserDashboardRoute/);
+  assert.match(runtime,/initUserDashboard/);
+  for(const status of ['analisar','preparando_documentacao','proposta_pronta','participando','recurso','vencida','perdida','arquivada'])assert.match(backend,new RegExp(status));
+  assert.match(backend,/user_tender_tracking/);
+  assert.match(backend,/user_dashboard_preferences/);
 });
