@@ -1,0 +1,77 @@
+name: Patch Tender Reviewer Fallback
+
+on:
+  push:
+    branches: [fix/tender-v2-reviewer-fallback]
+    paths: [.github/workflows/patch-tender-reviewer-fallback.yml]
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/tender-v2-reviewer-fallback
+      - name: Patch reviewer fallback and remove temporary workflow
+        run: |
+          python <<'PY'
+          from pathlib import Path
+          p=Path('tender-intelligence-v2.mjs')
+          s=p.read_text()
+          old="""async function callGeminiVerified(p,text){
+  const key=await geminiKey();if(!key)throw Object.assign(new Error('Gemini não está configurado para a Análise Inteligente de Edital.'),{status:503});
+  let last=null;
+  for(const model of [...new Set(MODELS)]){
+    try{
+      const first=normalizeTenderIntelligenceV2(await invokeGemini(key,model,primaryPrompt(p,text),7600));
+      let reviewed=first,verificationPass=false,verificationError=null;
+      try{reviewed=normalizeTenderIntelligenceV2(await invokeGemini(key,model,reviewerPrompt(p,text,first),8200));verificationPass=true}catch(e){verificationError=clean(e.message,240);console.warn('tender intelligence v2 reviewer fallback:',model,verificationError)}
+      return{model,analysis:reviewed,verificationPass,verificationError};
+    }catch(e){last=e;console.warn('tender intelligence v2 Gemini:',model,clean(e.message,260))}
+  }
+  throw Object.assign(new Error(`A IA não conseguiu concluir a análise agora${last?.message?`: ${clean(last.message,180)}`:''}.`),{status:503});
+}
+"""
+          new="""async function callGeminiVerified(p,text){
+  const key=await geminiKey();if(!key)throw Object.assign(new Error('Gemini não está configurado para a Análise Inteligente de Edital.'),{status:503});
+  const models=[...new Set(MODELS)];let last=null;
+  for(const model of models){
+    try{
+      const first=normalizeTenderIntelligenceV2(await invokeGemini(key,model,primaryPrompt(p,text),7600));
+      let reviewed=first,verificationPass=false,verificationError=null,reviewerModel=null;
+      const reviewerErrors=[];
+      for(const reviewModel of [model,...models.filter(x=>x!==model)]){
+        try{
+          reviewed=normalizeTenderIntelligenceV2(await invokeGemini(key,reviewModel,reviewerPrompt(p,text,first),8200));
+          verificationPass=true;reviewerModel=reviewModel;verificationError=null;break;
+        }catch(e){
+          const message=clean(e.message,220);reviewerErrors.push(`${reviewModel}: ${message}`);
+          console.warn('tender intelligence v2 reviewer fallback:',reviewModel,message);
+        }
+      }
+      if(!verificationPass)verificationError=clean(reviewerErrors.join(' | '),700);
+      return{model,reviewerModel,analysis:reviewed,verificationPass,verificationError};
+    }catch(e){last=e;console.warn('tender intelligence v2 Gemini:',model,clean(e.message,260))}
+  }
+  throw Object.assign(new Error(`A IA não conseguiu concluir a análise agora${last?.message?`: ${clean(last.message,180)}`:''}.`),{status:503});
+}
+"""
+          if old not in s:
+              raise SystemExit('callGeminiVerified original block not found')
+          s=s.replace(old,new,1)
+          old_diag="verification_pass:ai.verificationPass,verification_error:ai.verificationError,evidence_verified:"
+          new_diag="verification_pass:ai.verificationPass,reviewer_model:ai.reviewerModel||null,verification_error:ai.verificationError,evidence_verified:"
+          if old_diag not in s:
+              raise SystemExit('diagnostics block not found')
+          s=s.replace(old_diag,new_diag,1)
+          p.write_text(s)
+          Path('.github/workflows/patch-tender-reviewer-fallback.yml').unlink()
+          PY
+          git config user.name "radar-qa-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add tender-intelligence-v2.mjs .github/workflows/patch-tender-reviewer-fallback.yml
+          git commit -m "Fix: tenta modelos alternativos na segunda passagem da IA"
+          git push origin HEAD:fix/tender-v2-reviewer-fallback
