@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {hashAccountPassword,verifyAccountPassword,validateRecoveryDocumentSignature} from '../account-recovery-v1.mjs';
 import {hashRecoveryPassword,verifyRecoveryPassword} from '../account-recovery-email-v2.mjs';
+import {__test as deliveryTest} from '../account-recovery-delivery-v3.mjs';
 
 const read=p=>fs.readFileSync(new URL('../'+p,import.meta.url),'utf8');
 
@@ -26,22 +27,40 @@ test('assisted recovery accepts only PDF PNG JPEG by file signature',()=>{
   assert.equal(validateRecoveryDocumentSignature(Buffer.from('<script>alert(1)</script>')),null);
 });
 
-test('runtime preserves production chain and email hotfix supports user and admin',()=>{
+test('delivery v3 normalizes recipient without exposing raw email in correlation id',()=>{
+  assert.equal(deliveryTest.emailOf('  Teste@Example.COM  '),'teste@example.com');
+  assert.equal(deliveryTest.allowedRole('user'),true);
+  assert.equal(deliveryTest.allowedRole('admin'),true);
+  assert.equal(deliveryTest.allowedRole('guest'),false);
+  const h=deliveryTest.recipientHash('teste@example.com');
+  assert.match(h,/^[0-9a-f]{24}$/);
+  assert.equal(h.includes('teste'),false);
+});
+
+test('runtime preserves production chain and recovery delivery has provider telemetry',()=>{
   const pkg=JSON.parse(read('package.json'));
+  const deliveryRuntime=read('production-v28.mjs');
+  const delivery=read('account-recovery-delivery-v3.mjs');
   const runtime=read('production-v27.mjs');
   const hotfix=read('account-recovery-email-v2.mjs');
   const backend=read('account-recovery-v1.mjs');
   const frontend=read('account-recovery-v1.js');
-  assert.equal(pkg.version,'2.14.1');
-  assert.equal(pkg.scripts.start,'node production-v27.mjs');
+  assert.equal(pkg.version,'2.14.2');
+  assert.equal(pkg.scripts.start,'node production-v28.mjs');
+  assert.match(deliveryRuntime,/await import\('\.\/production-v27\.mjs'\)/);
+  assert.match(deliveryRuntime,/handleAccountRecoveryDeliveryV3Route/);
   assert.match(runtime,/await import\('\.\/production-v26\.mjs'\)/);
   assert.match(runtime,/handleAccountRecoveryEmailV2Route/);
   assert.match(hotfix,/role IN\('user','admin'\)/);
-  assert.match(hotfix,/allowedRole=role=>role==='user'\|\|role==='admin'/);
-  assert.match(hotfix,/account recovery email accepted/);
-  assert.match(hotfix,/revokeIssuedToken/);
-  assert.match(hotfix,/password_reset_delivery_failed/);
-  assert.match(hotfix,/ACCOUNT_RECOVERY_EMAIL_TEST_MODE/);
+  assert.match(delivery,/LOWER\(u\.email\)=LOWER\(\$1\)/);
+  assert.match(delivery,/verified_notification_email/);
+  assert.match(delivery,/account_recovery_email_deliveries/);
+  assert.match(delivery,/last_event/);
+  assert.match(delivery,/https:\/\/api\.resend\.com\/emails\?limit=100/);
+  assert.match(delivery,/ACCOUNT_RECOVERY_PROBE_TO/);
+  assert.match(delivery,/account recovery request received/);
+  assert.match(delivery,/account recovery delivery status/);
+  assert.match(delivery,/revokeIssuedToken/);
   assert.match(backend,/crypto\.randomBytes\(32\)/);
   assert.match(backend,/aes-256-gcm/);
   assert.doesNotMatch(backend,/SELECT[^\n]*password_hash[^\n]*\/api\/account-recovery\/admin/i);
