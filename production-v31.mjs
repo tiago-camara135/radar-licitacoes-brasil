@@ -7,6 +7,7 @@ import { Pool } from 'pg';
 import { initUserDashboard,handleUserDashboardRoute } from './user-dashboard-v1.mjs';
 import { createResilientPncpDocumentFetch } from './pncp-document-resilience-v1.mjs';
 import { parsePncpDocumentUrl,extractOriginDocumentUrls,decodePdfUpload,isSafePublicOriginUrl } from './tender-source-resilience-v2.mjs';
+import { createPncpDocumentCache } from './pncp-document-cache-v1.mjs';
 
 const PORT=Number(process.env.PORT||10000);
 const APP_ORIGIN=String(process.env.APP_ORIGIN||'');
@@ -14,14 +15,17 @@ const DATABASE_URL=String(process.env.DATABASE_URL||'');
 const MAX_UPLOAD_BYTES=18*1024*1024;
 const MAX_UPLOAD_JSON=25*1024*1024;
 const UPLOAD_TTL_MS=5*60*1000;
+const PNCP_DOCUMENT_CIRCUIT_MS=60*1000;
 const healthPool=DATABASE_URL?new Pool({connectionString:DATABASE_URL,ssl:{rejectUnauthorized:false},max:2,idleTimeoutMillis:10000,connectionTimeoutMillis:5000}):null;
 healthPool?.on('error',error=>console.warn('runtime database health pool:',error?.code||error?.message||error));
 
 const nativeFetch=globalThis.fetch.bind(globalThis);
 const resilientPncpFetch=createResilientPncpDocumentFetch(nativeFetch,{logger:console});
+const documentCache=createPncpDocumentCache(healthPool,{logger:console,maxBytes:5*1024*1024,maxEntries:80,ttlDays:30});
 const uploadContext=new AsyncLocalStorage();
 const uploadSources=new Map();
 const originCache=new Map();
+let pncpDocumentCircuitUntil=0;
 const nativeCreateServer=http.createServer.bind(http);
 const sourceJs=fs.readFileSync(new URL('./source-transparency-v1.js',import.meta.url));
 const tenderJs=fs.readFileSync(new URL('./tender-intelligence-v2.js',import.meta.url));
@@ -67,6 +71,16 @@ async function discoverOriginDocuments(ids){
   }catch(error){console.warn('tender source origin fallback:',clean(error?.message,180));return[]}
 }
 
+async function cachedOrOriginFallback(ids){
+  const cached=await documentCache.get(ids);
+  if(cached){console.warn(`pncp document cache hit: ${ids.kind} ${ids.cnpj}/${ids.year}/${ids.sequence}${ids.documentSequence?`/${ids.documentSequence}`:''}`);return cached}
+  if(ids.kind==='list'){
+    const docs=await discoverOriginDocuments(ids);
+    if(docs.length)return new Response(JSON.stringify(docs),{status:200,headers:{'content-type':'application/json','x-rlb-source':'origin-fallback'}});
+  }
+  return null;
+}
+
 globalThis.fetch=async function rlbTenderSourceFetch(input,init={}){
   const url=requestUrl(input),ctx=uploadContext.getStore(),ids=parsePncpDocumentUrl(url);
   if(ctx&&ids&&ids.cnpj===ctx.cnpj&&ids.year===ctx.year&&ids.sequence===ctx.sequence){
@@ -74,10 +88,23 @@ globalThis.fetch=async function rlbTenderSourceFetch(input,init={}){
     if(ids.kind==='file')return new Response(ctx.buffer,{status:200,headers:{'content-type':'application/pdf','content-length':String(ctx.buffer.length)}});
   }
   if(ctx&&url===ctx.pncpUrl)return new Response(ctx.buffer,{status:200,headers:{'content-type':'application/pdf','content-length':String(ctx.buffer.length)}});
+
+  if(ids&&Date.now()<pncpDocumentCircuitUntil){
+    const fallback=await cachedOrOriginFallback(ids);
+    if(fallback)return fallback;
+    return new Response('<html><body><h1>503 Service Unavailable</h1><p>PNCP document circuit temporarily open.</p></body></html>',{status:503,headers:{'content-type':'text/html','x-rlb-source':'pncp-circuit'}});
+  }
+
   const response=await resilientPncpFetch(input,init);
-  if(ids?.kind==='list'&&response.status>=500){
-    const docs=await discoverOriginDocuments(ids);
-    if(docs.length)return new Response(JSON.stringify(docs),{status:200,headers:{'content-type':'application/json','x-rlb-source':'origin-fallback'}});
+  if(ids&&response.ok){
+    pncpDocumentCircuitUntil=0;
+    void documentCache.save(ids,response,url);
+    return response;
+  }
+  if(ids&&response.status>=500){
+    pncpDocumentCircuitUntil=Date.now()+PNCP_DOCUMENT_CIRCUIT_MS;
+    const fallback=await cachedOrOriginFallback(ids);
+    if(fallback)return fallback;
   }
   return response;
 };
@@ -106,7 +133,7 @@ http.createServer=function userDashboardBackendOnlyCreateServer(...args){
     try{
       const url=new URL(req.url||'/','http://localhost');
       if(req.method==='GET'&&url.pathname==='/assets/source-transparency-v1.js')return asset(res,'application/javascript; charset=utf-8',combinedSourceJs);
-      if(req.method==='GET'&&url.pathname==='/api/health'){const database=await databaseHealth();return json(res,database.ok?200:503,{ok:database.ok,version:'2.17.2-tender-source-resilience',storage:database.ok?'postgresql':'postgresql-unavailable',runtime:'production-v31',database})}
+      if(req.method==='GET'&&url.pathname==='/api/health'){const database=await databaseHealth();return json(res,database.ok?200:503,{ok:database.ok,version:'2.17.3-pncp-cache-circuit',storage:database.ok?'postgresql':'postgresql-unavailable',runtime:'production-v31',database,pncp_documents:{circuit_open:Date.now()<pncpDocumentCircuitUntil,circuit_until:pncpDocumentCircuitUntil||null,cache:'enabled'}})}
       if(await handleUploadSource(req,res,url))return;
       if(req.method==='POST'&&url.pathname==='/api/tender-intelligence/analyze'){
         const token=clean(req.headers['x-rlb-upload-token'],120),entry=uploadSources.get(token);
@@ -128,6 +155,7 @@ http.createServer=function userDashboardBackendOnlyCreateServer(...args){
 
 syncBuiltinESMExports();
 await import('./production-v29.mjs');
+await documentCache.init();
 await initUserDashboard();
-console.log('runtime audit hardening ready: PostgreSQL health + PNCP dual-route + origin discovery + PDF upload fallback');
+console.log('runtime audit hardening ready: PostgreSQL health + PNCP dual-route + 30d document cache + circuit breaker + origin discovery + PDF upload fallback');
 console.log('user dashboard backend preserved: Dashboard and Minha Operação UI disabled');
