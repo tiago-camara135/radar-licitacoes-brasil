@@ -110,7 +110,7 @@ export async function reconcileAlertBackfill(alertId,{reason='mutation',limit=BA
   const safeLimit=Math.min(Math.max(Number(limit)||BACKFILL_LIMIT,1),50);
   const base=candidateFilter(a);
   let offset=0,created=0,matched=0,scanned=0;
-  while(created<safeLimit&&scanned<MAX_SCAN){
+  while(matched<safeLimit&&scanned<MAX_SCAN){
     const params=[...base.params,PAGE_SIZE,offset],limitPos=base.params.length+1,offsetPos=base.params.length+2;
     const q=await pool.query(`SELECT pncp_id,org_cnpj,modality_code,modality_name,object_text,org_name,unit_name,municipality,uf,estimated_value,published_at,closes_at,pncp_url,origin_url,raw,detected_at,last_seen_at
       FROM monitored_procurements
@@ -123,7 +123,7 @@ export async function reconcileAlertBackfill(alertId,{reason='mutation',limit=BA
       if(!alertBackfillMatches(a,row))continue;
       matched+=1;
       if(await insertOnsite(a,row))created+=1;
-      if(created>=safeLimit)break;
+      if(matched>=safeLimit)break;
     }
     if(q.rows.length<PAGE_SIZE)break;
   }
