@@ -34,12 +34,13 @@ try{
   const after=await db.query(`SELECT status,last_event FROM account_recovery_email_deliveries WHERE user_id=$1 ORDER BY id DESC LIMIT 1`,[userId]);
   assert.equal(after.rows[0].status,'delivered');assert.equal(after.rows[0].last_event,'delivered');
 
-  r=await req('/assets/admin-user-support-v1.js');assert.equal(r.status,200);assert.equal(r.headers.get('x-rlb-recovery-history'),'v1');const js=await r.text();assert.match(js,/__rlbRecoveryDeliveryHistoryV1/);assert.match(js,/Histórico de recuperação/);
+  r=await req('/assets/admin-user-support-v1.js');assert.equal(r.status,200);assert.equal(r.headers.get('x-rlb-recovery-history'),'v1');const js=await r.text();
+  assert.match(js,/__rlbRecoveryDeliveryHistoryV1/);assert.match(js,/Histórico de recuperação/);assert.match(js,/data-rh-tab/);assert.match(js,/Recuperações/);assert.match(js,/\.acc-nav/);assert.match(js,/#accPanel/);
   r=await req('/assets/admin-user-support-v1.css');assert.equal(r.status,200);const css=await r.text();assert.match(css,/\.rh-panel/);assert.match(css,/html\[data-theme="dark"\]/);
 
   r=await post('/api/account-recovery/admin/email-deliveries/refresh',{},adminCookie,'https://cross-origin.invalid');assert.equal(r.status,403,'cross-origin admin refresh must be blocked');
   const audit=await db.query(`SELECT action FROM audit_logs WHERE user_id=$1 AND action='admin.account_recovery_provider_refresh' ORDER BY id DESC LIMIT 1`,[adminId]);assert.equal(audit.rows[0]?.action,'admin.account_recovery_provider_refresh');
-  console.log('account recovery history smoke passed: admin ledger, provider status, audit, adaptive asset and origin guard verified');
+  console.log('account recovery history smoke passed: native Admin tab, ledger, provider status, audit, adaptive asset and origin guard verified');
 }finally{
   if(userId||adminId)await db.query('DELETE FROM users WHERE id = ANY($1::bigint[])',[[userId,adminId].filter(Boolean)]).catch(()=>{});
   await db.end();
