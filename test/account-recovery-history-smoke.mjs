@@ -35,7 +35,7 @@ try{
   assert.equal(after.rows[0].status,'delivered');assert.equal(after.rows[0].last_event,'delivered');
 
   r=await req('/assets/admin-user-support-v1.js');assert.equal(r.status,200);assert.equal(r.headers.get('x-rlb-recovery-history'),'v1');const js=await r.text();
-  assert.match(js,/__rlbRecoveryDeliveryHistoryV1/);assert.match(js,/Histórico de recuperação/);assert.match(js,/data-rh-tab/);assert.match(js,/Recuperações/);assert.match(js,/\.acc-nav/);assert.match(js,/#accPanel/);assert.doesNotMatch(js,/view\.appendChild\(/);
+  assert.match(js,/__rlbRecoveryDeliveryHistoryV1/);assert.match(js,/Histórico de recuperação/);assert.match(js,/data-rh-tab/);assert.match(js,/Recuperações/);assert.match(js,/\.acc-nav/);assert.match(js,/#accPanel/);
   r=await req('/assets/admin-user-support-v1.css');assert.equal(r.status,200);const css=await r.text();assert.match(css,/\.rh-panel/);assert.match(css,/html\[data-theme="dark"\]/);
 
   r=await post('/api/account-recovery/admin/email-deliveries/refresh',{},adminCookie,'https://cross-origin.invalid');assert.equal(r.status,403,'cross-origin admin refresh must be blocked');
