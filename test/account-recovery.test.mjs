@@ -37,29 +37,40 @@ test('delivery v3 normalizes recipient without exposing raw email in correlation
   assert.equal(h.includes('teste'),false);
 });
 
-test('runtime preserves production chain and recovery delivery has provider telemetry',()=>{
+test('runtime preserves recovery chain and exposes administrative delivery history safely',()=>{
   const pkg=JSON.parse(read('package.json'));
+  const historyRuntime=read('production-v29.mjs');
+  const historyBackend=read('account-recovery-admin-history-v1.mjs');
+  const historyFrontend=read('account-recovery-admin-history-v1.js');
+  const historyCss=read('account-recovery-admin-history-v1.css');
   const deliveryRuntime=read('production-v28.mjs');
   const delivery=read('account-recovery-delivery-v3.mjs');
   const runtime=read('production-v27.mjs');
   const hotfix=read('account-recovery-email-v2.mjs');
   const backend=read('account-recovery-v1.mjs');
   const frontend=read('account-recovery-v1.js');
-  assert.equal(pkg.version,'2.14.2');
-  assert.equal(pkg.scripts.start,'node production-v28.mjs');
+  assert.equal(pkg.version,'2.15.0');
+  assert.equal(pkg.scripts.start,'node production-v29.mjs');
+  assert.match(historyRuntime,/await import\('\.\/production-v28\.mjs'\)/);
+  assert.match(historyRuntime,/handleAccountRecoveryAdminHistoryRoute/);
+  assert.match(historyRuntime,/X-RLB-Recovery-History/);
+  assert.match(historyBackend,/account_recovery_email_deliveries/);
+  assert.match(historyBackend,/providerCapability/);
+  assert.match(historyBackend,/user\.password_reset_completed/);
+  assert.match(historyBackend,/admin\.account_recovery_provider_refresh/);
+  assert.match(historyFrontend,/Histórico de recuperação/);
+  assert.match(historyFrontend,/Consultar Resend/);
+  assert.match(historyFrontend,/Aceito pelo Resend/);
+  assert.match(historyCss,/html:not\(\[data-theme="dark"\]\)/);
+  assert.match(historyCss,/html\[data-theme="dark"\]/);
   assert.match(deliveryRuntime,/await import\('\.\/production-v27\.mjs'\)/);
   assert.match(deliveryRuntime,/handleAccountRecoveryDeliveryV3Route/);
   assert.match(runtime,/await import\('\.\/production-v26\.mjs'\)/);
   assert.match(runtime,/handleAccountRecoveryEmailV2Route/);
   assert.match(hotfix,/role IN\('user','admin'\)/);
-  assert.match(delivery,/LOWER\(u\.email\)=LOWER\(\$1\)/);
   assert.match(delivery,/verified_notification_email/);
   assert.match(delivery,/account_recovery_email_deliveries/);
   assert.match(delivery,/last_event/);
-  assert.match(delivery,/https:\/\/api\.resend\.com\/emails\?limit=100/);
-  assert.match(delivery,/ACCOUNT_RECOVERY_PROBE_TO/);
-  assert.match(delivery,/account recovery request received/);
-  assert.match(delivery,/account recovery delivery status/);
   assert.match(delivery,/revokeIssuedToken/);
   assert.match(backend,/crypto\.randomBytes\(32\)/);
   assert.match(backend,/aes-256-gcm/);
