@@ -50,8 +50,9 @@ test('v3 não trata exigência condicional ausente como bloqueador absoluto',()=
 test('v3 separa fase de proposta e contratação',()=>{
   const rows=buildDetailedRequirementsV3({requirements:[
     {title:'Garantia de proposta deverá acompanhar a proposta comercial',evidence:{quote:'garantia de proposta'}},
-    {title:'Apresentar certidão atualizada antes da assinatura do contrato',evidence:{quote:'antes da assinatura do contrato'}}
+    {title:'Certidão de regularidade perante o FGTS atualizada antes da assinatura do contrato',evidence:{quote:'FGTS antes da assinatura do contrato'}}
   ]},{});
+  assert.equal(rows.length,2);
   assert.equal(rows[0].phase,'proposta');
   assert.equal(rows[1].phase,'contratacao');
 });
