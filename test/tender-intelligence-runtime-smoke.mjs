@@ -35,6 +35,10 @@ assert.match(css,/html\[data-theme="dark"\] \.tai-modal/);
 assert.match(css,/html:not\(\[data-theme="dark"\]\) \.tai-modal/);
 assert.match(css,/var\(--surface/);
 assert.match(css,/source-transparency/i);
+assert.match(css,/\.tai-modal \.rlb-matrix-v3/,'CSS da pré-habilitação deve ser entregue no asset oficial');
+assert.match(css,/\.mx3-summary-strip/,'resumo executivo precisa ter layout próprio');
+assert.match(css,/\.mx3-nav-btn\.active/,'navegação interna precisa ter estado visual ativo');
+assert.match(css,/html\[data-theme="dark"\] \.tai-modal \.rlb-matrix-v3/,'diagnóstico precisa suportar tema escuro');
 
 const payload=JSON.stringify({cnpj:'00000000000000',year:2026,sequence:1});
 const browserOrigin=await get('/api/tender-intelligence/analyze',{method:'POST',headers:{'content-type':'application/json',origin:base},body:payload});
@@ -59,4 +63,4 @@ const matrixNoAuth=await get('/api/tender-compliance-matrix/analyze',{method:'PO
 assert.equal(matrixNoAuth.status,401,'matriz Empresa × Edital exige sessão autenticada');
 const matrixCross=await get('/api/tender-compliance-matrix/analyze',{method:'POST',headers:{'content-type':'application/json',origin:'https://cross-origin.invalid'},body:payload});
 assert.equal(matrixCross.status,403,'matriz Empresa × Edital mantém proteção de origem');
-console.log('tender intelligence runtime smoke passed: report, multifonte, PDF fallback, pre-habilitacao visual, precision and origin guards active');
+console.log('tender intelligence runtime smoke passed: report, multifonte, PDF fallback, external pre-habilitacao styles, precision and origin guards active');
