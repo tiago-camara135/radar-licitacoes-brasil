@@ -23,7 +23,7 @@ assert.match(js,/__rlbTenderSourceFallbackV2/);
 assert.match(js,/Continuar sem depender do PNCP/);
 assert.match(js,/\/api\/tender-intelligence\/upload-source/);
 assert.match(js,/__rlbTenderComplianceMatrixV2/);
-assert.match(js,/MATRIZ EMPRESA × EDITAL/);
+assert.match(js,/matriz empresa × edital/i);
 assert.match(js,/\/api\/tender-compliance-matrix\/analyze/);
 assert.match(js,/Confiabilidade/);
 assert.match(css,/\.tender-ai-trigger/);
