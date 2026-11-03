@@ -78,6 +78,11 @@ jobs:
             cat /tmp/rlb-integration.log
             exit 1
           fi
+          if ! node test/tender-compliance-v3-smoke.mjs; then
+            echo "--- server log ---"
+            cat /tmp/rlb-integration.log
+            exit 1
+          fi
           if ! node test/account-recovery-smoke.mjs; then
             echo "--- server log ---"
             cat /tmp/rlb-integration.log
