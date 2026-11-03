@@ -1,1 +1,1 @@
-Production tender intelligence retest 2026-11-02T22:45Z
+Full production audit 2026-11-03 — authenticated E2E + PNCP direct diagnostic + post-backup verification
