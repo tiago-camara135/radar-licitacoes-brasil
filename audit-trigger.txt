@@ -1,1 +1,1 @@
-Full production audit 2026-11-03 — authenticated E2E + PNCP direct diagnostic + post-backup verification
+Post-fix production verification 2026-11-03 — PNCP Brazil timezone + health metadata + authenticated E2E
