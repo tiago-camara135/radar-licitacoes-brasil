@@ -1,0 +1,41 @@
+name: PNCP Date Window Audit
+
+on:
+  push:
+    branches: [prod-e2e-audit-20261102]
+
+permissions:
+  contents: read
+
+jobs:
+  date-window:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Compare Brazil-local and UTC publication dates
+        shell: bash
+        run: |
+          node <<'NODE'
+          const base='https://pncp.gov.br/api/consulta/v1/contratacoes/publicacao';
+          const now=new Date();
+          const fmt=(d,tz)=>new Intl.DateTimeFormat('en-CA',{timeZone:tz,year:'numeric',month:'2-digit',day:'2-digit'}).format(d).replaceAll('-','');
+          const utc=now.toISOString().slice(0,10).replaceAll('-','');
+          const brazil=fmt(now,'America/Fortaleza');
+          console.log('NOW',now.toISOString(),'UTC_DATE',utc,'BRAZIL_DATE',brazil);
+          const codes=[1,2,3,4,5,6,7,8,9,10,11,12,13,14];
+          async function probe(date,code){
+            const u=`${base}?dataInicial=${date}&dataFinal=${date}&codigoModalidadeContratacao=${code}&pagina=1&tamanhoPagina=50`;
+            try{
+              const r=await fetch(u,{headers:{accept:'application/json','user-agent':'RLB-Date-Audit/1.0'},signal:AbortSignal.timeout(20000)});
+              const text=await r.text();let j={};try{j=JSON.parse(text)}catch{}
+              const data=Array.isArray(j?.data)?j.data:Array.isArray(j)?j:[];
+              return {date,code,status:r.status,count:data.length,total:Number(j?.totalRegistros||j?.totalRecords||0)||0,error:r.ok?null:String(j?.message||j?.detail||text.slice(0,100))};
+            }catch(e){return {date,code,status:0,count:0,total:0,error:e.message}}
+          }
+          for(const date of [...new Set([brazil,utc])]){
+            const out=[];
+            for(const code of codes)out.push(await probe(date,code));
+            console.log('DATE_RESULT',date,JSON.stringify(out));
+            console.log('DATE_SUMMARY',date,JSON.stringify({http200:out.filter(x=>x.status===200).length,non200:out.filter(x=>x.status!==200).length,page_items:out.reduce((a,x)=>a+x.count,0),total_records:out.reduce((a,x)=>a+x.total,0)}));
+          }
+          NODE
