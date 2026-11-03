@@ -23,8 +23,8 @@ assert.match(js,/__rlbTenderSourceFallbackV2/);
 assert.match(js,/Continuar sem depender do PNCP/);
 assert.match(js,/\/api\/tender-intelligence\/upload-source/);
 assert.match(js,/__rlbTenderComplianceMatrixV3/);
-assert.match(js,/Matriz de Pré-Habilitação v3/i);
-assert.match(js,/Dossiê Empresa × Edital/);
+assert.match(js,/Análise de Habilitação/i);
+assert.match(js,/Diagnóstico Empresa × Edital/);
 assert.match(js,/Documentos considerados/);
 assert.match(js,/Critérios verificados/);
 assert.match(js,/\/api\/tender-compliance-matrix\/analyze/);
@@ -59,4 +59,4 @@ const matrixNoAuth=await get('/api/tender-compliance-matrix/analyze',{method:'PO
 assert.equal(matrixNoAuth.status,401,'matriz Empresa × Edital exige sessão autenticada');
 const matrixCross=await get('/api/tender-compliance-matrix/analyze',{method:'POST',headers:{'content-type':'application/json',origin:'https://cross-origin.invalid'},body:payload});
 assert.equal(matrixCross.status,403,'matriz Empresa × Edital mantém proteção de origem');
-console.log('tender intelligence runtime smoke passed: report, multifonte, PDF fallback, pre-habilitacao v3, precision and origin guards active');
+console.log('tender intelligence runtime smoke passed: report, multifonte, PDF fallback, pre-habilitacao visual, precision and origin guards active');
