@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import http from 'node:http';
 import { syncBuiltinESMExports } from 'node:module';
-import { initTenderComplianceMatrixV3,handleTenderComplianceMatrixV3Route } from './tender-compliance-matrix-v3.mjs';
+import { initTenderComplianceMatrixV3Safe,handleTenderComplianceMatrixV3SafeRoute } from './tender-compliance-matrix-v3-safety.mjs';
 
 const nativeReadFileSync=fs.readFileSync.bind(fs);
 const nativeCreateServer=http.createServer.bind(http);
@@ -19,11 +19,11 @@ fs.readFileSync=function matrixFrontendReadFileSync(path,...args){
 
 http.createServer=function tenderComplianceMatrixCreateServer(...args){
   const i=args.findIndex(x=>typeof x==='function');if(i<0)return nativeCreateServer(...args);const listener=args[i];
-  args[i]=async(req,res)=>{try{const url=new URL(req.url||'/','http://localhost');if(await handleTenderComplianceMatrixV3Route(req,res,url))return}catch(error){console.error('tender compliance matrix middleware:',error?.stack||error);if(!res.headersSent){res.statusCode=500;res.setHeader('Content-Type','application/json; charset=utf-8');res.end(JSON.stringify({error:'Erro interno na matriz Empresa × Edital.'}))}else try{res.end()}catch{}return}return listener(req,res)};
+  args[i]=async(req,res)=>{try{const url=new URL(req.url||'/','http://localhost');if(await handleTenderComplianceMatrixV3SafeRoute(req,res,url))return}catch(error){console.error('tender compliance matrix middleware:',error?.stack||error);if(!res.headersSent){res.statusCode=500;res.setHeader('Content-Type','application/json; charset=utf-8');res.end(JSON.stringify({error:'Erro interno na matriz Empresa × Edital.'}))}else try{res.end()}catch{}return}return listener(req,res)};
   return nativeCreateServer(...args);
 };
 
 syncBuiltinESMExports();
 await import('./production-v32.mjs');
-await initTenderComplianceMatrixV3();
-console.log('tender compliance matrix runtime v3 active: requirement-by-requirement + all candidate documents + criteria + process phase');
+await initTenderComplianceMatrixV3Safe();
+console.log('tender compliance matrix runtime v3 active: requirement-by-requirement + all candidate documents + criteria + process phase + technical quantity semantic guard');
