@@ -16,11 +16,14 @@ test('production starts through backend-only tracking, recovery history, deliver
   const precision=read('tender-intelligence-precision-v1.mjs');
   const resilience=read('gemini-reviewer-resilience-v1.mjs');
   const guard=read('production-v24.mjs');
+  const complianceSafety=read('tender-compliance-matrix-v3-safety.mjs');
   assert.equal(pkg.version,'2.19.0');
   assert.equal(pkg.scripts.start,'node production-v33.mjs');
   assert.match(entryRuntime,/await import\('\.\/production-v32\.mjs'\)/);
-  assert.match(entryRuntime,/handleTenderComplianceMatrixV3Route/);
+  assert.match(entryRuntime,/handleTenderComplianceMatrixV3SafeRoute/);
   assert.match(entryRuntime,/tender-readiness-matrix-v3\.js/);
+  assert.match(complianceSafety,/technical_quantity_semantic_guard/);
+  assert.match(complianceSafety,/applyTechnicalQuantitySafetyV3/);
   assert.match(activeRuntime,/await import\('\.\/production-v29\.mjs'\)/);
   assert.match(activeRuntime,/handleUserDashboardRoute/);
   assert.match(activeRuntime,/initUserDashboard/);
