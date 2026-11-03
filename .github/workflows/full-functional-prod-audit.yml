@@ -1,0 +1,61 @@
+name: Full Production Functional Audit
+
+on:
+  push:
+    branches: [prod-e2e-audit-20261102]
+
+permissions:
+  contents: read
+
+jobs:
+  functional-audit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Audit authenticated production flows
+        shell: bash
+        run: |
+          node <<'NODE'
+          import crypto from 'node:crypto';
+          const base='https://radarlicitacoesbrasil.com.br';
+          const origin=base;
+          const stamp=Date.now();
+          const email=`rlb-full-audit-${stamp}@example.test`;
+          const password=`RLB-${crypto.randomUUID()}-Aa9!`;
+          let cookie='';
+          const assert=(c,m)=>{if(!c)throw new Error(m)};
+          async function req(path,{method='GET',body,expected=200,requestOrigin=origin,auth=true,timeout=60000}={}){
+            const headers={accept:'application/json'};
+            if(body!==undefined)headers['content-type']='application/json';
+            if(auth&&cookie)headers.cookie=cookie;
+            if(['POST','PUT','PATCH','DELETE'].includes(method)&&requestOrigin)headers.origin=requestOrigin;
+            const r=await fetch(base+path,{method,headers,body:body===undefined?undefined:JSON.stringify(body),signal:AbortSignal.timeout(timeout),redirect:'manual'});
+            const set=r.headers.get('set-cookie');if(set)cookie=set.split(';')[0];
+            const text=await r.text();let data={};try{data=text?JSON.parse(text):{}}catch{data={text:text.slice(0,1000)}}
+            console.log(method,path,'->',r.status);
+            assert(r.status===expected,`${method} ${path}: expected ${expected}, got ${r.status}: ${text.slice(0,500)}`);
+            return data;
+          }
+          const health=await req('/api/health',{auth:false});assert(health.ok===true,'health not ok');
+          const originHealth=await req('/api/security/origin-health',{auth:false});assert(originHealth.ok===true,'origin guard unhealthy');
+          const rejected=await req('/api/auth/register',{method:'POST',auth:false,expected:403,requestOrigin:'https://cross-origin.invalid',body:{email:`reject-${stamp}@example.test`,password}});assert(rejected.code==='origin_not_authorized','cross-origin guard failed');
+          const reg=await req('/api/auth/register',{method:'POST',auth:false,expected:201,body:{email,password}});assert(reg.user?.email===email,'registration mismatch');
+          const me=await req('/api/me');assert(me.user?.email===email,'session failed');
+          const ent=await req('/api/entitlements');assert(ent.entitlement?.active===true,'entitlement inactive');
+          const profile=await req('/api/company-documents/profile',{method:'PUT',body:{legal_name:'RLB AUDITORIA FUNCIONAL',state:'RN',municipality:'Natal',contact_name:'Auditoria'}});assert(profile.profile?.legal_name==='RLB AUDITORIA FUNCIONAL','profile save failed');
+          const expiry=new Date(Date.now()+90*86400000).toISOString().slice(0,10);
+          const pdf=Buffer.from('%PDF-1.4\n% RLB production functional audit\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF\n').toString('base64');
+          const uploaded=await req('/api/company-documents',{method:'POST',expected:201,body:{doc_type:'fgts',issuer:'RLB Audit',jurisdiction:'Federal',expiry_date:expiry,filename:'rlb-audit-fgts.pdf',mime_type:'application/pdf',content_base64:pdf}});assert(uploaded.item?.id,'document upload failed');
+          const summary=await req('/api/company-documents/summary');assert(Number(summary.summary?.total)>=1,'document summary empty');
+          const fake=Buffer.from('not-a-pdf').toString('base64');
+          const bad=await req('/api/company-documents',{method:'POST',expected:400,body:{doc_type:'federal',filename:'fake.pdf',mime_type:'application/pdf',content_base64:fake}});assert(bad.code==='invalid_upload_signature','upload signature guard failed');
+          const alert=await req('/api/alerts',{method:'POST',expected:201,body:{name:`AUDIT ${stamp}`,keyword:`RLB-NOMATCH-${stamp}`,uf:'RN',modality_code:6,enabled:true}});assert(alert.item?.id,'alert create failed');
+          const alerts=await req('/api/alerts');assert(alerts.items?.some(x=>x.id===alert.item.id),'alert list failed');
+          const status=await req('/api/search-status');assert(status.status?.ok===true,'search status unhealthy');
+          const live=await req('/api/live-status');assert(live.status?.enabled===true,'live monitor disabled');
+          const search=await req('/api/licitacoes?keyword=combust%C3%ADvel&uf=RN&modalidade=6&days=7',{timeout:120000});assert(Array.isArray(search.items),'search items missing');
+          const quick=await req('/api/tender-readiness-quick/score',{method:'POST',body:{items:[{cnpj:'18348094000150',year:2026,sequence:97}]}});assert(Array.isArray(quick.items)&&quick.items.length===1,'quick readiness failed');
+          console.log('AUDIT_SUMMARY',JSON.stringify({health:true,origin_guard:true,register:true,session:true,entitlements:true,profile:true,document_upload:true,upload_signature_guard:true,alerts:true,search_status:true,live_status:live.status,search_items:search.items.length,readiness_score:quick.items[0]?.score}));
+          await req('/api/auth/logout',{method:'POST',body:{}});
+          console.log('FULL_PRODUCTION_FUNCTIONAL_AUDIT=SUCCESS');
+          NODE
