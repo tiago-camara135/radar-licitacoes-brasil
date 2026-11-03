@@ -19,7 +19,8 @@ test('production starts through backend-only tracking, recovery history, deliver
   assert.equal(pkg.version,'2.19.0');
   assert.equal(pkg.scripts.start,'node production-v33.mjs');
   assert.match(entryRuntime,/await import\('\.\/production-v32\.mjs'\)/);
-  assert.match(entryRuntime,/handleTenderComplianceMatrixV2Route/);
+  assert.match(entryRuntime,/handleTenderComplianceMatrixV3Route/);
+  assert.match(entryRuntime,/tender-readiness-matrix-v3\.js/);
   assert.match(activeRuntime,/await import\('\.\/production-v29\.mjs'\)/);
   assert.match(activeRuntime,/handleUserDashboardRoute/);
   assert.match(activeRuntime,/initUserDashboard/);
