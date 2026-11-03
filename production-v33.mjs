@@ -6,6 +6,7 @@ import { initTenderComplianceMatrixV3Safe,handleTenderComplianceMatrixV3SafeRout
 const nativeReadFileSync=fs.readFileSync.bind(fs);
 const nativeCreateServer=http.createServer.bind(http);
 const matrixJs=nativeReadFileSync(new URL('./tender-readiness-matrix-v3.js',import.meta.url),'utf8');
+const matrixCss=nativeReadFileSync(new URL('./tender-readiness-matrix-v3.css',import.meta.url),'utf8');
 
 fs.readFileSync=function matrixFrontendReadFileSync(path,...args){
   const value=path instanceof URL?path.pathname:String(path);
@@ -13,6 +14,10 @@ fs.readFileSync=function matrixFrontendReadFileSync(path,...args){
   if(value.endsWith('/tender-intelligence-upload-v1.js')||value.endsWith('\\tender-intelligence-upload-v1.js')){
     const source=Buffer.isBuffer(data)?data.toString('utf8'):String(data),finalJs=source+'\n\n'+matrixJs;
     return Buffer.isBuffer(data)?Buffer.from(finalJs):finalJs;
+  }
+  if(value.endsWith('/tender-intelligence-v2.css')||value.endsWith('\\tender-intelligence-v2.css')){
+    const source=Buffer.isBuffer(data)?data.toString('utf8'):String(data),finalCss=source+'\n\n'+matrixCss;
+    return Buffer.isBuffer(data)?Buffer.from(finalCss):finalCss;
   }
   return data;
 };
@@ -26,4 +31,4 @@ http.createServer=function tenderComplianceMatrixCreateServer(...args){
 syncBuiltinESMExports();
 await import('./production-v32.mjs');
 await initTenderComplianceMatrixV3Safe();
-console.log('tender compliance matrix runtime v3 active: requirement-by-requirement + all candidate documents + criteria + process phase + technical quantity semantic guard');
+console.log('tender compliance matrix runtime v3 active: requirement-by-requirement + all candidate documents + criteria + process phase + technical quantity semantic guard + external CSP-safe UI styles');
