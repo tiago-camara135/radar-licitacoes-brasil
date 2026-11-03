@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: radar-licitacoes-brasil
+    name: radar-licitacoes-brasil-app
     runtime: node
     region: virginia
     plan: free
@@ -14,6 +14,8 @@ services:
         value: production
       - key: PNCP_BASE_URL
         value: https://pncp.gov.br/api/consulta
+      - key: PNCP_OPERATION_TIMEZONE
+        value: America/Sao_Paulo
       - key: DATABASE_URL
         sync: false
       - key: ADMIN_EMAIL

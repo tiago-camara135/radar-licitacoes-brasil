@@ -7,6 +7,8 @@ const nativeReadFileSync=fs.readFileSync.bind(fs);
 const nativeCreateServer=http.createServer.bind(http);
 const matrixJs=nativeReadFileSync(new URL('./tender-readiness-matrix-v3.js',import.meta.url),'utf8');
 const matrixCss=nativeReadFileSync(new URL('./tender-readiness-matrix-v3.css',import.meta.url),'utf8');
+const appVersion=(()=>{try{return String(JSON.parse(nativeReadFileSync(new URL('./package.json',import.meta.url),'utf8')).version||'unknown').slice(0,40)}catch{return'unknown'}})();
+const runtimeName='production-v33';
 
 fs.readFileSync=function matrixFrontendReadFileSync(path,...args){
   const value=path instanceof URL?path.pathname:String(path);
@@ -24,11 +26,32 @@ fs.readFileSync=function matrixFrontendReadFileSync(path,...args){
 
 http.createServer=function tenderComplianceMatrixCreateServer(...args){
   const i=args.findIndex(x=>typeof x==='function');if(i<0)return nativeCreateServer(...args);const listener=args[i];
-  args[i]=async(req,res)=>{try{const url=new URL(req.url||'/','http://localhost');if(await handleTenderComplianceMatrixV3SafeRoute(req,res,url))return}catch(error){console.error('tender compliance matrix middleware:',error?.stack||error);if(!res.headersSent){res.statusCode=500;res.setHeader('Content-Type','application/json; charset=utf-8');res.end(JSON.stringify({error:'Erro interno na matriz Empresa × Edital.'}))}else try{res.end()}catch{}return}return listener(req,res)};
+  args[i]=async(req,res)=>{
+    try{
+      const url=new URL(req.url||'/','http://localhost');
+      if(req.method==='GET'&&url.pathname==='/api/health'){
+        const nativeEnd=res.end.bind(res);
+        res.end=(body,...endArgs)=>{
+          try{
+            const text=Buffer.isBuffer(body)?body.toString('utf8'):String(body??'');
+            const payload=JSON.parse(text);
+            if(payload&&typeof payload==='object'){
+              payload.version=appVersion;
+              payload.runtime=runtimeName;
+              return nativeEnd(JSON.stringify(payload),...endArgs);
+            }
+          }catch{}
+          return nativeEnd(body,...endArgs);
+        };
+      }
+      if(await handleTenderComplianceMatrixV3SafeRoute(req,res,url))return;
+    }catch(error){console.error('tender compliance matrix middleware:',error?.stack||error);if(!res.headersSent){res.statusCode=500;res.setHeader('Content-Type','application/json; charset=utf-8');res.end(JSON.stringify({error:'Erro interno na matriz Empresa × Edital.'}))}else try{res.end()}catch{}return}
+    return listener(req,res)
+  };
   return nativeCreateServer(...args);
 };
 
 syncBuiltinESMExports();
 await import('./production-v32.mjs');
 await initTenderComplianceMatrixV3Safe();
-console.log('tender compliance matrix runtime v3 active: requirement-by-requirement + all candidate documents + criteria + process phase + technical quantity semantic guard + external CSP-safe UI styles');
+console.log(`tender compliance matrix runtime v3 active: requirement-by-requirement + all candidate documents + criteria + process phase + technical quantity semantic guard + external CSP-safe UI styles; runtime ${runtimeName} version ${appVersion}`);
