@@ -40,6 +40,28 @@ const monthBounds = month => {
   if(Number.isNaN(d.getTime())) throw new Error("Mês inválido.");
   return [d.toISOString().slice(0,10),new Date(Date.UTC(d.getUTCFullYear(),d.getUTCMonth()+1,1,12)).toISOString().slice(0,10)];
 };
+function advanceRecurringDate(date,frequency){
+  const [year,month,day]=date.split("-").map(Number);
+  if(frequency==="weekly")return new Date(Date.UTC(year,month-1,day+7,12)).toISOString().slice(0,10);
+  if(frequency==="monthly"){
+    const monthIndex=month,nextYear=year+Math.floor(monthIndex/12),nextMonth=monthIndex%12,lastDay=new Date(Date.UTC(nextYear,nextMonth+1,0)).getUTCDate();
+    return nextYear+"-"+String(nextMonth+1).padStart(2,"0")+"-"+String(Math.min(day,lastDay)).padStart(2,"0");
+  }
+  if(frequency==="yearly"){
+    const nextYear=year+1,lastDay=new Date(Date.UTC(nextYear,month,0)).getUTCDate();
+    return nextYear+"-"+String(month).padStart(2,"0")+"-"+String(Math.min(day,lastDay)).padStart(2,"0");
+  }
+  throw new Error("Frequência recorrente inválida.");
+}
+function buildRecurringForecast(rule,endExclusive){
+  const expenses=[];let due=String(rule.next_due).slice(0,10),iterations=0;
+  while(due<endExclusive&&iterations<600){
+    expenses.push({rule_id:rule.id,description:rule.description,amount:asNumber(rule.amount),frequency:rule.frequency,due_on:due,account_name:rule.account_name,category_name:rule.category_name||"Sem categoria",in_period:true});
+    due=advanceRecurringDate(due,rule.frequency);iterations++;
+  }
+  if(!expenses.length)expenses.push({rule_id:rule.id,description:rule.description,amount:asNumber(rule.amount),frequency:rule.frequency,due_on:due,account_name:rule.account_name,category_name:rule.category_name||"Sem categoria",in_period:false});
+  return expenses;
+}
 function setSession(res,user){
   const token=jwt.sign({sub:user.id,email:user.email,name:user.full_name},process.env.JWT_SECRET,{expiresIn:SESSION_SECONDS,issuer:"tvc-control"});
   res.cookie(COOKIE,token,{httpOnly:true,secure:process.env.NODE_ENV==="production",sameSite:"lax",path:"/",maxAge:SESSION_SECONDS*1000});
@@ -298,17 +320,18 @@ app.get("/api/dashboard",requireAuth,asyncRoute(async(req,res)=>{
   const month=/^\d{4}-\d{2}$/.test(req.query.month||"")?req.query.month:new Date().toISOString().slice(0,7),bounds=monthBounds(month),uid=req.user.id;
   const q=[
     pool.query("SELECT a.id,a.name,a.account_type,a.institution,a.color,a.opening_balance,a.opening_balance+COALESCE(SUM(CASE WHEN t.status='paid' AND t.kind='income' THEN t.amount WHEN t.status='paid' AND t.kind='expense' THEN -t.amount WHEN t.status='paid' AND t.kind='transfer' AND t.account_id=a.id THEN -t.amount WHEN t.status='paid' AND t.kind='transfer' AND t.transfer_to_account_id=a.id THEN t.amount ELSE 0 END),0) AS current_balance FROM public.accounts a LEFT JOIN public.transactions t ON (t.account_id=a.id OR t.transfer_to_account_id=a.id) AND t.user_id=a.user_id WHERE a.user_id=$1 AND a.is_active=true GROUP BY a.id ORDER BY a.created_at",[uid]),
-    pool.query("SELECT COALESCE(SUM(amount) FILTER(WHERE kind='income' AND status='paid'),0) AS income,COALESCE(SUM(amount) FILTER(WHERE kind='expense' AND status='paid'),0) AS expense,COALESCE(SUM(amount) FILTER(WHERE kind='income' AND status='pending'),0) AS pending_income,COALESCE(SUM(amount) FILTER(WHERE kind='expense' AND status IN ('pending','overdue')),0) AS pending_expense,COUNT(*) AS transaction_count FROM public.transactions WHERE user_id=$1 AND occurred_on >= $2::date AND occurred_on < $3::date",[uid,bounds[0],bounds[1]]),
+    pool.query("SELECT COALESCE(SUM(amount) FILTER(WHERE kind='income' AND status='paid'),0) AS income,COALESCE(SUM(amount) FILTER(WHERE kind='expense' AND status='paid'),0) AS expense,COALESCE(SUM(amount) FILTER(WHERE kind='income' AND status='pending'),0) AS pending_income,COALESCE(SUM(amount) FILTER(WHERE kind='expense' AND status IN ('pending','overdue')),0) AS pending_expense,(SELECT COALESCE(SUM(t2.amount),0) FROM public.transactions t2 WHERE t2.user_id=$1 AND t2.kind='expense' AND t2.status IN ('pending','overdue') AND COALESCE(t2.due_on,t2.occurred_on) < $3::date) AS outstanding_expense,COUNT(*) AS transaction_count FROM public.transactions WHERE user_id=$1 AND occurred_on >= $2::date AND occurred_on < $3::date",[uid,bounds[0],bounds[1]]),
     pool.query("SELECT COALESCE(c.name,'Sem categoria') AS name,COALESCE(c.color,'#8792A5') AS color,SUM(t.amount) AS amount FROM public.transactions t LEFT JOIN public.categories c ON c.id=t.category_id WHERE t.user_id=$1 AND t.kind='expense' AND t.status='paid' AND t.occurred_on >= $2::date AND t.occurred_on < $3::date GROUP BY c.name,c.color ORDER BY amount DESC LIMIT 7",[uid,bounds[0],bounds[1]]),
     pool.query("SELECT to_char(date_trunc('month',occurred_on),'YYYY-MM') AS month,COALESCE(SUM(amount) FILTER(WHERE kind='income' AND status='paid'),0) AS income,COALESCE(SUM(amount) FILTER(WHERE kind='expense' AND status='paid'),0) AS expense FROM public.transactions WHERE user_id=$1 AND occurred_on >= (date_trunc('month',$2::date)-interval '5 months')::date AND occurred_on < (date_trunc('month',$2::date)+interval '1 month')::date GROUP BY 1 ORDER BY 1",[uid,bounds[0]]),
     pool.query("SELECT t.id,t.description,t.amount,t.due_on,t.status,t.kind,COALESCE(c.name,'Sem categoria') AS category_name FROM public.transactions t LEFT JOIN public.categories c ON c.id=t.category_id WHERE t.user_id=$1 AND t.status IN ('pending','overdue') AND t.kind IN ('expense','income') ORDER BY t.due_on NULLS LAST LIMIT 6",[uid]),
     pool.query("SELECT t.id,t.kind,t.description,t.amount,t.occurred_on,t.due_on,t.status,COALESCE(c.name,'Sem categoria') AS category_name,a.name AS account_name FROM public.transactions t LEFT JOIN public.categories c ON c.id=t.category_id LEFT JOIN public.accounts a ON a.id=t.account_id WHERE t.user_id=$1 AND t.occurred_on >= $2::date AND t.occurred_on < $3::date ORDER BY t.occurred_on DESC,t.created_at DESC LIMIT 7",[uid,bounds[0],bounds[1]]),
     pool.query("SELECT b.id,b.limit_amount,c.id AS category_id,c.name AS category_name,c.color,COALESCE(SUM(t.amount) FILTER(WHERE t.kind='expense' AND t.status='paid'),0) AS spent FROM public.budgets b JOIN public.categories c ON c.id=b.category_id LEFT JOIN public.transactions t ON t.user_id=b.user_id AND t.category_id=b.category_id AND t.occurred_on >= $2::date AND t.occurred_on < $3::date WHERE b.user_id=$1 AND b.month=$2::date GROUP BY b.id,c.id ORDER BY c.name",[uid,bounds[0],bounds[1]]),
     pool.query("SELECT id,name,target_amount,current_amount,target_date FROM public.goals WHERE user_id=$1 ORDER BY created_at DESC LIMIT 4",[uid]),
-    pool.query("SELECT c.id,c.name,c.brand,c.last_four,c.credit_limit,c.closing_day,c.due_day,COALESCE(SUM(t.amount) FILTER(WHERE t.status IN ('pending','overdue') AND t.kind='expense'),0) AS used_amount FROM public.cards c LEFT JOIN public.transactions t ON t.card_id=c.id AND t.user_id=c.user_id WHERE c.user_id=$1 GROUP BY c.id ORDER BY c.created_at DESC LIMIT 4",[uid])
+    pool.query("SELECT c.id,c.name,c.brand,c.last_four,c.credit_limit,c.closing_day,c.due_day,COALESCE(SUM(t.amount) FILTER(WHERE t.status IN ('pending','overdue') AND t.kind='expense'),0) AS used_amount FROM public.cards c LEFT JOIN public.transactions t ON t.card_id=c.id AND t.user_id=c.user_id WHERE c.user_id=$1 GROUP BY c.id ORDER BY c.created_at DESC LIMIT 4",[uid]),
+    pool.query("SELECT r.id,r.description,r.amount,r.frequency,r.next_due,a.name AS account_name,COALESCE(c.name,'Sem categoria') AS category_name FROM public.recurring_rules r LEFT JOIN public.accounts a ON a.id=r.account_id LEFT JOIN public.categories c ON c.id=r.category_id WHERE r.user_id=$1 AND r.kind='expense' AND r.is_active=true ORDER BY r.next_due,r.created_at",[uid])
   ];
-  const results=await Promise.all(q),accounts=results[0].rows,totals=results[1].rows[0];
-  res.json({month,balance:accounts.reduce((s,a)=>s+asNumber(a.current_balance),0),income:asNumber(totals.income),expense:asNumber(totals.expense),pendingIncome:asNumber(totals.pending_income),pendingExpense:asNumber(totals.pending_expense),transactionCount:Number(totals.transaction_count),accounts,categories:results[2].rows,chart:results[3].rows,upcoming:results[4].rows,transactions:results[5].rows,budgets:results[6].rows,goals:results[7].rows,cards:results[8].rows});
+  const results=await Promise.all(q),accounts=results[0].rows,totals=results[1].rows[0],balance=accounts.reduce((s,a)=>s+asNumber(a.current_balance),0),fixedExpenses=results[9].rows.flatMap(rule=>buildRecurringForecast(rule,bounds[1])).sort((a,b)=>a.due_on.localeCompare(b.due_on)||a.description.localeCompare(b.description)),fixedExpenseTotal=fixedExpenses.reduce((sum,item)=>sum+(item.in_period?item.amount:0),0),outstandingExpense=asNumber(totals.outstanding_expense),committedExpense=outstandingExpense+fixedExpenseTotal;
+  res.json({month,balance,income:asNumber(totals.income),expense:asNumber(totals.expense),pendingIncome:asNumber(totals.pending_income),pendingExpense:asNumber(totals.pending_expense),outstandingExpense,fixedExpenseTotal,committedExpense,projectedBalance:balance-committedExpense,fixedExpenses,transactionCount:Number(totals.transaction_count),accounts,categories:results[2].rows,chart:results[3].rows,upcoming:results[4].rows,transactions:results[5].rows,budgets:results[6].rows,goals:results[7].rows,cards:results[8].rows});
 }));
 
 app.use("/api",(_req,res)=>res.status(404).json({error:"Rota não encontrada."}));

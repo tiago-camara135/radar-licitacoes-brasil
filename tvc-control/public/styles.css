@@ -11,3 +11,23 @@ html[data-theme=dark]{color-scheme:dark;--bg:#0d1422;--surface:#151f30;--surface
 .table-action.edit{color:var(--brand)}.table-action.edit:hover{color:var(--brand);background:var(--brand-soft);border-radius:6px}.edit-note{grid-column:1/-1;padding:10px 12px;border-radius:9px;background:var(--brand-soft);color:var(--brand);font-size:10px;line-height:1.5}
 
 .entity-actions{display:flex;align-items:center;gap:10px}.entity-actions .account-edit{color:var(--brand);font-weight:650}.entity-actions [data-delete="account"]{color:var(--muted)}.entity-actions button{padding:3px 0}
+
+.fixed-overview-panel{grid-column:1/-1}
+.fixed-summary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:0 0 13px}
+.fixed-summary-item{display:flex;flex-direction:column;gap:7px;padding:13px 15px;border:1px solid var(--line);border-radius:11px;background:var(--surface-2);min-width:0}
+.fixed-summary-item>span{font-size:10px;color:var(--muted);font-weight:650}
+.fixed-summary-item strong{font-size:21px;font-weight:800;letter-spacing:-.6px;overflow-wrap:anywhere}
+.fixed-summary-item small{font-size:9px;color:var(--muted)}
+.projected-summary{background:var(--brand-soft);border-color:transparent}
+.projected-summary strong{color:var(--brand)}
+.projected-summary strong.negative{color:var(--red)}
+.fixed-expenses-list{display:flex;flex-direction:column}
+.fixed-expense-row{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:13px;align-items:center;padding:11px 0;border-bottom:1px solid var(--line)}
+.fixed-expense-row:last-child{border-bottom:0}
+.fixed-expense-copy{min-width:0}
+.fixed-expense-copy b{display:block;font-size:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fixed-expense-copy small{display:block;color:var(--muted);font-size:9px;margin-top:4px}
+.fixed-expense-value{font-size:10px;white-space:nowrap}
+.fixed-expense-more{padding:12px 0 2px;color:var(--muted);font-size:9px}
+.fixed-expense-more .link-button{margin-left:5px;font-size:9px}
+@media(max-width:520px){.fixed-summary{grid-template-columns:1fr}.fixed-expense-row{grid-template-columns:minmax(0,1fr) auto;gap:8px}.fixed-status{grid-column:2;grid-row:1}.fixed-expense-value{grid-column:2;grid-row:2;text-align:right}.fixed-expense-copy{grid-row:1/3}}

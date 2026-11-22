@@ -82,7 +82,17 @@
         <article class="stat-card stat-main"><div class="stat-top"><span>Saldo total</span><span class="stat-icon">◈</span></div><div class="stat-value" id="stat-balance">R$ 0,00</div><div class="stat-foot"><span class="trend neutral">●</span> Saldo das suas contas</div><div class="stat-glow"></div></article>
         <article class="stat-card"><div class="stat-top"><span>Receitas do mês</span><span class="stat-icon green">↙</span></div><div class="stat-value positive" id="stat-income">R$ 0,00</div><div class="stat-foot">Entradas confirmadas</div></article>
         <article class="stat-card"><div class="stat-top"><span>Despesas do mês</span><span class="stat-icon red">↗</span></div><div class="stat-value negative" id="stat-expense">R$ 0,00</div><div class="stat-foot">Saídas confirmadas</div></article>
-        <article class="stat-card"><div class="stat-top"><span>Contas a pagar</span><span class="stat-icon amber">◷</span></div><div class="stat-value" id="stat-pending">R$ 0,00</div><div class="stat-foot" id="stat-pending-note">Valores pendentes</div></article>
+        <article class="stat-card"><div class="stat-top"><span>Compromissos até o fim do mês</span><span class="stat-icon amber">◷</span></div><div class="stat-value" id="stat-pending">R$ 0,00</div><div class="stat-foot" id="stat-pending-note">Pendências + despesas fixas previstas</div></article>
+      </div>
+      <div class="dashboard-grid fixed-overview-grid">
+        <article class="panel fixed-overview-panel">
+          <div class="panel-heading"><div><h3>Despesas fixas previstas</h3><p>Próximos vencimentos e compromissos que entram no seu planejamento financeiro</p></div><button class="link-button" data-go="recurring">Gerenciar <span>→</span></button></div>
+          <div class="fixed-summary">
+            <div class="fixed-summary-item"><span>Total de despesas fixas</span><strong id="fixed-expense-total">R$ 0,00</strong><small>Vencimentos até o fim do período selecionado</small></div>
+            <div class="fixed-summary-item projected-summary"><span>Saldo livre projetado</span><strong id="projected-balance">R$ 0,00</strong><small>Saldo atual menos os compromissos previstos</small></div>
+          </div>
+          <div id="fixed-expenses-preview" class="fixed-expenses-list"><div class="empty-state">Suas despesas fixas aparecerão aqui.</div></div>
+        </article>
       </div>
       <div class="dashboard-grid">
         <article class="panel chart-panel"><div class="panel-heading"><div><h3>Fluxo financeiro</h3><p>Receitas e despesas ao longo dos últimos meses</p></div><span class="panel-tag">6 MESES</span></div><div id="cashflow-chart" class="chart-area"><div class="empty-state">Seus gráficos aparecerão aqui quando você registrar lançamentos.</div></div><div class="chart-legend"><span><i class="legend-dot income-dot"></i>Receitas</span><span><i class="legend-dot expense-dot"></i>Despesas</span></div></article>
