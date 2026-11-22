@@ -7,7 +7,7 @@
 <meta name="description" content="TVC Control — controle financeiro pessoal com clareza e inteligência.">
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="icon" href="/icon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/styles.css">
+<link rel="stylesheet" href="/styles.css?v=9">
 <title>TVC Control | Gestão financeira</title>
 </head>
 <body>
@@ -81,15 +81,24 @@
       <div class="stats-grid">
         <article class="stat-card stat-main"><div class="stat-top"><span>Saldo total</span><span class="stat-icon">◈</span></div><div class="stat-value" id="stat-balance">R$ 0,00</div><div class="stat-foot"><span class="trend neutral">●</span> Saldo das suas contas</div><div class="stat-glow"></div></article>
         <article class="stat-card"><div class="stat-top"><span>Receitas do mês</span><span class="stat-icon green">↙</span></div><div class="stat-value positive" id="stat-income">R$ 0,00</div><div class="stat-foot">Entradas confirmadas</div></article>
-        <article class="stat-card"><div class="stat-top"><span>Despesas do mês</span><span class="stat-icon red">↗</span></div><div class="stat-value negative" id="stat-expense">R$ 0,00</div><div class="stat-foot">Saídas confirmadas</div></article>
-        <article class="stat-card"><div class="stat-top"><span>Compromissos até o fim do mês</span><span class="stat-icon amber">◷</span></div><div class="stat-value" id="stat-pending">R$ 0,00</div><div class="stat-foot" id="stat-pending-note">Pendências + despesas fixas previstas</div></article>
+        <article class="stat-card"><div class="stat-top"><span>Despesas registradas</span><span class="stat-icon red">↗</span></div><div class="stat-value negative" id="stat-expense">R$ 0,00</div><div class="stat-foot">Pagas + lançadas a pagar</div></article>
+        <article class="stat-card"><div class="stat-top"><span>Saldo disponível projetado</span><span class="stat-icon amber">◷</span></div><div class="stat-value" id="stat-pending">R$ 0,00</div><div class="stat-foot" id="stat-pending-note">Após contas pendentes e despesas fixas previstas</div></article>
       </div>
       <div class="dashboard-grid fixed-overview-grid">
+        <article class="panel fixed-overview-panel expense-overview-panel">
+          <div class="panel-heading"><div><h3>Despesas lançadas</h3><p>Pagamentos confirmados, pendentes e atrasados</p></div><button class="link-button" data-go="transactions">Ver lançamentos <span>→</span></button></div>
+          <div class="fixed-summary expense-summary">
+            <div class="fixed-summary-item"><span>Total do período</span><strong id="period-expense-total">R$ 0,00</strong><small>Pagas + a pagar no mês</small></div>
+            <div class="fixed-summary-item"><span>Pagas</span><strong id="period-expense-paid">R$ 0,00</strong><small>Já saíram do saldo real</small></div>
+            <div class="fixed-summary-item"><span>A pagar</span><strong id="period-expense-pending">R$ 0,00</strong><small>Reduzem o saldo projetado</small></div>
+          </div>
+          <div id="expense-transactions-preview" class="expense-transactions-list"><div class="empty-state">Suas despesas lançadas aparecerão aqui.</div></div>
+        </article>
         <article class="panel fixed-overview-panel">
-          <div class="panel-heading"><div><h3>Despesas fixas previstas</h3><p>Próximos vencimentos e compromissos que entram no seu planejamento financeiro</p></div><button class="link-button" data-go="recurring">Gerenciar <span>→</span></button></div>
+          <div class="panel-heading"><div><h3>Despesas fixas previstas</h3><p>Compromissos recorrentes ainda não lançados</p></div><button class="link-button" data-go="recurring">Gerenciar <span>→</span></button></div>
           <div class="fixed-summary">
-            <div class="fixed-summary-item"><span>Total de despesas fixas</span><strong id="fixed-expense-total">R$ 0,00</strong><small>Vencimentos até o fim do período selecionado</small></div>
-            <div class="fixed-summary-item projected-summary"><span>Saldo livre projetado</span><strong id="projected-balance">R$ 0,00</strong><small>Saldo atual menos os compromissos previstos</small></div>
+            <div class="fixed-summary-item"><span>Total previsto</span><strong id="fixed-expense-total">R$ 0,00</strong><small>Até o fim do período selecionado</small></div>
+            <div class="fixed-summary-item"><span>Regras ativas</span><strong id="fixed-expense-count">0</strong><small>Despesas recorrentes cadastradas</small></div>
           </div>
           <div id="fixed-expenses-preview" class="fixed-expenses-list"><div class="empty-state">Suas despesas fixas aparecerão aqui.</div></div>
         </article>
@@ -166,5 +175,5 @@
 
 <div id="modal" class="modal" hidden><div class="modal-backdrop" data-close-modal></div><section class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modal-title"><div class="modal-head"><div><div class="eyebrow">TVC CONTROL</div><h2 id="modal-title">Novo lançamento</h2></div><button class="icon-button" data-close-modal aria-label="Fechar">×</button></div><form id="modal-form" class="form-stack"><div id="modal-fields" class="modal-fields"></div><div class="modal-actions"><button class="btn btn-secondary" type="button" data-close-modal>Cancelar</button><button class="btn btn-primary" id="modal-submit" type="submit">Salvar</button></div></form></section></div>
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
-<script src="/app.js" defer></script>
+<script src="/app.js?v=9" defer></script>
 </body></html>
