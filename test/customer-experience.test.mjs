@@ -14,10 +14,9 @@ test('public entry explains product use and official-source boundaries',()=>{
   assert.match(html,/A preparação e o envio de propostas continuam sob responsabilidade da empresa/);
 });
 
-test('first-run guide routes to existing alerts and document views',()=>{
-  assert.match(html,/class="quick-start"/);
-  assert.match(html,/data-view="alerts"/);
-  assert.match(html,/data-view="documents"/);
+test('dashboard first-steps guide is removed while document navigation remains',()=>{
+  assert.doesNotMatch(html,/class="quick-start"/);
+  assert.doesNotMatch(html,/Primeiros passos no Radar/);
   assert.match(html,/id="documentsNav" data-view="documents"/);
   assert.match(js,/document\.addEventListener\('click',e=>\{const b=e\.target\.closest\('\[data-view\]'\)/);
   assert.match(js,/if\(v==='documents'\)loadDocuments\(\)/);
@@ -29,9 +28,9 @@ test('authentication tabs expose selected state and password guidance',()=>{
   assert.match(js,/setAttribute\('aria-selected',String\(login\)\)/);
 });
 
-test('customer education and onboarding have responsive mobile layouts',()=>{
+test('public customer education retains responsive mobile layouts without dashboard guide styles',()=>{
   assert.match(css,/\.customer-steps\{display:grid;grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/);
   assert.match(css,/@media\(max-width:820px\)/);
   assert.match(css,/@media\(max-width:560px\)/);
-  assert.match(css,/\.quick-start-grid\{grid-template-columns:1fr/);
+  assert.doesNotMatch(css,/quick-start/);
 });
