@@ -34,3 +34,18 @@ test('public customer education retains responsive mobile layouts without dashbo
   assert.match(css,/@media\(max-width:560px\)/);
   assert.doesNotMatch(css,/quick-start/);
 });
+
+test('brand palette is unified across light and dark themes and key accents',()=>{
+  const marker='/* RADAR BRAND PALETTE 1.0';
+  const start=css.lastIndexOf(marker);
+  assert.ok(start>=0,'final palette override must exist');
+  const palette=css.slice(start);
+  for(const token of ['--bg:','#f4f7f9','--emerald:#176b62','--cyan:#3f788e','--muted:#5f7482','--action-bg:#155e58','--action-bg2:#2c6d80']) assert.ok(palette.includes(token),token);
+  assert.ok(palette.includes('html[data-theme="dark"]'));
+  for(const token of ['--bg:#0b1721','--emerald:#68b7a7','--cyan:#82b5c6']) assert.ok(palette.includes(token),token);
+  assert.match(palette,/\.auth-copy\{/);
+  assert.match(palette,/\.btn\.primary\{/);
+  assert.match(palette,/\.ai-fab\{/);
+  assert.doesNotMatch(palette,/#00f5a0|#00d9f5|#a855f7/);
+  assert.match(html,/app-v2\.css\?v=20261122-palette-1/);
+});
