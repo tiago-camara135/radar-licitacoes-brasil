@@ -10,7 +10,7 @@ test('Dashboard e Minha Operação deixam de ser injetados sem remover backend e
   const entry=read('production-v33.mjs');
   const runtime=read('production-v31.mjs');
   const backend=read('user-dashboard-v1.mjs');
-  assert.equal(pkg.scripts.start,'node production-v33.mjs');
+  assert.equal(pkg.scripts.start,'node production-v34.mjs');
   assert.match(entry,/await import\('\.\/production-v32\.mjs'\)/);
   assert.match(runtime,/await import\('\.\/production-v29\.mjs'\)/);
   assert.match(runtime,/handleUserDashboardRoute/);
