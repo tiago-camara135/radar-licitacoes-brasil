@@ -183,9 +183,9 @@ html[data-theme="dark"] .app-shell .sidebar::before{opacity:.25}
   color:var(--hdr-brand-sub)!important;
 }
 .app-shell .sidebar-brand span::after{
-  content:"Inteligência e monitoramento em compras públicas";
-  font-size:9px;
-  letter-spacing:.015em;
+  content:"Inteligência para compras públicas";
+  font-size:10px;
+  letter-spacing:.01em;
   color:var(--hdr-brand-sub);
 }
 
@@ -280,7 +280,7 @@ html[data-theme="dark"] .app-shell .main-nav button:nth-child(4) .nav-icon{
 }
 .app-shell .main-nav b{
   display:block!important;
-  font-size:9.5px!important;
+  font-size:10.5px!important;
   line-height:1.2;
   text-transform:none!important;
   letter-spacing:.01em!important;
@@ -291,7 +291,7 @@ html[data-theme="dark"] .app-shell .main-nav button:nth-child(4) .nav-icon{
 .app-shell .main-nav small{
   display:block!important;
   margin-top:3px!important;
-  font-size:7.5px!important;
+  font-size:8.5px!important;
   color:var(--hdr-nav-sub)!important;
   white-space:nowrap;
 }
@@ -456,4 +456,16 @@ html[data-theme="dark"] .app-shell .logout-btn:hover{
   .app-shell .logout-btn{height:34px!important;padding:0 8px!important}
   .app-shell .main-nav button{padding:4px 8px!important}
   .app-shell .main-nav .nav-icon{width:27px!important;height:27px!important;flex-basis:27px}
+}
+
+/* Iconografia e foco consistentes para mouse, toque e teclado. */
+.app-shell .main-nav .nav-icon svg{
+  width:18px!important;height:18px!important;
+  fill:none!important;stroke:currentColor!important;stroke-width:1.75!important;
+  stroke-linecap:round!important;stroke-linejoin:round!important;
+}
+.app-shell .main-nav button:focus-visible{
+  outline:3px solid color-mix(in srgb,var(--hdr-map2) 42%,transparent)!important;
+  outline-offset:2px!important;
+  border-radius:10px!important;
 }
