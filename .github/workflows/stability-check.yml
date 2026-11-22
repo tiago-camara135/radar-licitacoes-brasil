@@ -32,7 +32,7 @@ jobs:
         with:
           node-version: 24
       - run: npm install --omit=dev
-      - name: Restrict CI database role to application privileges
+      - name: Create least-privilege CI application role
         env:
           DATABASE_URL: postgresql://radar:radar_test_password@127.0.0.1:5432/radar_test?sslmode=disable
         run: node test/restrict-ci-db-role.mjs
@@ -43,7 +43,7 @@ jobs:
         run: npm test
       - name: Authenticated browser-like integration smoke
         env:
-          DATABASE_URL: postgresql://radar:radar_test_password@127.0.0.1:5432/radar_test?sslmode=disable
+          DATABASE_URL: postgresql://radar_app:radar_app_test_password@127.0.0.1:5432/radar_test?sslmode=disable
           NODE_ENV: test
           PORT: "10000"
           APP_ORIGIN: "https://configured.example.test"
