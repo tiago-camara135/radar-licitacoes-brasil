@@ -510,3 +510,82 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,te
 @media(prefers-reduced-motion:reduce){
   *,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
 }
+
+
+/* CUSTOMER EXPERIENCE 1.0 — onboarding, clarity and accessible navigation */
+#authScreen{align-items:start;justify-items:center;padding-top:34px;padding-bottom:64px}
+.auth-password-help{margin:-8px 0 14px;color:var(--muted);font-size:9px;line-height:1.5}
+.auth-tabs button[aria-selected="true"]{background:var(--surface);color:var(--text);box-shadow:0 2px 9px rgba(15,35,56,.10)}
+.customer-education{width:min(1200px,100%);margin:42px auto 0;color:var(--text)}
+.customer-education-heading{max-width:780px;margin:0 0 20px}
+.customer-education-heading h2{margin:9px 0 10px;font-size:clamp(27px,3vw,38px);line-height:1.08;letter-spacing:-.05em;text-wrap:balance}
+.customer-education-heading p{max-width:740px;margin:0;color:var(--muted);font-size:12px;line-height:1.75}
+.customer-steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.customer-step{min-width:0;padding:20px;border:1px solid var(--line);border-radius:17px;background:var(--surface);box-shadow:var(--shadow)}
+.customer-step-number{display:grid;place-items:center;width:32px;height:32px;border-radius:10px;background:color-mix(in srgb,var(--emerald) 12%,var(--surface));color:var(--emerald);font-size:10px;font-weight:900}
+.customer-step h3{margin:15px 0 7px;font-size:14px;letter-spacing:-.02em}
+.customer-step p{margin:0;color:var(--muted);font-size:10px;line-height:1.7}
+.customer-transparency{display:grid;grid-template-columns:36px minmax(0,1fr) auto;gap:12px;align-items:center;margin-top:14px;padding:17px;border:1px solid color-mix(in srgb,var(--emerald) 24%,var(--line));border-radius:15px;background:color-mix(in srgb,var(--emerald) 5%,var(--surface))}
+.customer-transparency-icon{display:grid;place-items:center;width:30px;height:30px;border-radius:50%;background:color-mix(in srgb,var(--emerald) 14%,var(--surface));color:var(--emerald);font-weight:900}
+.customer-transparency strong{display:block;font-size:11px}
+.customer-transparency p{margin:4px 0 0;color:var(--muted);font-size:9px;line-height:1.65}
+.customer-transparency>a{font-size:9px;font-weight:800;color:var(--emerald);white-space:nowrap}
+.customer-faq{display:grid;grid-template-columns:minmax(220px,.65fr) minmax(0,1.35fr);gap:24px;margin-top:34px;padding:24px;border:1px solid var(--line);border-radius:20px;background:var(--surface);box-shadow:var(--shadow)}
+.customer-faq-heading h2{margin:8px 0 0;font-size:24px;letter-spacing:-.04em}
+.customer-faq details{border-bottom:1px solid var(--line);padding:12px 0}
+.customer-faq details:first-of-type{padding-top:2px}
+.customer-faq details:last-child{border-bottom:0;padding-bottom:2px}
+.customer-faq summary{position:relative;display:block;padding:3px 28px 3px 0;list-style:none;cursor:pointer;font-size:10px;font-weight:800;line-height:1.55}
+.customer-faq summary::-webkit-details-marker{display:none}
+.customer-faq summary::after{content:"+";position:absolute;right:2px;top:0;color:var(--emerald);font-size:17px;font-weight:500}
+.customer-faq details[open] summary::after{content:"−"}
+.customer-faq details p{margin:8px 26px 2px 0;color:var(--muted);font-size:9px;line-height:1.75}
+.quick-start{margin:0 0 19px;border:1px solid var(--line);border-radius:16px;background:var(--surface);box-shadow:var(--shadow);overflow:hidden}
+.quick-start>summary{display:flex;align-items:center;gap:12px;padding:14px 17px;cursor:pointer;list-style:none}
+.quick-start>summary::-webkit-details-marker{display:none}
+.quick-start-mark{display:grid;place-items:center;width:34px;height:34px;flex:0 0 34px;border-radius:11px;background:color-mix(in srgb,var(--emerald) 12%,var(--surface));color:var(--emerald);font-size:10px;font-weight:900}
+.quick-start-copy{display:grid;gap:3px;min-width:0}
+.quick-start-copy strong{font-size:11px;letter-spacing:-.01em}
+.quick-start-copy small{color:var(--muted);font-size:9px;line-height:1.5}
+.quick-start-toggle{display:inline-flex;align-items:center;gap:7px;margin-left:auto;color:var(--emerald);font-size:9px;font-weight:850;white-space:nowrap}
+.quick-start-toggle>span{font-size:16px;transition:transform .18s ease}
+.quick-start[open] .quick-start-toggle>span{transform:rotate(180deg)}
+.quick-start-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;padding:0 13px 13px}
+.quick-start-card{min-width:0;padding:13px;border:1px solid var(--line);border-radius:12px;background:var(--surface2)}
+.quick-start-number{font-size:8px;font-weight:900;letter-spacing:.08em;color:var(--emerald)}
+.quick-start-card h3{margin:7px 0 5px;font-size:10px;line-height:1.4}
+.quick-start-card p{min-height:46px;margin:0 0 10px;color:var(--muted);font-size:8.5px;line-height:1.6}
+.quick-start-card a,.quick-start-card button{display:inline-flex;align-items:center;gap:5px;min-height:28px;padding:6px 8px;border:1px solid var(--line2);border-radius:8px;background:var(--surface);color:var(--text);font-size:8px;font-weight:800;text-decoration:none;cursor:pointer}
+.quick-start-card a:hover,.quick-start-card button:hover{border-color:var(--emerald);color:var(--emerald)}
+.source-note{display:grid;grid-template-columns:1fr auto;gap:4px 14px;align-items:center;margin-top:13px;padding:14px 16px;border:1px solid var(--line);border-radius:13px;background:var(--surface2)}
+.source-note strong{font-size:10px}
+.source-note p{grid-column:1;margin:0;color:var(--muted);font-size:9px;line-height:1.6}
+.source-note a{grid-column:2;grid-row:1/3;color:var(--emerald);font-size:9px;font-weight:850;white-space:nowrap}
+#documentsNav .nav-icon svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+@media(max-width:820px){
+  #authScreen{padding:24px 14px 48px}
+  .customer-education{margin-top:30px}
+  .customer-faq{grid-template-columns:1fr;gap:10px;padding:19px}
+  .quick-start-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:560px){
+  #authScreen{padding:18px 10px 38px}
+  .customer-education{margin-top:25px}
+  .customer-education-heading h2{font-size:26px}
+  .customer-education-heading p{font-size:10px}
+  .customer-steps{grid-template-columns:1fr}
+  .customer-step{padding:16px}
+  .customer-step h3{margin-top:11px}
+  .customer-transparency{grid-template-columns:30px minmax(0,1fr);gap:9px;padding:13px}
+  .customer-transparency>a{grid-column:2;grid-row:2}
+  .customer-faq{margin-top:23px;padding:15px}
+  .quick-start>summary{gap:9px;padding:12px}
+  .quick-start-copy small{max-width:230px}
+  .quick-start-toggle{font-size:0}
+  .quick-start-toggle>span{font-size:16px}
+  .quick-start-grid{grid-template-columns:1fr;padding:0 10px 10px}
+  .quick-start-card p{min-height:0}
+  .source-note{grid-template-columns:1fr}
+  .source-note p,.source-note a{grid-column:1;grid-row:auto}
+}
+@media(prefers-reduced-motion:reduce){.quick-start-toggle>span{transition:none}}
