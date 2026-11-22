@@ -1,12 +1,12 @@
 import { Pool } from 'pg';
-import { fetchPncpOpenSearch, normalizeSearchFilters, applySearchFilters, resultKey, pncpUrl, originUrl, municipalityOf, closingOf, pncpClientHealth } from './pncp-client-v3.mjs';
+import { fetchPncpOpenSearch, normalizeSearchFilters, applySearchFilters, resultKey, pncpUrl, originUrl, municipalityOf, closingOf, pncpClientHealth, summarizePncpErrors } from './pncp-client-v3.mjs';
 
 const PORT=Number(process.env.PORT||10000);
 const DATABASE_URL=process.env.DATABASE_URL||'';
 const pool=DATABASE_URL?new Pool({connectionString:DATABASE_URL,ssl:{rejectUnauthorized:false},max:3,idleTimeoutMillis:30000}):null;
 const cache=new Map();
 let ready=false,refreshTimer=null,openRefreshRunning=false;
-let lastRemote={at:null,ok:null,errors:0,partial:false,count:0,strategy:'open-proposals-background'};
+let lastRemote={at:null,ok:null,errors:0,partial:false,count:0,strategy:'open-proposals-background',error_details:[]};
 const digits=v=>String(v??'').replace(/\D/g,'');
 const clean=(v,n=500)=>String(v??'').trim().slice(0,n);
 const validDate=v=>{if(!v)return null;const t=Date.parse(v);return Number.isFinite(t)?new Date(t).toISOString():null};
@@ -103,12 +103,12 @@ async function refreshOpenIndex(filters={}){
   try{
     const remote=await fetchPncpOpenSearch({...filters,openOnly:true});
     await persistRemote(remote.items);
-    lastRemote={at:new Date().toISOString(),ok:true,errors:remote.errors.length,partial:remote.partial,count:remote.items.length,strategy:'open-proposals-background',successful_modalities:remote.successfulModalities,failed_modalities:remote.failedModalities};
+    lastRemote={at:new Date().toISOString(),ok:true,errors:remote.errors.length,partial:remote.partial,count:remote.items.length,strategy:'open-proposals-background',successful_modalities:remote.successfulModalities,failed_modalities:remote.failedModalities,error_details:summarizePncpErrors(remote.errors)};
     cache.clear();
-    console.log(`search router v4 open refresh: modalities=${remote.successfulModalities}/14 items=${remote.items.length} errors=${remote.failedModalities} partial=${Boolean(remote.partial)}`);
+    console.log(`search router v4 open refresh: modalities=${remote.successfulModalities}/14 items=${remote.items.length} errors=${remote.failedModalities} failed_codes=${summarizePncpErrors(remote.errors).map(x=>`${x.modality||'unknown'}:${x.category}${x.status?'/HTTP'+x.status:''}`).join(',')||'none'} partial=${Boolean(remote.partial)}`);
     return true;
   }catch(e){
-    lastRemote={at:new Date().toISOString(),ok:false,errors:1,partial:true,count:0,strategy:'open-proposals-background',message:clean(e?.message||'PNCP indisponível',180)};
+    lastRemote={at:new Date().toISOString(),ok:false,errors:1,partial:true,count:0,strategy:'open-proposals-background',message:clean(e?.message||'PNCP indisponível',180),error_details:summarizePncpErrors([{status:e?.status,message:e?.message}])};
     console.warn('search router v4 open refresh deferred:',e?.message||e);
     return false;
   }finally{openRefreshRunning=false}
