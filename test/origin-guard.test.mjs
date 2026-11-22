@@ -18,7 +18,7 @@ test('production starts through backend-only tracking, recovery history, deliver
   const guard=read('production-v24.mjs');
   const complianceSafety=read('tender-compliance-matrix-v3-safety.mjs');
   assert.equal(pkg.version,'2.19.0');
-  assert.equal(pkg.scripts.start,'node production-v33.mjs');
+  assert.equal(pkg.scripts.start,'node production-v34.mjs');
   assert.match(entryRuntime,/await import\('\.\/production-v32\.mjs'\)/);
   assert.match(entryRuntime,/handleTenderComplianceMatrixV3SafeRoute/);
   assert.match(entryRuntime,/tender-readiness-matrix-v3\.js/);
