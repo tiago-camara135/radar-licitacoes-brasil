@@ -33,7 +33,7 @@
         </div>
         <form id="authForm" class="auth-card" novalidate>
           <div class="auth-card-head"><span class="eyebrow">ACESSO SEGURO</span><h2>Entre no Radar</h2><p>Use sua conta para acessar o monitoramento.</p></div>
-          <div class="auth-tabs" role="tablist"><button type="button" id="tabLogin" class="active">Entrar</button><button type="button" id="tabRegister">Criar conta</button></div>
+          <div class="auth-tabs" role="tablist" aria-label="Acesso à plataforma"><button type="button" id="tabLogin" class="active" role="tab" aria-selected="true">Entrar</button><button type="button" id="tabRegister" role="tab" aria-selected="false">Criar conta</button></div>
           <label class="field"><span>E-mail</span><input id="authEmail" type="email" autocomplete="email" required placeholder="seuemail@empresa.com.br"></label>
           <label class="field"><span>Senha</span><input id="authPassword" type="password" autocomplete="current-password" required minlength="10" aria-describedby="authPasswordHelp" placeholder="Mínimo de 10 caracteres"></label>
           <p id="authPasswordHelp" class="auth-password-help">Use pelo menos 10 caracteres. A mesma regra vale para entrar e criar sua conta.</p>
