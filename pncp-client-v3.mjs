@@ -13,6 +13,19 @@ let cooldownUntil = 0;
 const sleep = ms => new Promise(r=>setTimeout(r,ms));
 const digits = v => String(v ?? '').replace(/\D/g,'');
 const clean = (v,n=500) => String(v ?? '').trim().slice(0,n);
+
+export function summarizePncpErrors(errors=[]){
+  return (Array.isArray(errors)?errors:[]).slice(0,14).map(error=>{
+    const rawStatus=Number(error?.status);
+    const status=Number.isInteger(rawStatus)&&rawStatus>0?rawStatus:null;
+    const rawModality=Number(error?.code);
+    const modality=Number.isInteger(rawModality)&&rawModality>=1&&rawModality<=14?rawModality:null;
+    const message=clean(error?.message||'',240);
+    const category=status===429?'rate_limit':status>=500?'upstream_5xx':status?'http_error':/abort|timeout/i.test(message)?'timeout':'network_error';
+    return {modality,status,category};
+  });
+}
+
 export const textNorm = v => String(v ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
 export const ymd = d => new Date(d).toISOString().slice(0,10).replaceAll('-','');
 export const municipalityOf = x => x?.unidadeOrgao?.municipioNome || x?.unidadeOrgao?.nomeMunicipio || x?.municipioNome || '';
