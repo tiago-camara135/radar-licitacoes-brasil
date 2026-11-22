@@ -21,10 +21,17 @@ const MOD=[['','Todas'],['1','Leilão - Eletrônico'],['2','Diálogo Competitivo
 const UFS=['','AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'];
 
 async function api(path,opt={}){
-  const r=await fetch(path,{credentials:'same-origin',cache:'no-store',...opt,headers:{accept:'application/json',...(opt.body?{'content-type':'application/json'}:{}),...(opt.headers||{})}});
-  const d=await r.json().catch(()=>({}));
-  if(!r.ok)throw new Error(d.error||`Erro ${r.status}`);
-  return d;
+  const {timeoutMs=15000,signal,...request}=opt,controller=new AbortController(),timer=setTimeout(()=>controller.abort(),timeoutMs),relay=()=>controller.abort();
+  if(signal){if(signal.aborted)controller.abort();else signal.addEventListener('abort',relay,{once:true})}
+  try{
+    const r=await fetch(path,{credentials:'same-origin',cache:'no-store',...request,signal:controller.signal,headers:{accept:'application/json',...(request.body?{'content-type':'application/json'}:{}),...(request.headers||{})}});
+    const d=await r.json().catch(()=>({}));
+    if(!r.ok)throw new Error(d.error||`Erro ${r.status}`);
+    return d;
+  }catch(e){
+    if(controller.signal.aborted&&!signal?.aborted)throw Object.assign(new Error('A solicitação demorou mais que o esperado. Tente novamente.'),{code:'request_timeout'});
+    throw e;
+  }finally{clearTimeout(timer);signal?.removeEventListener('abort',relay)}
 }
 function toast(msg,error=false){
   const e=$('#toast');if(!e)return;
