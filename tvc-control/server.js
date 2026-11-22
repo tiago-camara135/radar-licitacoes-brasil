@@ -54,13 +54,11 @@ function advanceRecurringDate(date,frequency){
   throw new Error("Frequência recorrente inválida.");
 }
 function buildRecurringForecast(rule,endExclusive){
-  const expenses=[];let due=String(rule.next_due).slice(0,10),iterations=0;
+  const amount=asNumber(rule.amount),nextDue=String(rule.next_due).slice(0,10);let due=nextDue,periodTotal=0,occurrences=0,iterations=0;
   while(due<endExclusive&&iterations<600){
-    expenses.push({rule_id:rule.id,description:rule.description,amount:asNumber(rule.amount),frequency:rule.frequency,due_on:due,account_name:rule.account_name,category_name:rule.category_name||"Sem categoria",in_period:true});
-    due=advanceRecurringDate(due,rule.frequency);iterations++;
+    periodTotal+=amount;occurrences++;due=advanceRecurringDate(due,rule.frequency);iterations++;
   }
-  if(!expenses.length)expenses.push({rule_id:rule.id,description:rule.description,amount:asNumber(rule.amount),frequency:rule.frequency,due_on:due,account_name:rule.account_name,category_name:rule.category_name||"Sem categoria",in_period:false});
-  return expenses;
+  return {rule_id:rule.id,description:rule.description,amount,frequency:rule.frequency,due_on:nextDue,account_name:rule.account_name,category_name:rule.category_name||"Sem categoria",occurrences,period_total:periodTotal};
 }
 function setSession(res,user){
   const token=jwt.sign({sub:user.id,email:user.email,name:user.full_name},process.env.JWT_SECRET,{expiresIn:SESSION_SECONDS,issuer:"tvc-control"});
@@ -330,7 +328,7 @@ app.get("/api/dashboard",requireAuth,asyncRoute(async(req,res)=>{
     pool.query("SELECT c.id,c.name,c.brand,c.last_four,c.credit_limit,c.closing_day,c.due_day,COALESCE(SUM(t.amount) FILTER(WHERE t.status IN ('pending','overdue') AND t.kind='expense'),0) AS used_amount FROM public.cards c LEFT JOIN public.transactions t ON t.card_id=c.id AND t.user_id=c.user_id WHERE c.user_id=$1 GROUP BY c.id ORDER BY c.created_at DESC LIMIT 4",[uid]),
     pool.query("SELECT r.id,r.description,r.amount,r.frequency,r.next_due,a.name AS account_name,COALESCE(c.name,'Sem categoria') AS category_name FROM public.recurring_rules r LEFT JOIN public.accounts a ON a.id=r.account_id LEFT JOIN public.categories c ON c.id=r.category_id WHERE r.user_id=$1 AND r.kind='expense' AND r.is_active=true ORDER BY r.next_due,r.created_at",[uid])
   ];
-  const results=await Promise.all(q),accounts=results[0].rows,totals=results[1].rows[0],balance=accounts.reduce((s,a)=>s+asNumber(a.current_balance),0),fixedExpenses=results[9].rows.flatMap(rule=>buildRecurringForecast(rule,bounds[1])).sort((a,b)=>a.due_on.localeCompare(b.due_on)||a.description.localeCompare(b.description)),fixedExpenseTotal=fixedExpenses.reduce((sum,item)=>sum+(item.in_period?item.amount:0),0),outstandingExpense=asNumber(totals.outstanding_expense),committedExpense=outstandingExpense+fixedExpenseTotal;
+  const results=await Promise.all(q),accounts=results[0].rows,totals=results[1].rows[0],balance=accounts.reduce((s,a)=>s+asNumber(a.current_balance),0),fixedExpenses=results[9].rows.map(rule=>buildRecurringForecast(rule,bounds[1])).sort((a,b)=>a.due_on.localeCompare(b.due_on)||a.description.localeCompare(b.description)),fixedExpenseTotal=fixedExpenses.reduce((sum,item)=>sum+item.period_total,0),outstandingExpense=asNumber(totals.outstanding_expense),committedExpense=outstandingExpense+fixedExpenseTotal;
   res.json({month,balance,income:asNumber(totals.income),expense:asNumber(totals.expense),pendingIncome:asNumber(totals.pending_income),pendingExpense:asNumber(totals.pending_expense),outstandingExpense,fixedExpenseTotal,committedExpense,projectedBalance:balance-committedExpense,fixedExpenses,transactionCount:Number(totals.transaction_count),accounts,categories:results[2].rows,chart:results[3].rows,upcoming:results[4].rows,transactions:results[5].rows,budgets:results[6].rows,goals:results[7].rows,cards:results[8].rows});
 }));
 
