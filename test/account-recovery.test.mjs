@@ -52,7 +52,7 @@ test('runtime preserves recovery chain and exposes administrative delivery histo
   const backend=read('account-recovery-v1.mjs');
   const frontend=read('account-recovery-v1.js');
   assert.equal(pkg.version,'2.19.0');
-  assert.equal(pkg.scripts.start,'node production-v33.mjs');
+  assert.equal(pkg.scripts.start,'node production-v34.mjs');
   assert.match(entryRuntime,/await import\('\.\/production-v32\.mjs'\)/);
   assert.match(activeRuntime,/await import\('\.\/production-v29\.mjs'\)/);
   assert.match(activeRuntime,/handleUserDashboardRoute/);
