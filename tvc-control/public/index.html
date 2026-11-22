@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="pt-BR" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#f5f7fb">
+<meta name="description" content="TVC Control — controle financeiro pessoal com clareza e inteligência.">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/styles.css">
+<title>TVC Control | Gestão financeira</title>
+</head>
+<body>
+<div id="auth-screen" class="auth-shell">
+  <div class="auth-visual">
+    <div class="brand brand-light"><span class="brand-mark">T</span><span><b>TVC Control</b><small>GESTÃO FINANCEIRA</small></span></div>
+    <div class="auth-pitch">
+      <div class="eyebrow light">SEU DINHEIRO. SUAS DECISÕES.</div>
+      <h1>Clareza para<br><em>cada escolha.</em></h1>
+      <p>Organize suas contas, acompanhe seus gastos e transforme seus planos em objetivos possíveis.</p>
+      <div class="auth-feature"><span>✓</span> Visão completa da sua vida financeira</div>
+      <div class="auth-feature"><span>✓</span> Contas, cartões e despesas em um só lugar</div>
+      <div class="auth-feature"><span>✓</span> Seus dados sincronizados com segurança</div>
+    </div>
+    <div class="auth-foot">TVC CONTROL <span>•</span> CONTROLE COM INTELIGÊNCIA</div>
+  </div>
+  <div class="auth-form-side">
+    <div class="auth-form-wrap">
+      <div class="mobile-brand brand"><span class="brand-mark">T</span><span><b>TVC Control</b><small>GESTÃO FINANCEIRA</small></span></div>
+      <div class="auth-heading"><div class="eyebrow">BEM-VINDO AO TVC CONTROL</div><h2 id="auth-title">Acesse sua conta</h2><p id="auth-subtitle">Entre para acompanhar suas finanças.</p></div>
+      <form id="auth-form" class="form-stack">
+        <label id="name-field" class="field" hidden><span>Nome completo</span><input name="fullName" autocomplete="name" placeholder="Como podemos chamar você?"></label>
+        <label class="field"><span>E-mail</span><input name="email" type="email" autocomplete="email" placeholder="voce@email.com" required></label>
+        <label class="field"><span>Senha</span><input name="password" type="password" autocomplete="current-password" placeholder="Mínimo de 10 caracteres" minlength="10" required></label>
+        <div id="auth-error" class="form-error" hidden></div>
+        <button id="auth-submit" class="btn btn-primary btn-wide" type="submit">Entrar na minha conta <span>→</span></button>
+      </form>
+      <div class="auth-switch"><span id="auth-switch-copy">Ainda não tem uma conta?</span> <button id="auth-switch" class="text-button" type="button">Criar conta grátis</button></div>
+      <div class="auth-security"><span>◈</span> Acesso protegido e dados privados por usuário.</div>
+    </div>
+  </div>
+</div>
+
+<div id="app-shell" class="app-shell" hidden>
+  <aside class="sidebar">
+    <div class="brand"><span class="brand-mark">T</span><span><b>TVC Control</b><small>GESTÃO FINANCEIRA</small></span></div>
+    <div class="side-caption">MENU PRINCIPAL</div>
+    <nav class="side-nav">
+      <button class="nav-link active" data-page="dashboard"><span class="nav-icon">▦</span>Visão geral</button>
+      <button class="nav-link" data-page="transactions"><span class="nav-icon">↕</span>Lançamentos</button>
+      <button class="nav-link" data-page="accounts"><span class="nav-icon">▣</span>Minhas contas</button>
+      <button class="nav-link" data-page="cards"><span class="nav-icon">▤</span>Cartões</button>
+      <button class="nav-link" data-page="recurring"><span class="nav-icon">⟳</span>Despesas fixas</button>
+      <button class="nav-link" data-page="budgets"><span class="nav-icon">◷</span>Orçamentos</button>
+      <button class="nav-link" data-page="goals"><span class="nav-icon">◎</span>Metas e sonhos</button>
+      <button class="nav-link" data-page="reports"><span class="nav-icon">▥</span>Relatórios</button>
+    </nav>
+    <div class="side-caption side-caption-spaced">PREFERÊNCIAS</div>
+    <nav class="side-nav">
+      <button class="nav-link" data-page="settings"><span class="nav-icon">⚙</span>Configurações</button>
+      <button class="nav-link" id="theme-toggle"><span class="nav-icon">◐</span>Alternar aparência</button>
+    </nav>
+    <div class="sidebar-bottom">
+      <div class="sidebar-help"><span class="help-icon">✦</span><div><b>Um passo de cada vez</b><small>Pequenos hábitos constroem grandes resultados.</small></div></div>
+      <button class="user-mini" id="user-menu"><span class="avatar" id="user-avatar">T</span><span class="user-mini-copy"><b id="sidebar-user-name">Minha conta</b><small id="sidebar-user-email">usuario@email.com</small></span><span class="user-menu-arrow">⌄</span></button>
+    </div>
+  </aside>
+
+  <main class="main-area">
+    <header class="topbar">
+      <div class="topbar-left"><div class="eyebrow" id="today-label">PAINEL FINANCEIRO</div><h1 id="page-title">Visão geral</h1></div>
+      <div class="topbar-actions">
+        <label class="month-control" id="month-control"><span>Período</span><input id="month-picker" type="month"></label>
+        <button class="icon-button theme-mobile" id="theme-toggle-mobile" title="Alternar tema">◐</button>
+        <button class="btn btn-primary" id="new-transaction"><span class="plus">＋</span><span class="new-label">Novo lançamento</span></button>
+      </div>
+    </header>
+
+    <section class="page active" id="page-dashboard">
+      <div class="welcome-row"><div><h2 id="welcome-title">Seu dinheiro em perspectiva.</h2><p>Acompanhe o que entra, o que sai e o que você está construindo.</p></div><div class="sync-indicator"><i></i> Dados sincronizados</div></div>
+      <div class="stats-grid">
+        <article class="stat-card stat-main"><div class="stat-top"><span>Saldo total</span><span class="stat-icon">◈</span></div><div class="stat-value" id="stat-balance">R$ 0,00</div><div class="stat-foot"><span class="trend neutral">●</span> Saldo das suas contas</div><div class="stat-glow"></div></article>
+        <article class="stat-card"><div class="stat-top"><span>Receitas do mês</span><span class="stat-icon green">↙</span></div><div class="stat-value positive" id="stat-income">R$ 0,00</div><div class="stat-foot">Entradas confirmadas</div></article>
+        <article class="stat-card"><div class="stat-top"><span>Despesas do mês</span><span class="stat-icon red">↗</span></div><div class="stat-value negative" id="stat-expense">R$ 0,00</div><div class="stat-foot">Saídas confirmadas</div></article>
+        <article class="stat-card"><div class="stat-top"><span>Contas a pagar</span><span class="stat-icon amber">◷</span></div><div class="stat-value" id="stat-pending">R$ 0,00</div><div class="stat-foot" id="stat-pending-note">Valores pendentes</div></article>
+      </div>
+      <div class="dashboard-grid">
+        <article class="panel chart-panel"><div class="panel-heading"><div><h3>Fluxo financeiro</h3><p>Receitas e despesas ao longo dos últimos meses</p></div><span class="panel-tag">6 MESES</span></div><div id="cashflow-chart" class="chart-area"><div class="empty-state">Seus gráficos aparecerão aqui quando você registrar lançamentos.</div></div><div class="chart-legend"><span><i class="legend-dot income-dot"></i>Receitas</span><span><i class="legend-dot expense-dot"></i>Despesas</span></div></article>
+        <article class="panel"><div class="panel-heading"><div><h3>Despesas por categoria</h3><p>Onde seu dinheiro está sendo usado</p></div><span class="panel-more">ESTE MÊS</span></div><div id="expense-categories" class="category-list"><div class="empty-state">Nenhuma despesa registrada neste período.</div></div></article>
+      </div>
+      <div class="dashboard-grid lower-grid">
+        <article class="panel"><div class="panel-heading"><div><h3>Últimos lançamentos</h3><p>Movimentações recentes da sua conta</p></div><button class="link-button" data-go="transactions">Ver todos <span>→</span></button></div><div id="recent-transactions" class="transaction-list"><div class="empty-state">Seus lançamentos aparecerão aqui.</div></div></article>
+        <article class="panel"><div class="panel-heading"><div><h3>Próximos vencimentos</h3><p>Não deixe nenhuma conta passar</p></div><button class="link-button" data-go="transactions">Ver agenda <span>→</span></button></div><div id="upcoming-list" class="upcoming-list"><div class="empty-state">Nenhuma conta pendente.</div></div></article>
+      </div>
+      <div class="dashboard-grid lower-grid">
+        <article class="panel"><div class="panel-heading"><div><h3>Orçamentos em andamento</h3><p>Controle seus limites por categoria</p></div><button class="link-button" data-go="budgets">Gerenciar <span>→</span></button></div><div id="budget-preview" class="budget-list"><div class="empty-state">Defina um limite para começar a acompanhar.</div></div></article>
+        <article class="panel"><div class="panel-heading"><div><h3>Metas em destaque</h3><p>Seus planos ganhando forma</p></div><button class="link-button" data-go="goals">Ver metas <span>→</span></button></div><div id="goal-preview" class="goal-list"><div class="empty-state">Crie sua primeira meta financeira.</div></div></article>
+      </div>
+    </section>
+
+    <section class="page" id="page-transactions">
+      <div class="page-intro"><div><h2>Seus lançamentos</h2><p>Registre e acompanhe cada movimentação financeira.</p></div><button class="btn btn-primary" data-create="transaction">＋ Novo lançamento</button></div>
+      <article class="panel"><div class="table-toolbar"><div class="filter-search"><span>⌕</span><input id="transaction-search" placeholder="Buscar lançamento..."></div><select id="transaction-kind-filter" class="select-control"><option value="all">Todos os tipos</option><option value="income">Receitas</option><option value="expense">Despesas</option><option value="transfer">Transferências</option></select></div><div class="table-scroll"><table class="data-table"><thead><tr><th>DESCRIÇÃO</th><th>CATEGORIA</th><th>CONTA / CARTÃO</th><th>DATA</th><th>SITUAÇÃO</th><th class="align-right">VALOR</th><th></th></tr></thead><tbody id="transactions-table"></tbody></table></div></article>
+    </section>
+
+    <section class="page" id="page-accounts">
+      <div class="page-intro"><div><h2>Minhas contas</h2><p>Organize bancos, carteiras e reservas em um só lugar.</p></div><button class="btn btn-primary" data-create="account">＋ Adicionar conta</button></div>
+      <div id="accounts-grid" class="entity-grid"></div>
+    </section>
+
+    <section class="page" id="page-cards">
+      <div class="page-intro"><div><h2>Cartões</h2><p>Acompanhe limites, utilização e datas importantes.</p></div><button class="btn btn-primary" data-create="card">＋ Adicionar cartão</button></div>
+      <div id="cards-grid" class="entity-grid"></div>
+    </section>
+
+    <section class="page" id="page-recurring">
+      <div class="page-intro"><div><h2>Despesas fixas e recorrentes</h2><p>Cadastre contas que se repetem e gere os lançamentos de cada vencimento.</p></div><button class="btn btn-primary" data-create="recurring">＋ Nova recorrência</button></div>
+      <div id="recurring-grid" class="entity-grid"></div>
+    </section>
+
+    <section class="page" id="page-budgets">
+      <div class="page-intro"><div><h2>Orçamentos</h2><p>Defina limites mensais e acompanhe seu consumo.</p></div><button class="btn btn-primary" data-create="budget">＋ Criar orçamento</button></div>
+      <div id="budgets-grid" class="entity-grid"></div>
+    </section>
+
+    <section class="page" id="page-goals">
+      <div class="page-intro"><div><h2>Metas e sonhos</h2><p>Transforme objetivos em planos financeiros.</p></div><button class="btn btn-primary" data-create="goal">＋ Nova meta</button></div>
+      <div id="goals-grid" class="entity-grid"></div>
+    </section>
+
+    <section class="page" id="page-reports">
+      <div class="page-intro"><div><h2>Relatórios</h2><p>Uma leitura clara da sua movimentação financeira.</p></div><button class="btn btn-secondary" id="export-csv">⇩ Exportar CSV</button></div>
+      <div class="stats-grid report-stats"><article class="stat-card"><div class="stat-top"><span>Receitas</span><span class="stat-icon green">↙</span></div><div class="stat-value positive" id="report-income">R$ 0,00</div></article><article class="stat-card"><div class="stat-top"><span>Despesas</span><span class="stat-icon red">↗</span></div><div class="stat-value negative" id="report-expense">R$ 0,00</div></article><article class="stat-card"><div class="stat-top"><span>Resultado</span><span class="stat-icon">＝</span></div><div class="stat-value" id="report-net">R$ 0,00</div></article><article class="stat-card"><div class="stat-top"><span>Lançamentos</span><span class="stat-icon amber">▤</span></div><div class="stat-value" id="report-count">0</div></article></div>
+      <article class="panel"><div class="panel-heading"><div><h3>Resumo por categoria</h3><p>Despesas confirmadas no período selecionado</p></div></div><div id="report-categories" class="category-list"></div></article>
+    </section>
+
+    <section class="page" id="page-settings">
+      <div class="page-intro"><div><h2>Configurações</h2><p>Gerencie seu perfil e a aparência do TVC Control.</p></div></div>
+      <div class="settings-grid">
+        <article class="panel"><div class="panel-heading"><div><h3>Seu perfil</h3><p>Informações da sua conta</p></div></div><form id="profile-form" class="form-stack"><label class="field"><span>Nome completo</span><input name="fullName" required minlength="2" maxlength="100"></label><label class="field"><span>E-mail</span><input id="profile-email" disabled></label><button class="btn btn-primary" type="submit">Salvar alterações</button></form></article>
+        <article class="panel"><div class="panel-heading"><div><h3>Aparência</h3><p>Escolha como prefere visualizar o aplicativo</p></div></div><div class="theme-options"><button class="theme-choice" data-theme-choice="light"><span class="theme-preview light-preview"></span><b>Claro</b><small>Leve e clean</small></button><button class="theme-choice" data-theme-choice="dark"><span class="theme-preview dark-preview"></span><b>Escuro</b><small>Confortável à noite</small></button><button class="theme-choice" data-theme-choice="system"><span class="theme-preview system-preview"></span><b>Automático</b><small>Segue o dispositivo</small></button></div><div class="settings-divider"></div><button class="btn btn-secondary" id="logout-button">Sair da minha conta</button></article>
+      </div>
+      <div class="privacy-note"><span>◈</span><div><b>Seus dados são privados</b><p>Suas informações financeiras são associadas à sua conta e protegidas no banco de dados. Nunca compartilhe sua senha.</p></div></div>
+    </section>
+    <footer class="app-footer"><span>© <span id="year"></span> TVC Control</span><span>Seu dinheiro, sob controle.</span></footer>
+  </main>
+  <nav class="mobile-nav">
+    <button class="mobile-link active" data-page="dashboard"><span>▦</span>Início</button>
+    <button class="mobile-link" data-page="transactions"><span>↕</span>Lançamentos</button>
+    <button class="mobile-link" data-page="accounts"><span>▣</span>Contas</button>
+    <button class="mobile-link" data-page="cards"><span>▤</span>Cartões</button>
+    <button class="mobile-link" data-page="recurring"><span>⟳</span>Fixas</button>
+    <button class="mobile-link" data-page="settings"><span>⚙</span>Mais</button>
+  </nav>
+</div>
+
+<div id="modal" class="modal" hidden><div class="modal-backdrop" data-close-modal></div><section class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modal-title"><div class="modal-head"><div><div class="eyebrow">TVC CONTROL</div><h2 id="modal-title">Novo lançamento</h2></div><button class="icon-button" data-close-modal aria-label="Fechar">×</button></div><form id="modal-form" class="form-stack"><div id="modal-fields" class="modal-fields"></div><div class="modal-actions"><button class="btn btn-secondary" type="button" data-close-modal>Cancelar</button><button class="btn btn-primary" id="modal-submit" type="submit">Salvar</button></div></form></section></div>
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+<script src="/app.js" defer></script>
+</body></html>
