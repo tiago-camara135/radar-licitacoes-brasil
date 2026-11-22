@@ -39,13 +39,13 @@ test('frontend script cache keys are refreshed with the performance fix',()=>{
 
 test('dashboard loads independent account summaries concurrently',()=>{
   const backend=read('user-dashboard-v1.mjs');
-  assert.match(backend,/const \\[prefs,health,tracked,ai,alertRows,companyRows\\]=await Promise\\.all\\(\\[/);
-  assert.match(backend,/recs=await recommendations\\(uid,health\\.map,geo\\)/);
+  assert.ok(backend.includes('const [prefs,health,tracked,ai,alertRows,companyRows]=await Promise.all(['));
+  assert.ok(backend.includes('recs=await recommendations(uid,health.map,geo)'));
 });
 
 test('secondary account and habilitation screens bound API wait time',()=>{
   for(const file of ['user-dashboard-v1.js','admin-user-support-v1.js','company-documents-v1.js','company-verification-v1.js','tender-readiness-v1.js']){
     assert.match(read(file),/timeoutMs=15000/,file);
   }
-  assert.match(read('tender-readiness-quick-v1.js'),/setTimeout\\(\\(\\)=>controller\\.abort\\(\\),12000\\)/);
+  assert.ok(read('tender-readiness-quick-v1.js').includes('setTimeout(()=>controller.abort(),12000)'));
 });
