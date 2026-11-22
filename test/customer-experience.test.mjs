@@ -40,7 +40,7 @@ test('brand palette is unified across light and dark themes and key accents',()=
   const start=css.lastIndexOf(marker);
   assert.ok(start>=0,'final palette override must exist');
   const palette=css.slice(start);
-  for(const token of ['--bg:','#f4f7f9','--emerald:#176b62','--cyan:#477f95','--action-bg:#155e58','--action-bg2:#2c6d80']) assert.ok(palette.includes(token),token);
+  for(const token of ['--bg:','#f4f7f9','--emerald:#176b62','--cyan:#3f788e','--muted:#5f7482','--action-bg:#155e58','--action-bg2:#2c6d80']) assert.ok(palette.includes(token),token);
   assert.ok(palette.includes('html[data-theme="dark"]'));
   for(const token of ['--bg:#0b1721','--emerald:#68b7a7','--cyan:#82b5c6']) assert.ok(palette.includes(token),token);
   assert.match(palette,/\.auth-copy\{/);
