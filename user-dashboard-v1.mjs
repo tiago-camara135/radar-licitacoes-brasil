@@ -144,9 +144,15 @@ function priorities({alertsCount,health,tracked,ai,company}){
 }
 
 async function overview(uid,user){
-  const prefs=await preferences(uid),geo=prefs.geo,health=await documentHealth(uid),recs=await recommendations(uid,health.map,geo),tracked=await tracking(uid),ai=await recentAi(uid);
-  const alerts=(await qMaybe(`SELECT COUNT(*)::int total,COUNT(*) FILTER(WHERE enabled)::int active FROM saved_alerts WHERE user_id=$1`,[uid],[{total:0,active:0}]))[0]||{};
-  const company=(await qMaybe('SELECT cnpj,legal_name,trade_name,state,municipality,contact_name FROM company_profiles WHERE user_id=$1 LIMIT 1',[uid]))[0]||null;
+  const [prefs,health,tracked,ai,alertRows,companyRows]=await Promise.all([
+    preferences(uid),
+    documentHealth(uid),
+    tracking(uid),
+    recentAi(uid),
+    qMaybe(`SELECT COUNT(*)::int total,COUNT(*) FILTER(WHERE enabled)::int active FROM saved_alerts WHERE user_id=$1`,[uid],[{total:0,active:0}]),
+    qMaybe('SELECT cnpj,legal_name,trade_name,state,municipality,contact_name FROM company_profiles WHERE user_id=$1 LIMIT 1',[uid])
+  ]);
+  const geo=prefs.geo,recs=await recommendations(uid,health.map,geo),alerts=alertRows[0]||{},company=companyRows[0]||null;
   const todayStart=Date.parse(today()+'T00:00:00-03:00'),matchedToday=recs.filter(x=>new Date(x.detected_at).getTime()>=todayStart).length,highReady=recs.filter(x=>x.fit.score>=85).length;
   const events=agenda(recs,tracked,health),upcoming7=events.filter(x=>['session','opportunity'].includes(x.type)&&new Date(x.date)-new Date()<=7*86400000&&new Date(x.date)>=new Date()).length;
   const pr=priorities({alertsCount:num(alerts.active),health,tracked,ai,company});
