@@ -9,3 +9,5 @@ html[data-theme=dark]{color-scheme:dark;--bg:#0d1422;--surface:#151f30;--surface
 
 
 .table-action.edit{color:var(--brand)}.table-action.edit:hover{color:var(--brand);background:var(--brand-soft);border-radius:6px}.edit-note{grid-column:1/-1;padding:10px 12px;border-radius:9px;background:var(--brand-soft);color:var(--brand);font-size:10px;line-height:1.5}
+
+.entity-actions{display:flex;align-items:center;gap:10px}.entity-actions .account-edit{color:var(--brand);font-weight:650}.entity-actions [data-delete="account"]{color:var(--muted)}.entity-actions button{padding:3px 0}

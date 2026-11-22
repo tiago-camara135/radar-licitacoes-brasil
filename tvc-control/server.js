@@ -129,11 +129,18 @@ app.get("/api/accounts",requireAuth,asyncRoute(async(req,res)=>{
   res.json({accounts:r.rows});
 }));
 app.post("/api/accounts",requireAuth,asyncRoute(async(req,res)=>{
-  const b=req.body||{},types=["checking","savings","cash","investment","other"],opening=Number(b.openingBalance||0);
-  if(typeof b.name!=="string"||b.name.trim().length<2||b.name.trim().length>60||!types.includes(b.accountType)||!Number.isFinite(opening))return res.status(400).json({error:"Confira os dados da conta."});
+  const b=req.body||{},accountType=typeof b.accountType==="string"?b.accountType.trim():"",opening=Number(b.openingBalance||0);
+  if(typeof b.name!=="string"||b.name.trim().length<2||b.name.trim().length>60||accountType.length<2||accountType.length>40||accountType==="__new__"||accountType.split("").some(ch=>ch.charCodeAt(0)<32)||!Number.isFinite(opening)||opening<0)return res.status(400).json({error:"Confira os dados da conta e o tipo informado."});
   const color=/^#[0-9a-fA-F]{6}$/.test(b.color)?b.color:"#4169E1";
-  const r=await pool.query("INSERT INTO public.accounts(user_id,name,account_type,institution,opening_balance,color) VALUES($1,$2,$3,$4,$5,$6) RETURNING *",[req.user.id,b.name.trim(),b.accountType,typeof b.institution==="string"?b.institution.trim().slice(0,80):null,opening,color]);
+  const r=await pool.query("INSERT INTO public.accounts(user_id,name,account_type,institution,opening_balance,color) VALUES($1,$2,$3,$4,$5,$6) RETURNING *",[req.user.id,b.name.trim(),accountType,typeof b.institution==="string"?b.institution.trim().slice(0,80):null,opening,color]);
   res.status(201).json({account:r.rows[0]});
+}));
+app.patch("/api/accounts/:id",requireAuth,asyncRoute(async(req,res)=>{
+  const b=req.body||{},accountType=typeof b.accountType==="string"?b.accountType.trim():"",opening=Number(b.openingBalance);
+  if(typeof b.name!=="string"||b.name.trim().length<2||b.name.trim().length>60||accountType.length<2||accountType.length>40||accountType==="__new__"||accountType.split("").some(ch=>ch.charCodeAt(0)<32)||!Number.isFinite(opening)||opening<0)return res.status(400).json({error:"Confira os dados da conta e o tipo informado."});
+  const r=await pool.query("UPDATE public.accounts SET name=$3,account_type=$4,institution=$5,opening_balance=$6 WHERE id=$1 AND user_id=$2 AND is_active=true RETURNING id",[req.params.id,req.user.id,b.name.trim(),accountType,typeof b.institution==="string"?b.institution.trim().slice(0,80):null,opening]);
+  if(!r.rowCount)return res.status(404).json({error:"Conta não encontrada."});
+  res.json({ok:true,account:{id:r.rows[0].id}});
 }));
 app.delete("/api/accounts/:id",requireAuth,asyncRoute(async(req,res)=>{
   const r=await pool.query("UPDATE public.accounts SET is_active=false WHERE id=$1 AND user_id=$2 RETURNING id",[req.params.id,req.user.id]);
