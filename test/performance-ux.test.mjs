@@ -48,4 +48,6 @@ test('secondary account and habilitation screens bound API wait time',()=>{
     assert.match(read(file),/timeoutMs=15000/,file);
   }
   assert.ok(read('tender-readiness-quick-v1.js').includes('setTimeout(()=>controller.abort(),12000)'));
+  assert.ok(read('tender-readiness-quick-v1.js').includes("$$('.tr-quick-badge.loading')"));
+  assert.ok(read('tender-readiness-quick-v1.js').includes("$$('.tr-quick-badge')"));
 });
