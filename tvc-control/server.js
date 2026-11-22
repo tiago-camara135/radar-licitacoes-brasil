@@ -173,6 +173,20 @@ app.post("/api/transactions",requireAuth,asyncRoute(async(req,res)=>{
     await client.query("COMMIT");res.status(201).json({ok:true,created:ids.length,ids});
   }catch(err){await client.query("ROLLBACK");throw err;}finally{client.release();}
 }));
+app.patch("/api/transactions/:id",requireAuth,asyncRoute(async(req,res)=>{
+  const b=req.body||{},kind=b.kind,description=typeof b.description==="string"?b.description.trim():"",amount=Number(b.amount),occurred=b.occurredOn,status=b.status||"paid",dueOn=b.dueOn||null;
+  if(!["income","expense","transfer"].includes(kind)||description.length<2||description.length>120||!Number.isFinite(amount)||amount<=0||amount>999999999||!validDate(occurred)||!["paid","pending","overdue","cancelled"].includes(status))return res.status(400).json({error:"Confira descrição, tipo, valor, data e situação do lançamento."});
+  if(dueOn&&!validDate(dueOn))return res.status(400).json({error:"Informe uma data de vencimento válida."});
+  const accountId=b.accountId||null,categoryId=kind==="transfer"?null:(b.categoryId||null),cardId=kind==="expense"?(b.cardId||null):null,transferToAccountId=kind==="transfer"?(b.transferToAccountId||null):null;
+  if(accountId&&!(await owned("public.accounts",accountId,req.user.id)))return res.status(400).json({error:"Conta não encontrada."});
+  if(categoryId&&!(await owned("public.categories",categoryId,req.user.id)))return res.status(400).json({error:"Categoria não encontrada."});
+  if(cardId&&!(await owned("public.cards",cardId,req.user.id)))return res.status(400).json({error:"Cartão não encontrado."});
+  if(kind==="transfer"&&(!accountId||!transferToAccountId||accountId===transferToAccountId||!(await owned("public.accounts",transferToAccountId,req.user.id))))return res.status(400).json({error:"Selecione duas contas diferentes para a transferência."});
+  const notes=typeof b.notes==="string"?b.notes.slice(0,500):null;
+  const r=await pool.query("UPDATE public.transactions SET account_id=$3,category_id=$4,kind=$5,description=$6,amount=$7,occurred_on=$8,due_on=$9,status=$10,notes=$11,card_id=$12,transfer_to_account_id=$13,updated_at=now() WHERE id=$1 AND user_id=$2 RETURNING id",[req.params.id,req.user.id,accountId,categoryId,kind,description,amount,occurred,dueOn,status,notes,cardId,transferToAccountId]);
+  if(!r.rowCount)return res.status(404).json({error:"Lançamento não encontrado."});
+  res.json({ok:true,transaction:{id:r.rows[0].id}});
+}));
 app.delete("/api/transactions/:id",requireAuth,asyncRoute(async(req,res)=>{
   const r=await pool.query("DELETE FROM public.transactions WHERE id=$1 AND user_id=$2 RETURNING id",[req.params.id,req.user.id]);
   if(!r.rowCount)return res.status(404).json({error:"Lançamento não encontrado."});res.json({ok:true});
