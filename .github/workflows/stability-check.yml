@@ -32,6 +32,10 @@ jobs:
         with:
           node-version: 24
       - run: npm install --omit=dev
+      - name: Restrict CI database role to application privileges
+        env:
+          DATABASE_URL: postgresql://radar:radar_test_password@127.0.0.1:5432/radar_test?sslmode=disable
+        run: node test/restrict-ci-db-role.mjs
       - name: Syntax checks — whole codebase
         run: |
           find . -type f \( -name '*.mjs' -o -name '*.js' \) -not -path './node_modules/*' -print0 | xargs -0 -n1 node --check
