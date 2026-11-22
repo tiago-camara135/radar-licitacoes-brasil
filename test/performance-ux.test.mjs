@@ -51,3 +51,10 @@ test('secondary account and habilitation screens bound API wait time',()=>{
   assert.ok(read('tender-readiness-quick-v1.js').includes("$$('.tr-quick-badge.loading')"));
   assert.ok(read('tender-readiness-quick-v1.js').includes("$$('.tr-quick-badge')"));
 });
+
+ 
+test('long-running AI, readiness and document upload operations receive appropriate time budgets',()=>{
+  assert.match(read('tender-intelligence-v2.js'),/timeoutMs:90000/);
+  assert.match(read('tender-readiness-v1.js'),/timeoutMs:60000/);
+  assert.match(read('company-documents-v1.js'),/timeoutMs:60000/);
+});
