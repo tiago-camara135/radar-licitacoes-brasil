@@ -822,7 +822,7 @@ const recKey=x=>[x?.org_cnpj,x?.year,x?.sequence].map(String).join('-');
 const recVersion=x=>JSON.stringify([x?.object_text,x?.closes_at,Number(x?.fit?.score),x?.modality_name]);
 const ui={};
 function install(){
-  const bar=$('#appShell .topbar');if(!bar)return;
+  const bar=$('#radarAccountControls');if(!bar)return;
   ui.wrap=el('div','rev-n-wrap');
   ui.bell=el('button','rev-n-bell','Notificações');ui.bell.type='button';ui.bell.setAttribute('aria-controls','revNotifPanel');ui.bell.setAttribute('aria-expanded','false');
   ui.count=el('span','rev-n-count','—');ui.count.setAttribute('aria-label','Contagem de notificações não lidas');ui.bell.append(ui.count);
@@ -837,7 +837,18 @@ function install(){
   ui.mark=el('button','rev-n-mark','Marcar todas como lidas');ui.mark.type='button';
   controls.append(ui.all,ui.unread,ui.mark);
   ui.list=el('div','rev-n-list');ui.message=el('p','rev-n-message','Carregando…');ui.message.setAttribute('role','status');
-  ui.panel.append(head,controls,ui.message,ui.list);ui.wrap.append(ui.bell,ui.panel);bar.append(ui.wrap);
+  ui.panel.append(head,controls,ui.message,ui.list);ui.wrap.append(ui.bell,ui.panel);bar.insertBefore(ui.wrap,$('#radarAccount'));
+  ui.bell.setAttribute('aria-label','Notificações');ui.bell.title='Notificações';
+  const profile=$('#radarAccount');
+  $('#pulseHeaderSearch').addEventListener('click',()=>{
+    profile.open=false;setOpen(false);
+    $('#mainNav [data-view="radar"]').click();
+    $('#searchKeyword')?.focus();
+  });
+  profile.addEventListener('toggle',()=>{if(profile.open)setOpen(false)});
+  document.addEventListener('pointerdown',e=>{if(profile.open&&!profile.contains(e.target))profile.open=false});
+  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&profile.open){profile.open=false;profile.querySelector('summary').focus()}});
+
   ui.bell.addEventListener('click',()=>setOpen(!open));
   ui.close.addEventListener('click',()=>setOpen(false));
   ui.all.addEventListener('click',()=>{filter='all';render()});
@@ -1051,7 +1062,9 @@ function renderRecommendationItems(){
     }
     const url=safeUrl(x.pncp_url);
     if(url){const a=el('a','','Abrir PNCP');a.href=url;a.target='_blank';a.rel='noopener noreferrer';side.append(a)}
-    const icon=el('span','pulse-rec-icon');icon.dataset.icon=/manuten|reparo|obra/i.test(x.object_text||'')?'tools':'document';icon.setAttribute('aria-hidden','true');
+    const icon=el('span','pulse-rec-icon');const subject=x.object_text||'';
+    const category=[['vehicle',/ve[ií]culo|frota|autom[oó]vel/i],['electric',/el[eé]tric|ilumina/i],['health',/hospital|m[eé]dic|sa[uú]de/i],['tools',/manuten|reparo|obra/i]].find(([,pattern])=>pattern.test(subject));
+    icon.dataset.icon=category?.[0]||'document';icon.setAttribute('aria-hidden','true');
     card.append(icon,info,side);list.append(card);
   }
   document.dispatchEvent(new CustomEvent('radar:recommendations-rendered'));

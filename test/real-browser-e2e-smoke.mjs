@@ -75,7 +75,9 @@ try{
  note('Executive home layout and real KPI cards OK');
  assert.equal(await page.locator('#adminNav').isVisible(),false,'Non-admin cannot see admin navigation');
  const inTheme=await page.locator('html').getAttribute('data-theme');
+ await page.locator('#radarAccount summary').click();
  await page.locator('#radarTheme').click();
+ await page.keyboard.press('Escape');
  const changed=await page.locator('html').getAttribute('data-theme');
  assert.notEqual(inTheme,changed,'Authenticated theme control works');
  note('Registration, authenticated dashboard, four metrics, user role and theme OK');
@@ -465,9 +467,13 @@ try{
  assert.notEqual(themePalettes[0].surface,themePalettes[1].surface,'Card surfaces must react to theme');
  // Toggle real preserva interação e preferência, não apenas atributo via JS.
  const themeBefore=await page.locator('html').getAttribute('data-theme');
+ await page.locator('#radarAccount summary').click();
  await page.locator('#radarTheme').click();
+ await page.keyboard.press('Escape');
  assert.notEqual(await page.locator('html').getAttribute('data-theme'),themeBefore,'Theme button must toggle palette');
+ await page.locator('#radarAccount summary').click();
  await page.locator('#radarTheme').click();
+ await page.keyboard.press('Escape');
  assert.equal(await page.locator('html').getAttribute('data-theme'),themeBefore,'Theme button must restore palette');
  note('Adaptive KPI palette and functional light/dark theme toggle OK');
 
