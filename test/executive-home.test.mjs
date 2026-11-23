@@ -114,7 +114,7 @@ test('agenda 7 ou 30 dias, feed vigente e estágios do gráfico são filtros fun
  assert.match(js,/deadlinePeriod=7,feedFilter='all',liveCache=\[\]/);
  assert.match(js,/deadlinePeriod=next;setActive\('data-home-period',next\)/);
  assert.match(js,/feedFilter=next;setActive\('data-home-feed',next\)/);
- assert.match(js,/data\.funnel\|\|\{\}/);
+ assert.match(js,/const funnel=data\?\.funnel\|\|\{\}/);
  assert.match(js,/item\.dataset\.homeStage=g\.status/);
  assert.match(js,/if\(filter==='preparing'\)/);
  assert.match(js,/calendar-focused/);
