@@ -190,7 +190,7 @@ app.get("/api/transactions",requireAuth,asyncRoute(async(req,res)=>{
 }));
 app.post("/api/transactions",requireAuth,asyncRoute(async(req,res)=>{
   const b=req.body||{},kind=b.kind,description=typeof b.description==="string"?b.description.trim():"",amount=Number(b.amount),occurred=b.occurredOn,status=b.status||"paid";
-  if(!["income","expense","transfer"].includes(kind)||description.length<2||description.length>120||!Number.isFinite(amount)||amount<=0||amount>999999999||!validDate(occurred)||!["paid","pending","overdue"].includes(status))return res.status(400).json({error:"Confira descrição, tipo, valor, data e situação do lançamento."});
+  if(!["income","expense","transfer"].includes(kind)||description.length<2||description.length>120||!Number.isFinite(amount)||amount<=0||amount>999999999||!validDate(occurred)||!["paid","pending","overdue","cancelled"].includes(status))return res.status(400).json({error:"Confira descrição, tipo, valor, data e situação do lançamento."});
   if(status==="paid"&&kind==="income"&&!b.accountId)return res.status(400).json({error:"Selecione a conta em que o recebimento entrou para atualizar o saldo."});
   if(status==="paid"&&kind==="expense"&&!b.accountId&&!b.cardId)return res.status(400).json({error:"Selecione a conta de saída para descontar esta despesa do saldo, ou informe o cartão utilizado."});
   if(b.accountId&&!(await owned("public.accounts",b.accountId,req.user.id)))return res.status(400).json({error:"Conta não encontrada."});
@@ -235,8 +235,13 @@ app.delete("/api/transactions/:id",requireAuth,asyncRoute(async(req,res)=>{
 }));
 app.patch("/api/transactions/:id/status",requireAuth,asyncRoute(async(req,res)=>{
   const status=req.body&&req.body.status;if(!["paid","pending","overdue","cancelled"].includes(status))return res.status(400).json({error:"Situação inválida."});
+  const found=await pool.query("SELECT kind,account_id,card_id FROM public.transactions WHERE id=$1 AND user_id=$2",[req.params.id,req.user.id]);
+  if(!found.rowCount)return res.status(404).json({error:"Lançamento não encontrado."});
+  const transaction=found.rows[0];
+  if(status==="paid"&&transaction.kind==="income"&&!transaction.account_id)return res.status(400).json({error:"Edite o lançamento e selecione a conta em que o recebimento entrou para atualizar o saldo."});
+  if(status==="paid"&&transaction.kind==="expense"&&!transaction.account_id&&!transaction.card_id)return res.status(400).json({error:"Edite o lançamento e selecione a conta de saída para descontar a despesa do saldo."});
   const r=await pool.query("UPDATE public.transactions SET status=$3,updated_at=now() WHERE id=$1 AND user_id=$2 RETURNING id,status",[req.params.id,req.user.id,status]);
-  if(!r.rowCount)return res.status(404).json({error:"Lançamento não encontrado."});res.json({transaction:r.rows[0]});
+  res.json({transaction:r.rows[0]});
 }));
 
 app.get("/api/cards",requireAuth,asyncRoute(async(req,res)=>{
