@@ -3468,3 +3468,70 @@ html[data-theme="dark"] #view-home [data-pulse-state="changed"] .rlb-pulse-chip{
 @media(prefers-reduced-motion:reduce){
  #view-home .rlb-pulse-item{animation:none!important}
 }
+
+
+/* Radar Pulse • etapa 4: prioridade por prazo e aderência fundamentada */
+#view-home .rlb-priority-chip{
+ display:inline-flex;align-items:center;gap:5px;align-self:flex-start;
+ width:max-content;max-width:100%;padding:5px 8px;border-radius:7px;
+ font-size:9px;line-height:1.25;font-weight:850;
+ border:1px solid transparent;
+}
+#view-home .rlb-priority-urgent{
+ color:#bd4b15;background:#fff0e6;border-color:rgba(217,102,43,.25)
+}
+#view-home .rlb-priority-high{
+ color:#067752;background:#e5faf0;border-color:rgba(7,148,102,.22)
+}
+html[data-theme="dark"] #view-home .rlb-priority-urgent{
+ color:#ffc89d;background:rgba(202,99,29,.22);border-color:rgba(248,157,87,.33)
+}
+html[data-theme="dark"] #view-home .rlb-priority-high{
+ color:#8df4c1;background:rgba(30,164,110,.18);border-color:rgba(57,214,146,.25)
+}
+#view-home #rlbHomeRecommendations .rev-rec[data-priority="urgent"]{
+ border-color:color-mix(in srgb,#e7a15d 45%,var(--rlb-pulse-line))!important;
+ background:color-mix(in srgb,#f1ad6d 9%,var(--rlb-home-surface))!important;
+}
+#view-home #rlbHomeRecommendations .rev-rec[data-priority="urgent"]:before{
+ content:"";position:absolute;top:13px;bottom:13px;left:0;width:3px;
+ background:linear-gradient(180deg,#ffbb61,#ed713f);border-radius:0 4px 4px 0;
+}
+#view-home .rev-rec-side .rlb-fit-meter{
+ grid-column:1/-1;grid-row:3;
+ width:100%;height:5px;min-height:5px;border:0;border-radius:10px;
+ appearance:none;-webkit-appearance:none;background:transparent;
+ overflow:hidden;
+}
+#view-home .rlb-fit-meter::-webkit-progress-bar{
+ border-radius:10px;background:var(--rlb-pulse-line);
+}
+#view-home .rlb-fit-meter::-webkit-progress-value{
+ border-radius:10px;background:linear-gradient(90deg,#13b989,#027b64)
+}
+#view-home .rlb-fit-meter::-moz-progress-bar{
+ border-radius:10px;background:linear-gradient(90deg,#13b989,#027b64)
+}
+#view-home .rlb-home-deadline[data-urgency="critical"]{
+ border-left:3px solid #ed8a43;padding-left:8px;
+ border-radius:7px;background:color-mix(in srgb,#efac6a 9%,var(--rlb-home-surface));
+}
+#view-home .rlb-home-deadline[data-urgency="critical"] .rlb-home-date{
+ border-color:rgba(223,120,63,.27);
+ background:color-mix(in srgb,#f5b46c 20%,var(--rlb-home-surface));
+}
+#view-home .rlb-home-deadline[data-urgency="critical"] .rlb-home-deadline-status{
+ color:#c5531a;background:#fff0e5;
+}
+#view-home .rlb-home-deadline[data-urgency="soon"] .rlb-home-deadline-status{
+ color:#9f6d10;background:color-mix(in srgb,#e8ad31 15%,var(--rlb-home-surface));
+}
+html[data-theme="dark"] #view-home .rlb-home-deadline[data-urgency="critical"] .rlb-home-deadline-status{
+ color:#ffd0a7;background:rgba(214,116,47,.25);
+}
+html[data-theme="dark"] #view-home .rlb-home-deadline[data-urgency="soon"] .rlb-home-deadline-status{
+ color:#ffd89c;background:rgba(208,147,32,.23);
+}
+@media(max-width:500px){
+ #view-home .rev-rec-side .rlb-fit-meter{width:100%;flex-basis:100%;order:4}
+}
