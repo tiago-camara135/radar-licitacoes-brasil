@@ -65,7 +65,7 @@ test('Radar Nacional functionality and existing selectors remain intact',()=>{
   assert.match(app,/async function refreshLive\(\)/);
   assert.match(app,/\$\('#refreshLive'\)\?\.addEventListener\('click',refreshLive\)/);
   assert.match(app,/\$\('#liveScope'\)\?\.addEventListener\('change',renderLive\)/);
-  assert.match(html,/app-v2\.css\?v=20261122-radar-unified-colors-11/);
+  assert.match(html,/app-v2\.css\?v=20261123-compact-alerts-1/);
 });
 
 test('final readability pass raises secondary information to a more legible size',()=>{
