@@ -2007,3 +2007,116 @@ html.rlb-corporate-v3 body :is(.tr-head h2,.tai-head h2) {
   font-weight: 760;
   letter-spacing: -.035em;
 }
+
+/* Painel de oportunidade conforme a referência aprovada */
+#appShell .radar-detail-card {
+  gap: 10px;
+  padding: 15px;
+}
+#appShell .radar-detail-card h2 {
+  font-size: clamp(20px, 1.9vw, 27px);
+  font-weight: 800;
+  line-height: 1.22;
+  letter-spacing: -.04em;
+}
+#appShell .radar-detail-card .radar-detail-actions { padding-block: 0; gap: 9px; }
+#appShell .radar-detail-card .radar-detail-actions a,
+#appShell .radar-detail-card .radar-detail-actions button { font-size: 14px; font-weight: 680; }
+#appShell .radar-detail-card dl { gap: 5px; }
+#appShell .radar-detail-card dl div {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+#appShell .radar-detail-card dt { color: var(--radar-text); font-weight: 730; flex-shrink: 0; }
+#appShell .radar-detail-card dt::after { content: ":"; }
+#appShell .radar-detail-card dd { font-weight: 450; }
+#appShell .radar-detail-card > .tr-quick-badge {
+  padding: 10px 11px 12px !important;
+  gap: 8px;
+  border-radius: 12px !important;
+}
+#appShell .radar-detail-card > .tr-quick-badge.high {
+  --radar-score-bg: #e7f8ef;
+  --radar-score-ink: #096548;
+  --radar-score-fill: #0bb655;
+}
+#appShell .radar-detail-card > .tr-quick-badge .trq-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px !important;
+  line-height: 1.2;
+}
+#appShell .radar-detail-card > .tr-quick-badge[data-ready="1"] .trq-detail { display: none; }
+#appShell .radar-detail-card > .tr-quick-badge .trq-score { font-size: 21px !important; }
+#appShell .radar-detail-card .trq-document-icon {
+  width: 19px;
+  height: 19px;
+  flex: none;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+#appShell .radar-detail-card .trq-meter, .radar-detail-card .trq-meter::-webkit-meter-bar { height: 11px; }
+.radar-detail-card .trq-meter::-webkit-meter-optimum-value { background: var(--radar-score-fill,var(--radar-score-ink)); }
+.radar-detail-card .trq-meter::-moz-meter-bar { background: var(--radar-score-fill,var(--radar-score-ink)); }
+#appShell .radar-detail-card h3 { padding-top: 3px; border-top: 0; font-size: 17px; font-weight: 790; }
+.radar-detail-card .radar-document-group h4 {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  white-space: nowrap;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+.radar-detail-card .radar-document-group + .radar-document-group { margin-top: 6px; }
+.radar-detail-card .radar-file { min-height: 38px; padding-block: 2px; }
+.radar-detail-card .radar-file-download { min-height: 36px; }
+.radar-detail-card .radar-file-copy > a { font-size: 13px; font-weight: 580; }
+.radar-analysis-menu { order: 2; }
+.radar-analysis-menu:not(:has(.radar-analysis-actions > button)) { display: none; }
+.radar-analysis-menu summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 5px 2px;
+  min-height: 34px;
+  color: var(--radar-muted);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 650;
+}
+.radar-analysis-menu summary::after { content: "⌄"; }
+.radar-analysis-menu[open] summary::after { content: "⌃"; }
+.radar-detail-navigation { order: 3; }
+html[data-theme="dark"] #appShell .radar-detail-card > .tr-quick-badge.high {
+  --radar-score-bg: #16372c;
+  --radar-score-ink: #76e5ab;
+  --radar-score-fill: #24c870;
+}
+@media (max-width: 760px) {
+  #appShell .radar-detail-card .radar-back {
+    background: transparent;
+    color: var(--radar-text);
+    border: 0;
+    padding: 0;
+    min-height: 30px;
+  }
+  #appShell .radar-detail-card .radar-back span { color: #4384ff; font-size: 24px; line-height: 1; }
+  #appShell .radar-detail-card dl { order: 2; }
+  #appShell .radar-detail-card > .tr-quick-badge .trq-title { font-size: 13px !important; }
+}
+#appShell .radar-detail-card dl svg {
+  width: 16px;
+  height: 16px;
+  flex: none;
+  align-self: flex-start;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}

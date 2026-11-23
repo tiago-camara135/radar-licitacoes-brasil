@@ -161,7 +161,7 @@ function radarItem(item) {
   return {
     key, title: item.objetoCompra || 'Objeto não informado', org: org(item), modality: mod(item),
     place: [mun(item), uf(item)].filter(Boolean).join('/'), number: item.numeroCompra && item.anoCompra ? [item.numeroCompra, item.anoCompra].join('/') : item.numeroCompra || item.numeroControlePNCP || '',
-    published: item.dataPublicacaoPncp || '', closing,
+    published: item.dataPublicacaoPncp || '', opening: item.dataAberturaProposta || item.dataInicioRecebimentoProposta || '', closing,
     status: item.situacaoCompraNome || (closing ? 'Prazo informado pelo PNCP' : 'Situação não informada'),
     value: item.valorTotalEstimado == null ? '' : brl(item.valorTotalEstimado),
     official, origin: dashboardUrl(item._originUrl || item.linkSistemaOrigem || item.linkProcessoEletronico)
@@ -329,20 +329,31 @@ function renderRadarDetail(panel, item, index = -1) {
     return;
   }
   const saved = dashboard.saved.has(item.key);
-  const rows = [['Órgão', item.org], ['Município/UF', item.place], ['Modalidade', item.modality], ['Número', item.number],
-    ['Situação', Date.parse(item.closing) < Date.now() ? 'Prazo encerrado' : item.status],
-    ['Prazo para propostas', item.closing && when(item.closing)], ['Valor estimado', item.value]];
+  const calendar = 'M4 6h16v14H4zM4 10h16M8 3v5m8-5v5';
+  const rows = [
+    ['Órgão', item.org,'M3 9 12 4l9 5H3zM5 11v7m7-7v7m7-7v7M3 20h18'],
+    ['Local', item.place,'M19 10c0 5-7 10-7 10s-7-5-7-10a7 7 0 1 1 14 0zM12 7a3 3 0 1 0 0 6 3 3 0 0 0 0-6z'],
+    ['Modalidade', item.modality,'m8 4 7 7-4 4-7-7zM13 13l6 6M4 20h8'],
+    ['Nº do edital', item.number,'M9 4 6 20M17 4l-3 16M4 9h16M3 15h16'],
+    ['Abertura', item.opening && when(item.opening),calendar],
+    ['Encerramento', item.closing && when(item.closing),calendar],
+    ['Situação', Date.parse(item.closing) < Date.now() ? 'Prazo encerrado' : item.status,'M5 12l4 4L19 6'],
+    ['Valor estimado', item.value,'M12 3v18m5-14H9a3 3 0 0 0 0 6h6a3 3 0 0 1 0 6H7']
+  ];
   panel.innerHTML = `<article class="result-item radar-detail-card" data-radar-key="${esc(item.key)}">
-    <button type="button" class="radar-button radar-back" data-radar-back>Voltar à lista</button>
+    <button type="button" class="radar-button radar-back" data-radar-back><span aria-hidden="true">‹</span> Voltar à lista</button>
     <h2 tabindex="-1">${esc(item.title)}</h2>
     <div class="radar-actions radar-detail-actions">
       ${dashboardUrl(item.official) ? `<a class="radar-primary radar-official" href="${esc(dashboardUrl(item.official))}" target="_blank" rel="noopener noreferrer">${radarOpenIcon}Ver edital</a>` : ''}
       ${/^[\w-]{1,100}$/.test(item.key) ? `<button type="button" data-radar-save class="radar-button" aria-pressed="${saved}">${radarSaveLabel(saved)}</button>` : ''}
       ${item.origin !== item.official ? externalRadarLink(item.origin, 'Portal de origem') : ''}
     </div>
-    <dl>${rows.filter(([, value])=>value).map(([label,value])=>`<div><dt>${label}</dt><dd>${esc(value)}</dd></div>`).join('')}</dl>
-    <div class="radar-analysis-actions"></div>
+    <dl>${rows.filter(([, value])=>value).map(([label,value,icon])=>`<div><svg viewBox="0 0 24 24" aria-hidden="true"><path d="${icon}"/></svg><dt>${label}</dt><dd>${esc(value)}</dd></div>`).join('')}</dl>
     <h3>${opportunityIcon} Documentos</h3><div class="radar-documents" aria-live="polite"></div>
+    <details class="radar-analysis-menu">
+      <summary>Análises</summary>
+      <div class="radar-analysis-actions"></div>
+    </details>
     ${index >= 0 ? `<nav class="radar-detail-navigation" aria-label="Navegação entre oportunidades">
       <button type="button" class="radar-button" data-radar-step="-1" ${index === 0 ? 'disabled' : ''}>‹ Oportunidade anterior</button>
       <button type="button" class="radar-button" data-radar-step="1" ${index + 1 === dashboard.items.length ? 'disabled' : ''}>Próxima oportunidade ›</button>

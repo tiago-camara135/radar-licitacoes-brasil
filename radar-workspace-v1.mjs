@@ -78,7 +78,7 @@ function savedData(kind, body) {
   return {
     title, place: text(body.place, 240), org: text(body.org, 400),
     modality: text(body.modality, 120), number: text(body.number, 180),
-    published: text(body.published, 40), closing: text(body.closing, 40),
+    published: text(body.published, 40), opening: text(body.opening, 40), closing: text(body.closing, 40),
     status: text(body.status, 120), value: text(body.value, 60),
     official: publicUrl(body.official), origin: publicUrl(body.origin)
   };
