@@ -430,3 +430,17 @@ button{color:inherit}
 .calendar-event-row .reminder-pay{color:#13834f}
 .calendar-event-row .reminder-delete{color:#d94b52}
 @media(max-width:680px){.mobile-link{min-width:0}.mobile-icon{width:26px;height:25px}.mobile-label{font-size:7px}.calendar-add-payment{padding:9px 10px;font-size:9px}}
+
+/* Fluxo financeiro: barras empilhadas de realizado e previsto */
+.chart-area{gap:clamp(8px,1.8vw,20px);padding-bottom:0}
+.chart-month{gap:5px}
+.chart-bar-stack{width:min(19px,40%);display:flex;flex-direction:column-reverse;align-self:end;justify-content:flex-start;overflow:hidden;border-radius:5px 5px 1px 1px;min-height:0;transition:height .3s ease}
+.cashflow-segment{display:block;width:100%;min-height:0;flex:0 0 auto;transition:height .3s ease}
+.chart-bar-stack.income .cashflow-actual{background:linear-gradient(180deg,#45c58a,#249e6c)}
+.chart-bar-stack.income .cashflow-forecast{background:#bcebd4}
+.chart-bar-stack.expense .cashflow-actual{background:linear-gradient(180deg,#f08b91,#d94d5b)}
+.chart-bar-stack.expense .cashflow-forecast{background:#f8c6c9}
+.chart-legend{flex-wrap:wrap;row-gap:8px;column-gap:15px}
+.income-forecast-dot{background:#bcebd4}
+.expense-forecast-dot{background:#f8c6c9}
+@media(max-width:680px){.chart-area{gap:6px;padding-left:2px;padding-right:2px}.chart-month{gap:3px}.chart-bar-stack{width:min(15px,42%)}.chart-legend{gap:8px 11px;font-size:8px}}
