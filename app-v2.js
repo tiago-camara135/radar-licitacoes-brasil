@@ -1,7 +1,7 @@
 (()=>{
 'use strict';
 const $=(s,r=document)=>r.querySelector(s);const $$=(s,r=document)=>Array.from(r.querySelectorAll(s));
-const state={user:null,mode:'login',view:'radar',live:[],timer:null,sse:null,livePromise:null};
+const state={user:null,mode:'login',view:'home',live:[],timer:null,sse:null,livePromise:null};
 const UFS=['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'];
 const MOD=[['1','Leilão - Eletrônico'],['2','Diálogo Competitivo'],['3','Concurso'],['4','Concorrência - Eletrônica'],['5','Concorrência - Presencial'],['6','Pregão - Eletrônico'],['7','Pregão - Presencial'],['8','Dispensa de Licitação'],['9','Inexigibilidade'],['10','Manifestação de Interesse'],['11','Pré-qualificação'],['12','Credenciamento'],['13','Leilão - Presencial'],['14','Inaplicabilidade da Lei 14.133/2021']];
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -73,9 +73,9 @@ function bindRadarMenu() {
 function authMode(mode){state.mode=mode;const login=mode==='login';$('#tabLogin')?.classList.toggle('active',login);$('#tabRegister')?.classList.toggle('active',!login);$('#tabLogin')?.setAttribute('aria-selected',String(login));$('#tabRegister')?.setAttribute('aria-selected',String(!login));if($('#authSubmit'))$('#authSubmit').textContent=login?'Entrar':'Criar conta';if($('#authPassword'))$('#authPassword').autocomplete=login?'current-password':'new-password';if($('#authMessage'))$('#authMessage').textContent=''}
 async function submitAuth(e){e?.preventDefault();const email=$('#authEmail')?.value.trim()||'',password=$('#authPassword')?.value||'',button=$('#authSubmit'),msg=$('#authMessage');if(!email||password.length<10){if(msg)msg.textContent='Informe um e-mail válido e uma senha com pelo menos 10 caracteres.';return}if(button)button.disabled=true;try{const d=await api(state.mode==='login'?'/api/auth/login':'/api/auth/register',{method:'POST',body:JSON.stringify({email,password})});await enter(d.user)}catch(err){if(msg)msg.textContent=err.message}finally{if(button)button.disabled=false}}
 async function checkSession(){try{const d=await api('/api/me');if(d.user)await enter(d.user);else throw new Error()}catch{$('#authScreen')?.classList.remove('hidden');$('#appShell')?.classList.add('hidden')}}
-async function enter(user){state.user=user;$('#authScreen')?.classList.add('hidden');$('#appShell')?.classList.remove('hidden');renderRadarAccount(user);$('#adminNav')?.classList.toggle('hidden',user.role!=='admin');show('radar');startLive();startRadarDashboard()}
+async function enter(user){state.user=user;$('#authScreen')?.classList.add('hidden');$('#appShell')?.classList.remove('hidden');renderRadarAccount(user);$('#adminNav')?.classList.toggle('hidden',user.role!=='admin');show('home');startLive();startRadarDashboard()}
 async function logout(){try{await api('/api/auth/logout',{method:'POST',body:'{}'})}catch{}location.reload()}
-const titles={radar:['Radar de Licitações',''],saved:['Oportunidades salvas',''], 'saved-searches':['Buscas salvas',''],alerts:['Alertas','Critérios e canais de notificação'],documents:['Documentos','Acervo pessoal'],ai:['IA RLB','Assistente para licitações'],admin:['Administração','Gestão da plataforma']};
+const titles={home:['Visão Geral','Seu centro de oportunidades'],radar:['Buscar Licitações','Pesquisa nacional e filtros avançados'],saved:['Oportunidades salvas',''], 'saved-searches':['Buscas salvas',''],alerts:['Alertas','Critérios e canais de notificação'],documents:['Documentos','Acervo pessoal'],ai:['IA RLB','Assistente para licitações'],admin:['Administração','Gestão da plataforma']};
 function show(v){state.view=v;setRadarMenu(false);$$('.view').forEach(x=>x.classList.remove('active'));$('#view-'+v)?.classList.add('active');$$('#mainNav [data-view]').forEach(x=>{const active=x.dataset.view===v;x.classList.toggle('active',active);if(active)x.setAttribute('aria-current','page');else x.removeAttribute('aria-current')});if($('#pageTitle'))$('#pageTitle').textContent=titles[v]?.[0]||'';if($('#pageSubtitle'))$('#pageSubtitle').textContent=titles[v]?.[1]||'';if(v==='saved'){renderSavedTenders();loadDashboardSaved('tender')}if(v==='saved-searches'){renderSavedSearches();loadDashboardSaved('search')}if(v==='alerts')loadAlertsPage();if(v==='documents')loadDocuments();if(v==='ai')loadAiStatus();if(v==='admin')loadAdmin()}
 function isMunicipal(x){return norm(x?.orgaoEntidade?.esferaId)==='M'||/MUNICIPIO|MUNICIPAL|PREFEITURA|CAMARA MUNICIPAL|FUNDO MUNICIPAL|SECRETARIA MUNICIPAL/.test(norm(org(x)+' '+(x?.unidadeOrgao?.nomeUnidade||'')))}
 function isChamber(x){return (norm(x?.orgaoEntidade?.poderId)==='L'&&norm(x?.orgaoEntidade?.esferaId)==='M')||/CAMARA MUNICIPAL|CAMARA DE VEREADORES|LEGISLATIVO MUNICIPAL/.test(norm(org(x)+' '+(x?.unidadeOrgao?.nomeUnidade||'')))}
@@ -101,7 +101,7 @@ function renderLive() {
     </article>`;
   }).join('') || '<div class="empty-state">Nenhuma oportunidade neste filtro.</div>';
 }
-async function refreshLive(){if(state.livePromise)return state.livePromise;const task=(async()=>{try{const d=await api('/api/live-feed?limit=40',{timeoutMs:12000});state.live=d.items||[];renderLive();const s=d.status||{};if($('#metricStored'))$('#metricStored').textContent=Number(s.total_stored||0).toLocaleString('pt-BR');if($('#metricNew'))$('#metricNew').textContent=Number(s.last_new_count||0).toLocaleString('pt-BR');if($('#metricLast'))$('#metricLast').textContent=time(s.last_success_at);$('#statusDot')?.classList.toggle('ok',!s.consecutive_failures);if($('#monitorStatusText'))$('#monitorStatusText').textContent=s.running?'Varredura em andamento':`PNCP • ${s.live?.modalities_per_cycle||14} modalidades • ${s.interval_seconds||90}s`;if($('#liveMeta'))$('#liveMeta').textContent=`Atualização por eventos • varredura ${time(s.last_success_at)} • tela ${time(d.fetched_at)} • ${Number(s.total_stored||0).toLocaleString('pt-BR')} registros`}catch(e){if($('#liveMeta'))$('#liveMeta').textContent=e.code==='request_timeout'?'A atualização demorou mais que o esperado. Tentaremos novamente.':'Falha temporária ao sincronizar o feed.'}})();state.livePromise=task;try{return await task}finally{if(state.livePromise===task)state.livePromise=null}}
+async function refreshLive(){if(state.livePromise)return state.livePromise;const task=(async()=>{try{const d=await api('/api/live-feed?limit=40',{timeoutMs:12000});state.live=d.items||[];renderLive();const s=d.status||{};document.dispatchEvent(new CustomEvent('radar:live-feed',{detail:{items:state.live,status:s}}));if($('#metricStored'))$('#metricStored').textContent=Number(s.total_stored||0).toLocaleString('pt-BR');if($('#metricNew'))$('#metricNew').textContent=Number(s.last_new_count||0).toLocaleString('pt-BR');if($('#metricLast'))$('#metricLast').textContent=time(s.last_success_at);$('#statusDot')?.classList.toggle('ok',!s.consecutive_failures);if($('#monitorStatusText'))$('#monitorStatusText').textContent=s.running?'Varredura em andamento':`PNCP • ${s.live?.modalities_per_cycle||14} modalidades • ${s.interval_seconds||90}s`;if($('#liveMeta'))$('#liveMeta').textContent=`Atualização por eventos • varredura ${time(s.last_success_at)} • tela ${time(d.fetched_at)} • ${Number(s.total_stored||0).toLocaleString('pt-BR')} registros`}catch(e){if($('#liveMeta'))$('#liveMeta').textContent=e.code==='request_timeout'?'A atualização demorou mais que o esperado. Tentaremos novamente.':'Falha temporária ao sincronizar o feed.'}})();state.livePromise=task;try{return await task}finally{if(state.livePromise===task)state.livePromise=null}}
 function startLive(){clearInterval(state.timer);state.timer=null;try{state.sse?.close()}catch{}state.sse=null;refreshLive();try{state.sse=new EventSource('/api/live-events');const sync=()=>{if(state.view==='radar')refreshLive()};state.sse.addEventListener('procurement',sync);state.sse.addEventListener('status',sync);state.timer=setInterval(()=>{if(!state.sse||state.sse.readyState!==EventSource.OPEN)refreshLive()},90000)}catch{state.sse=null;state.timer=setInterval(refreshLive,90000)}}
 const dashboard = {
   search: null, items: [], page: 0, listScroll: 0, selected: '', savedSelected: '',
@@ -678,7 +678,7 @@ const ui={};
 function logged(){return !!$('#appShell')&&!$('#appShell').classList.contains('hidden')}
 function identity(){return String($('#radarUserName')?.textContent||'').trim()}
 function install(){
- const view=$('#view-radar');if(!view||$('#revSummary'))return;
+ const view=$('#view-home')||$('#view-radar');if(!view||$('#revSummary'))return;
  const panel=el('section','rev-summary');panel.id='revSummary';panel.setAttribute('aria-label','Resumo estratégico da conta');
  const head=el('div','rev-summary-head'),heading=el('div','rev-heading');
  heading.append(el('span','rev-eyebrow','SEU RADAR HOJE'),el('h2','','Resumo de oportunidades'));
@@ -691,10 +691,10 @@ function install(){
  const footer=el('div','rev-summary-footer');
  ui.next=el('span','','Acompanhe seus alertas para receber recomendações.');
  const go=el('button','rev-action','Gerenciar alertas');go.type='button';go.addEventListener('click',()=>$('#mainNav [data-view="alerts"]')?.click());
- footer.append(ui.next,go);panel.append(head,grid,footer);view.insertBefore(panel,$('#radarSearchForm')||view.firstChild);
+ footer.append(ui.next,go);panel.append(head,grid,footer);const statsSlot=$('#rlbHomeKpis');if(statsSlot)statsSlot.append(panel);else view.insertBefore(panel,$('#radarSearchForm')||view.firstChild);
  const shell=$('#appShell');
  if(shell)new MutationObserver(()=>{if(!logged()){epoch++;lastLoad=0;lastIdentity='';ui.values.forEach(x=>x.textContent='—');ui.status.textContent='Entre na conta para consultar os indicadores.'}else load(false)}).observe(shell,{attributes:true,attributeFilter:['class']});
- document.addEventListener('click',e=>{if(e.target.closest('#mainNav [data-view="radar"]'))load(false)});
+ document.addEventListener('click',e=>{if(e.target.closest('#mainNav [data-view="radar"], #mainNav [data-view="home"]'))load(false)});
  document.addEventListener('visibilitychange',()=>{if(!document.hidden&&Date.now()-lastLoad>180000)load(false)});
  if(logged())load(false);
 }
@@ -717,6 +717,7 @@ async function load(force){
  }catch(e){
    if(!logged()||requestEpoch!==epoch)return;
    ui.status.textContent=e.name==='AbortError'?'A consulta demorou. Tente novamente.':e.message;
+   document.dispatchEvent(new CustomEvent('radar:overview-error',{detail:{message:ui.status.textContent}}));
    ui.next.textContent='As demais funcionalidades do Radar continuam disponíveis.';
  }finally{clearTimeout(timeout);busy=false;ui.refresh.disabled=false;ui.refresh.textContent='Atualizar'}
 }
@@ -815,7 +816,7 @@ async function markAll(){
 function recommendations(d){
   const panel=$('#revSummary');if(!panel)return;
   let target=$('#revRecommendations');
-  if(!target){target=el('div','rev-recommendations');target.id='revRecommendations';const foot=$('.rev-summary-footer',panel);panel.insertBefore(target,foot||null)}
+  if(!target){target=el('div','rev-recommendations');target.id='revRecommendations';const homeSlot=$('#rlbHomeRecommendations');if(homeSlot)homeSlot.replaceChildren(target);else{const foot=$('.rev-summary-footer',panel);panel.insertBefore(target,foot||null)}}
   const recs=Array.isArray(d?.recommendations)?d.recommendations.slice(0,3):[];
   target.replaceChildren();
   const head=el('div','rev-recs-head'),title=el('strong','','Recomendadas para seus alertas'),note=el('small','','Aderência estimada aos critérios; não representa chance de vencer.');
