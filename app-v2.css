@@ -4159,3 +4159,14 @@ html[data-theme] #appShell #radarAccountControls {
  #appShell.radar-layout #mainNav .nav-icon svg{width:clamp(20px,1.55vw,28px)!important;height:clamp(20px,1.55vw,28px)!important}
  #appShell #view-home{max-width:none}
 }
+
+/* Radar Pulse: botao de consulta, com centro fixo e varredura acessivel. */
+#view-home #rlbHomeRefresh{display:inline-grid;place-items:center;flex:0 0 40px;width:40px;height:40px;min-width:40px;padding:0;line-height:1;vertical-align:middle;color:var(--rlb-pulse-accent);border:1px solid var(--rlb-pulse-border);background:var(--rlb-home-soft);border-radius:10px;box-sizing:border-box}
+#view-home #rlbHomeRefresh .pulse-refresh-radar{display:block;width:24px;height:24px;flex:none;overflow:visible;pointer-events:none}
+#view-home #rlbHomeRefresh:hover:not(:disabled){border-color:var(--rlb-pulse-accent);background:var(--rlb-pulse-glow)}
+#view-home #rlbHomeRefresh[aria-busy="true"]{opacity:.85;cursor:wait}
+#view-home #rlbHomeRefresh[aria-busy="true"] .pulse-refresh-sweep{transform-origin:12px 12px;animation:rlbRadarScan 1.35s linear infinite}
+@keyframes rlbRadarScan{to{transform:rotate(360deg)}}
+#view-home .pulse-rec-status:not([hidden]){display:block;color:var(--rlb-home-muted);font-size:11px;margin:8px 0 0;line-height:1.4}
+#view-home .pulse-rec-status[hidden]{display:none}
+@media(prefers-reduced-motion:reduce){#view-home #rlbHomeRefresh .pulse-refresh-sweep{animation:none!important}}

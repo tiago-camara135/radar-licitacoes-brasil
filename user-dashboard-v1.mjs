@@ -96,7 +96,7 @@ JOIN saved_alerts a ON a.user_id=$1 AND a.enabled=TRUE
 WHERE ${deadlineSql}>=NOW()
  AND ($2::text[] IS NULL OR UPPER(m.uf)=ANY($2::text[]))
 GROUP BY m.pncp_id,m.org_cnpj,m.year,m.sequence,m.modality_code,m.modality_name,m.object_text,m.org_name,m.municipality,m.uf,m.estimated_value,m.published_at,m.closes_at,m.pncp_url,m.origin_url,m.detected_at
-ORDER BY m.detected_at DESC LIMIT 60`;
+ORDER BY m.detected_at DESC NULLS LAST,m.pncp_id ASC LIMIT 120`;
 function fitFor(row,ready,geo,alerts){
   const alertPoints=Math.min(60,48+Math.min(12,alerts.length*6));
   const geoPoints=geo.scope==='brasil'?8:15;
@@ -110,8 +110,8 @@ function fitFor(row,ready,geo,alerts){
 }
 async function recommendations(uid,docsMap,geo){
   const filterUfs=geo.scope==='brasil'?null:geo.ufs;
-  const rows=await qMaybe(recommendationSql,[uid,filterUfs]);
-  return rows.map(r=>{const ref=dateOnly(r.closes_at)||today(),ready=readinessFor(docsMap,ref),alerts=Array.isArray(r.alert_names)?r.alert_names.filter(Boolean):[],fit=fitFor(r,ready,geo,alerts);return{...r,estimated_value:r.estimated_value==null?null:Number(r.estimated_value),readiness:ready,fit,match_reason:alerts.length?`Corresponde a ${alerts.slice(0,2).join(' • ')}`:'Compatível com seus filtros'}}).sort((a,b)=>b.fit.score-a.fit.score||b.readiness.score-a.readiness.score||new Date(a.closes_at)-new Date(b.closes_at)).slice(0,18);
+  const rows=(await pool.query(recommendationSql,[uid,filterUfs])).rows;
+  return rows.map(r=>{const ref=dateOnly(r.closes_at)||today(),ready=readinessFor(docsMap,ref),alerts=Array.isArray(r.alert_names)?r.alert_names.filter(Boolean):[],fit=fitFor(r,ready,geo,alerts);return{...r,estimated_value:r.estimated_value==null?null:Number(r.estimated_value),readiness:ready,fit,match_reason:alerts.length?`Corresponde a ${alerts.slice(0,2).join(' • ')}`:'Compatível com seus filtros'}}).sort((a,b)=>b.fit.score-a.fit.score||b.readiness.score-a.readiness.score||new Date(a.closes_at)-new Date(b.closes_at)).slice(0,60);
 }
 async function tracking(uid){
   return qMaybe(`SELECT t.id,t.pncp_key,t.org_cnpj,t.year,t.sequence,t.status,t.notes,t.created_at,t.updated_at,m.pncp_id,m.modality_name,m.object_text,m.org_name,m.municipality,m.uf,m.estimated_value,${deadlineSql} AS closes_at,m.pncp_url,m.origin_url
