@@ -1232,9 +1232,9 @@ let generation=0,overview=null,deadlinePeriod=7,feedFilter='all',liveCache=[];
 function openSection(name){
   const target=$('#mainNav [data-view="'+name+'"]');
   if(!logged()||!target)return;
+  // A página já anuncia a mudança pelo título contextual. Forçar foco em
+  // um campo cria um contorno visual inesperado ao clicar com o mouse.
   target.click();
-  if(name==='radar')$('#searchKeyword')?.focus({preventScroll:true});
-  if(name==='alerts')$('#alertName')?.focus({preventScroll:true});
 }
 function greeting(){
   if(!logged())return;
