@@ -1598,7 +1598,7 @@ function boot(){
     if(!hasAuthenticatedSnapshot){hasAuthenticatedSnapshot=true;nextDashboardRefresh=Date.now()+DASHBOARD_REFRESH_MS}
     refreshRequestPending=false;
     if($('#rlbHomeRefresh')){$('#rlbHomeRefresh').disabled=false;$('#rlbHomeRefresh').removeAttribute('aria-busy')}
-    if($('#rlbHomeLastUpdate'))$('#rlbHomeLastUpdate').textContent='Dados consultados às '+liveTime(Date.now());
+    if($('#rlbHomeLastUpdate'))$('#rlbHomeLastUpdate').textContent='Dados consultados às '+liveTime(new Date().toISOString());
     liveLabel('Recomendações e prazos verificados','ready');
     updateLiveClock();
     renderDeadlines(overview);

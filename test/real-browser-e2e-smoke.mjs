@@ -202,7 +202,7 @@ try{
  await page.locator('#rlbHomeRefresh').click();
  await Promise.all([overviewRequest,liveRequest]);
  await until(page,()=>document.querySelector('#rlbHomeLiveBar')?.dataset.state==='ready',16000);
- assert.match(await page.locator('#rlbHomeLastUpdate').textContent(),/Dados consultados às/);
+ assert.match(await page.locator('#rlbHomeLastUpdate').textContent(),/^Dados consultados às \d{2}:\d{2}$/);
  assert.match(await page.locator('#rlbHomeNextUpdate').textContent(),/Próxima consulta em/);
  assert.equal(await page.locator('#rlbHomeRefresh').isEnabled(),true);
  note('Dashboard refresh queries real overview + national feed and updates live clock OK');
