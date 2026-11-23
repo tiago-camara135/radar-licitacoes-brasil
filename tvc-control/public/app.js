@@ -92,9 +92,16 @@ function renderDashboard(){
  }).join(""):'<div class="empty-state">Nenhuma despesa fixa cadastrada. <button class="link-button" data-go="recurring">Cadastrar despesa fixa →</button></div>';
  const chart=(d.chart||[]),by={};chart.forEach(x=>by[x.month]=x);
  const a=state.month.split("-").map(Number),items=[];
- for(let i=5;i>=0;i--){const dt=new Date(a[0],a[1]-1-i,1),key=dt.getFullYear()+"-"+String(dt.getMonth()+1).padStart(2,"0");items.push(Object.assign({month:key,label:dt.toLocaleDateString("pt-BR",{month:"short"}),income:0,expense:0},by[key]||{}));}
- const max=Math.max(1,...items.map(x=>Math.max(+x.income,+x.expense)));
- $("#cashflow-chart").innerHTML=items.map(x=>'<div class="chart-month"><div class="chart-bar" title="Receitas: '+money(x.income)+'" style="height:'+Math.max(2,+x.income/max*92)+'%"></div><div class="chart-bar expense" title="Despesas: '+money(x.expense)+'" style="height:'+Math.max(2,+x.expense/max*92)+'%"></div><small class="chart-month-label">'+esc(x.label.replace(".",""))+'</small></div>').join("");
+ for(let i=5;i>=0;i--){const dt=new Date(a[0],a[1]-1-i,1),key=dt.getFullYear()+"-"+String(dt.getMonth()+1).padStart(2,"0");items.push(Object.assign({month:key,label:dt.toLocaleDateString("pt-BR",{month:"short"}),income:0,expense:0,pendingIncome:0,pendingExpense:0},by[key]||{}));}
+ const max=Math.max(1,...items.map(x=>Math.max(+x.income+ +x.pendingIncome,+x.expense+ +x.pendingExpense)));
+ const stack=(actual,forecast,total,type)=>{
+  const height=total?Math.max(3,total/max*92):0,actualHeight=total?actual/total*100:0,forecastHeight=total?forecast/total*100:0;
+  return '<div class="chart-bar-stack '+type+'" style="height:'+height+'%" title="Realizado: '+money(actual)+' · Previsto: '+money(forecast)+' · Total: '+money(total)+'"><span class="cashflow-segment cashflow-actual" style="height:'+actualHeight+'%"></span><span class="cashflow-segment cashflow-forecast" style="height:'+forecastHeight+'%"></span></div>';
+ };
+ $("#cashflow-chart").innerHTML=items.map(x=>{
+  const income=+x.income||0,expense=+x.expense||0,pendingIncome=+x.pendingIncome||0,pendingExpense=+x.pendingExpense||0;
+  return '<div class="chart-month" aria-label="'+esc(x.label)+': receitas '+money(income+pendingIncome)+', despesas '+money(expense+pendingExpense)+'">'+stack(income,pendingIncome,income+pendingIncome,"income")+stack(expense,pendingExpense,expense+pendingExpense,"expense")+'<small class="chart-month-label">'+esc(x.label.replace(".",""))+'</small></div>';
+ }).join("");
  const cats=d.categories||[],total=cats.reduce((s,x)=>s+(+x.amount),0);
  $("#expense-categories").innerHTML=cats.length?cats.map(c=>'<div class="category-row"><span class="category-symbol">'+symbol(c.name)+'</span><div class="category-copy"><b>'+esc(c.name)+'</b><div class="mini-progress"><i style="width:'+(total?Math.max(2,+c.amount/total*100):0)+'%;background:'+( /^#[0-9a-f]{6}$/i.test(c.color||"")?c.color:"#71809a")+'"></i></div></div><span class="category-amount">'+money(c.amount)+'</span></div>').join(""):'<div class="empty-state">Nenhuma despesa registrada neste período.</div>';
  const transactions=d.transactions||[];
