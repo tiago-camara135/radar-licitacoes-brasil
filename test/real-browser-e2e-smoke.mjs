@@ -145,7 +145,9 @@ try{
  await page.locator('.ai-fab').click();
  await page.locator('#ai-assistant.ai-widget-open').waitFor({state:'visible',timeout});
  assert.ok(await page.locator('#aiPrompt').isVisible(),'AI floating composer must open');
- note('AI-RLB launcher and composer OK (no paid API request)');
+ await page.locator('#ai-assistant .ai-close').click();
+ await until(page,()=>!document.querySelector('#ai-assistant')?.classList.contains('ai-widget-open'));
+ note('AI-RLB launcher, composer and close button OK (no paid API request)');
 
  await page.setViewportSize({width:390,height:844});
  await gotoSection(page,'radar');
