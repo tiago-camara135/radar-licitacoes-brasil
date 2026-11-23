@@ -1268,6 +1268,13 @@ const totalFormat=v=>Number(v||0).toLocaleString('pt-BR');
 let generation=0,overview=null,deadlinePeriod=7,feedFilter='all',liveCache=[];
 const DASHBOARD_REFRESH_MS=5*60*1000;
 let nextDashboardRefresh=0,lastDashboardRefreshAttempt=0,refreshRequestPending=false,hasAuthenticatedSnapshot=false;
+let agendaInitialized=false,agendaSeen=new Map(),agendaPulse=new Map(),renderedAgendaSignature='';
+let recentInitialized=false,recentSeen=new Map(),recentPulse=new Map(),renderedRecentSignature='';
+const agendaKey=x=>String(x?.pncp_key||[x?.type,x?.date,x?.title].join('|'));
+const agendaVersion=x=>JSON.stringify([x?.date,x?.title,x?.subtitle,x?.status]);
+const tenderKey=x=>String(x?.numeroControlePNCP||x?._pncpId||
+  [x?.orgaoEntidade?.cnpj,x?.anoCompra,x?.sequencialCompra].filter(Boolean).join('-'));
+const tenderVersion=x=>JSON.stringify([x?.objetoCompra,x?.dataEncerramentoProposta,x?.dataFimRecebimentoProposta,x?.modalidadeNome]);
 function liveLabel(text,state){
   const label=$('#rlbHomeLiveLabel'),bar=$('#rlbHomeLiveBar');
   if(label)label.textContent=text;
@@ -1354,18 +1361,38 @@ function cardEmpty(message){
 }
 function renderDeadlines(data){
   const list=$('#rlbHomeDeadlines');if(!list)return;
-  list.replaceChildren();
+  const allEvents=Array.isArray(data?.agenda)?data.agenda:[];
+  const previous=agendaSeen;const incoming=new Map(allEvents.map(x=>[agendaKey(x),agendaVersion(x)]));
+  let added=0,changed=0;agendaPulse.clear();
+  if(agendaInitialized){
+    for(const event of allEvents){
+      const key=agendaKey(event),version=agendaVersion(event);
+      if(!previous.has(key)){agendaPulse.set(key,'new');added++}
+      else if(previous.get(key)!==version){agendaPulse.set(key,'changed');changed++}
+    }
+  }
+  agendaInitialized=true;agendaSeen=incoming;
+  if(added||changed)document.dispatchEvent(new CustomEvent('radar:pulse-updates',{
+    detail:{source:'deadlines',added,changed}
+  }));
   const start=new Date(),today=isoFmt.format(start);
   const endDate=new Date(start.getTime()+(deadlinePeriod+1)*86400000);
   const lastDay=isoFmt.format(endDate);
-  const events=(Array.isArray(data?.agenda)?data.agenda:[]).map(e=>({...e,parsed:dateOf(e.date,e.type)}))
+  const events=allEvents.map(e=>({...e,parsed:dateOf(e.date,e.type)}))
     .filter(e=>e.parsed&&(e.type==='document'?
       (isoFmt.format(e.parsed)>=today&&isoFmt.format(e.parsed)<=lastDay):
       (e.parsed>=start&&e.parsed.getTime()-start.getTime()<=deadlinePeriod*86400000)))
     .sort((a,b)=>a.parsed-b.parsed).slice(0,4);
+  const signature=JSON.stringify([deadlinePeriod,events.map(x=>[agendaKey(x),agendaVersion(x)])]);
+  if(signature===renderedAgendaSignature&&list.querySelector('.rlb-home-deadline'))return;
+  renderedAgendaSignature=signature;list.replaceChildren();
   if(!events.length){list.append(cardEmpty('Nenhum prazo registrado nos próximos '+deadlinePeriod+' dias.'));return}
   for(const event of events){
     const row=element('article','rlb-home-deadline');row.setAttribute('role','listitem');
+    const pulse=agendaPulse.get(agendaKey(event));
+    if(pulse){row.classList.add('rlb-pulse-item');row.dataset.pulseState=pulse;
+      setTimeout(()=>{row.classList.remove('rlb-pulse-item');row.removeAttribute('data-pulse-state')},10000);
+    }
     const stamp=element('div','rlb-home-date'),parts=dateFmt.formatToParts(event.parsed);
     const day=parts.find(part=>part.type==='day')?.value||'—',month=parts.find(part=>part.type==='month')?.value||'';
     stamp.append(element('strong','',day),element('span','',month.toUpperCase().replace('.','')));
@@ -1455,6 +1482,10 @@ function renderRecent(rows){
 }
 function clearPrivateData(){
   generation++;overview=null;hasAuthenticatedSnapshot=false;refreshRequestPending=false;nextDashboardRefresh=0;lastDashboardRefreshAttempt=0;
+  agendaInitialized=false;agendaSeen.clear();agendaPulse.clear();renderedAgendaSignature='';
+  recentInitialized=false;recentSeen.clear();recentPulse.clear();renderedRecentSignature='';
+  const announcement=$('#rlbHomeNewUpdates');
+  if(announcement){announcement.hidden=true;announcement.textContent='';}
   liveLabel('Entre na conta para consultar o painel','ready');
   if($('#rlbHomeRefresh'))$('#rlbHomeRefresh').disabled=true;
   if($('#rlbHomeLastUpdate'))$('#rlbHomeLastUpdate').textContent='Aguardando sincronização';
