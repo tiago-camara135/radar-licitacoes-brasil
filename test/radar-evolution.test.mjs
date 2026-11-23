@@ -61,3 +61,18 @@ test('evolução fica antes do marcador removido pelo runtime antigo',()=>{
  const cutoff=js.indexOf(marker);
  assert.ok(stage>0&&cutoff>stage,'componentes devem entrar no bundle antes do corte legado');
 });
+
+
+test('IA-RLB widget opens visibly without depending on the URL hash',()=>{
+ const drag=fs.readFileSync(new URL('../draggable-ai-v1.js',import.meta.url),'utf8');
+ assert.match(drag,/classList\.add\('ai-widget-open'\)/);
+ assert.match(css,/#appShell #ai-assistant\.ai-widget-open/);
+ assert.match(css,/#appShell \.ai-fab\.ai-widget-fab-hidden/);
+});
+
+
+test('sino de notificações continua acessível em telas pequenas',()=>{
+ assert.match(css, /max-width:760px/);
+ assert.match(css, /topbar\.rev-n-wrap|topbar \.rev-n-wrap/);
+ assert.match(css, /\.rev-n-bell::before/);
+});
