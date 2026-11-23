@@ -2578,3 +2578,26 @@ html[data-theme="dark"] .toast:not(.error) {
 .rev-health-status[data-ok="yes"]{color:var(--emerald)}.rev-health-status[data-ok="no"]{color:var(--coral)}
 @media(max-width:450px){.rev-health-head{align-items:flex-start;flex-direction:column}.rev-n-panel{max-height:75svh;overflow:auto}.rev-n-controls{gap:4px}.rev-n-mark{margin-left:0}}
 @media(prefers-reduced-motion:reduce){.rev-summary *,.rev-n-panel *,.rev-operation *{animation:none!important;transition-duration:0ms!important;scroll-behavior:auto!important}}
+
+
+/* QA hotfix: draggable IA-RLB uses ai-widget-open, not the legacy :target route. */
+#appShell #ai-assistant.ai-widget-open{
+  display:block!important;
+  visibility:visible!important;
+  opacity:1!important;
+  pointer-events:auto!important;
+}
+#appShell #ai-assistant.ai-widget-open .ai-window{
+  visibility:visible!important;
+  opacity:1!important;
+  transform:none!important;
+  pointer-events:auto;
+}
+#appShell .ai-fab.ai-widget-fab-hidden{
+  visibility:hidden!important;
+  opacity:0!important;
+  pointer-events:none!important;
+}
+@media(prefers-reduced-motion:reduce){
+  #appShell #ai-assistant.ai-widget-open .ai-window{transition:none!important}
+}
