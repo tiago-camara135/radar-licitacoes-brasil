@@ -146,8 +146,10 @@ function renderDashboardChips() {
   const chips = states.map(uf => dashboardChip(uf, uf));
   for (const id of ['radarMunicipality', 'searchModality', 'searchDays', 'radarClosingDays', 'radarOrganization']) {
     const input = $('#' + id);
-    if (input.value && input.value !== '0') chips.push(dashboardChip(input.selectedOptions?.[0]?.text || input.value, id));
+    const value = input.value.trim();
+    if (value && !(input.tagName === 'SELECT' && value === '0')) chips.push(dashboardChip(input.selectedOptions?.[0]?.text || value, id));
   }
+  $('#radarFiltersToggle').textContent = chips.length ? `Filtros (${chips.length})` : 'Filtros';
   if (!chips.length) chips.push('<span class="radar-chip radar-chip-static">Prazos vigentes</span>');
   $('#radarChips').innerHTML = chips.join('');
 }
@@ -508,7 +510,10 @@ function bindRadarDashboard() {
     if (!$('#radarFilters').hidden) $('#radarFiltersToggle').click();
     runDashboardSearch();
   });
-  form.addEventListener('change', renderDashboardChips);
+  $('#radarFilters').addEventListener('change', renderDashboardChips);
+  $('#radarFilters').addEventListener('input', event => {
+    if (event.target.matches('#radarMunicipality, #radarOrganization')) renderDashboardChips();
+  });
   $('#radarOrder').addEventListener('change', () => runDashboardSearch());
   $('#radarFiltersToggle').addEventListener('click', event => {
     const filters = $('#radarFilters');
