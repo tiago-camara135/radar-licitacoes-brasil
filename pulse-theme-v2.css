@@ -1,12 +1,12 @@
 /* Radar Pulse 2.0 — Arctic Pro / Deep Ocean. Semantic tokens, isolated from data and routes. */
 html[data-theme="light"]{
  --pulse-page:#F0F5FA;--pulse-paper:#FFFFFF;--pulse-inset:#EAF1F8;--pulse-edge:#CDDCE9;
- --pulse-ink:#142C46;--pulse-secondary:#49627B;--pulse-brand:#087E80;--pulse-selected:#086BA6;
- --rp-accent:#087E80;--rp-info:#086BB0;--rp-success:#08784E;--rp-violet:#7943C2;--rp-warn:#925008;--rp-danger:#B52948;
- --rp-raised:#F8FBFE;--rp-field:#F8FAFD;--rp-focus:#087E80;
+ --pulse-ink:#142C46;--pulse-secondary:#49627B;--pulse-brand:#087477;--pulse-selected:#086BA6;
+ --rp-accent:#087477;--rp-info:#086BB0;--rp-success:#08784E;--rp-violet:#7943C2;--rp-warn:#925008;--rp-danger:#B52948;
+ --rp-raised:#F8FBFE;--rp-field:#F8FAFD;--rp-focus:#087477;
  --rp-shadow:0 5px 18px #20486b0b,0 1px 3px #20486b0b;--rp-shadow-raised:0 12px 28px #20486b15;
  --rp-header:#FFFFFF;--rp-highlight:#FFFFFF;--rp-hero:linear-gradient(145deg,#E8F7FB,#DCEBF9 75%,#E4F8F2);
- --rp-hero-ink:#16324B;--rp-hero-muted:#405D73;--rp-hero-accent:#087E80;--rp-demo:#FFFFFF;--rp-demo-soft:#EAF3FA;
+ --rp-hero-ink:#16324B;--rp-hero-muted:#405D73;--rp-hero-accent:#087477;--rp-demo:#FFFFFF;--rp-demo-soft:#EAF3FA;
  --rp-button:#086BA6;--rp-button-end:#07588F;--rp-button-text:#FFFFFF;
  --rp-track:#08784E;--rp-track-end:#07613F;--rp-ai:#7943C2;--rp-ai-end:#6435A4;
  --rp-blue-tile:#E2F2FF;--rp-green-tile:#DEF7ED;--rp-purple-tile:#F0E8FF;--rp-amber-tile:#FFF0D9;
@@ -134,7 +134,7 @@ html[data-theme="light"] #authScreen .auth-home-demo-panel :is(.demo-toolbar,.de
 .pulse-theme-preview[data-preview="dark"]::after{background:#28e6cd;box-shadow:0 7px 0 #36526c}
 .pulse-theme-preview[data-preview="auto"]{background:linear-gradient(90deg,#eaf1f8 50%,#091322 50%)}
 .pulse-theme-preview[data-preview="auto"]::before{background:#a8c0d6}
-.pulse-theme-preview[data-preview="auto"]::after{background:linear-gradient(90deg,#087e80 50%,#28e6cd 50%);box-shadow:0 7px 0 #7892a9}
+.pulse-theme-preview[data-preview="auto"]::after{background:linear-gradient(90deg,#087477 50%,#28e6cd 50%);box-shadow:0 7px 0 #7892a9}
 #radarAccount .pulse-appearance{margin-top:4px;padding-top:7px}
 #radarAccount .pulse-appearance-options button{min-height:50px;width:100%}
 @media(max-width:600px){.pulse-appearance-options{gap:5px}.pulse-appearance-options button{min-height:44px}}
