@@ -206,6 +206,31 @@ try{
  assert.match(await page.locator('#rlbHomeNextUpdate').textContent(),/Próxima consulta em/);
  assert.equal(await page.locator('#rlbHomeRefresh').isEnabled(),true);
  note('Dashboard refresh queries real overview + national feed and updates live clock OK');
+ // Eventos de teste isolados simulam uma nova publicação baseada num snapshot real.
+ // O teste não grava dados sintéticos no site público.
+ const originalOverview=await page.evaluate(async()=>{
+   const r=await fetch('/api/dashboard/overview',{credentials:'same-origin',cache:'no-store'});
+   if(!r.ok)throw Error('QA snapshot not available: '+r.status);
+   return r.json();
+ });
+ await page.evaluate(data=>{
+   const first=data.recommendations?.[0];
+   if(!first)throw Error('Need real seeded recommendation for pulse test');
+   const newcomer={...first,sequence:Number(first.sequence)+1,object_text:'Recomendação nova QA temporária'};
+   const fake={...data,recommendations:[newcomer,...data.recommendations]};
+   window.__rlbPulseSyntheticOverview=fake;
+   document.dispatchEvent(new CustomEvent('radar:overview',{detail:fake}));
+ },originalOverview);
+ await until(page,()=>document.querySelector('#revRecommendations .rev-rec[data-pulse-state="new"]')?.textContent?.includes('Recomendação nova QA temporária'),8000);
+ assert.ok((await page.locator('#rlbHomeNewUpdates').textContent()).includes('nova(s) recomendação'));
+ await page.evaluate(()=>{
+   window.__rlbPulseUnchangedCard=document.querySelector('#revRecommendations .rev-rec');
+   document.dispatchEvent(new CustomEvent('radar:overview',{detail:window.__rlbPulseSyntheticOverview}));
+ });
+ assert.equal(await page.evaluate(()=>window.__rlbPulseUnchangedCard===document.querySelector('#revRecommendations .rev-rec')),true,
+   'Identical refreshed recommendations preserve DOM and do not blink');
+ await page.evaluate(data=>document.dispatchEvent(new CustomEvent('radar:overview',{detail:data})),originalOverview);
+ note('Real-snapshot diff highlights only newly introduced recommendations; unchanged cards do not blink OK');
 
  await page.locator('.rev-n-bell').click();
  await page.locator('#revNotifPanel:not([hidden])').waitFor({state:'visible',timeout});
