@@ -142,6 +142,17 @@
 
 
         <div id="rlbHomeKpis" class="rlb-home-kpis" aria-label="Indicadores personalizados"></div>
+        <div id="rlbHomeLiveBar" class="rlb-live-bar" aria-label="Atualização dos dados do painel">
+          <div class="rlb-live-identity"><span class="rlb-live-led" aria-hidden="true"></span>
+            <div><strong>Painel de oportunidades</strong><span id="rlbHomeLiveLabel">Consultando dados reais do Radar</span></div>
+          </div>
+          <div class="rlb-live-controls">
+            <span id="rlbHomeLastUpdate" class="rlb-live-last">Aguardando sincronização</span>
+            <span id="rlbHomeNextUpdate" class="rlb-live-next">Intervalo: 5 min</span>
+            <button type="button" id="rlbHomeRefresh" class="rlb-live-refresh" aria-label="Atualizar agora recomendações, prazos e oportunidades"><span aria-hidden="true">↻</span> Atualizar</button>
+          </div>
+        </div>
+        <div id="rlbHomeNewUpdates" class="rlb-live-new" role="status" aria-live="polite" hidden></div>
 
         <div class="rlb-home-main-grid">
           <section class="rlb-home-card rlb-home-recommendations" aria-labelledby="rlbHomeRecsTitle">
