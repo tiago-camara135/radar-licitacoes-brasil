@@ -66,7 +66,9 @@ try{
  await page.locator('#view-home.active').waitFor({state:'visible',timeout});
  assert.ok(await page.locator('#rlbHomeTitle').isVisible(),'Executive home opens after login');
  assert.equal(await page.locator('#rlbHomeKpis .rev-stat').count(),4);
+ assert.equal(await page.locator('#rlbHomeKpis button.rev-stat').count(),4,'Every KPI must be clickable');
  assert.ok(await page.locator('#rlbHomeSearchForm').isVisible());
+ assert.equal(await page.locator('#rlbPageNavBar').isVisible(),false,'Breadcrumb stays hidden on home');
  assert.ok(await page.locator('#rlbHomeRecent').count()===1);
  note('Executive home layout and real KPI cards OK');
  assert.equal(await page.locator('#adminNav').isVisible(),false,'Non-admin cannot see admin navigation');
@@ -117,8 +119,15 @@ try{
  await pool.query("INSERT INTO notification_deliveries(user_id,alert_id,pncp_id,channel,status,payload,created_at,sent_at) VALUES($1,$2,$3,'onsite','sent',$4::jsonb,NOW(),NOW())",[userId,alertId,pncpId,JSON.stringify(notificationPayload)]);
 
  await gotoSection(page,'home');
- await page.evaluate(item=>document.dispatchEvent(new CustomEvent('radar:live-feed',{detail:{items:[item]}})),raw);
+ const expired={...raw,objetoCompra:'Licitação encerrada CI '+token,dataEncerramentoProposta:new Date(Date.now()-2*86400000).toISOString()};
+ await page.evaluate(items=>document.dispatchEvent(new CustomEvent('radar:live-feed',{detail:{items}})),[raw,expired]);
  await until(page,()=>document.querySelector('#rlbHomeRecent')?.textContent?.includes('Aquisição de combustível para a frota CI'),10000);
+ assert.ok((await page.locator('#rlbHomeRecent').textContent()).includes('Licitação encerrada CI'));
+ await page.locator('#rlbHomeRecentFilters [data-home-feed="open"]').click();
+ assert.ok((await page.locator('#rlbHomeRecent').textContent()).includes('Aquisição de combustível'));
+ assert.ok(!(await page.locator('#rlbHomeRecent').textContent()).includes('Licitação encerrada CI'),'Current-deadline filter excludes expired tenders');
+ await page.locator('#rlbHomeRecentFilters [data-home-feed="all"]').click();
+ note('Recent feed toggles use real closing dates; no simulated opportunity numbers OK');
  const recentHref=await page.locator('#rlbHomeRecent a.rlb-home-table-open').first().getAttribute('href');
  assert.ok(recentHref?.startsWith('https://pncp.gov.br/app/editais/'),'Recent item links to official PNCP');
  await page.locator('#revSummary .rev-action').first().click();
@@ -127,7 +136,16 @@ try{
  const score=await page.locator('#revRecommendations .rev-rec .rev-rec-side b').first().textContent();
  assert.match(score,/\d+%/,'Aderência score must be populated');
  assert.ok(await page.locator('#revRecommendations [data-rev-track]').count()>0,'Tracking button attached');
- note('Personalized recommendations, score and tracking action OK');
+ await page.locator('#rlbHomeRecommendationFilters [data-home-rec-filter="soon"]').click();
+ assert.equal(await page.locator('#rlbHomeRecommendationFilters [data-home-rec-filter="soon"]').getAttribute('aria-pressed'),'true');
+ await until(page,()=>document.querySelector('#revRecommendations')?.textContent?.includes('Aquisição de combustível para a frota CI'),timeout);
+ assert.equal(await page.locator('#revRecommendations [data-rev-track]').first().getAttribute('data-cnpj'),cnpj,
+   'Tracking action must remain attached to the matching tender after filtering');
+ await page.locator('#rlbHomeKpis [data-home-action="high"]').click();
+ assert.equal(await page.locator('#rlbHomeRecommendationFilters [data-home-rec-filter="high"]').getAttribute('aria-pressed'),'true');
+ await page.locator('#rlbHomeRecommendationFilters [data-home-rec-filter="all"]').click();
+ await until(page,()=>document.querySelector('#revRecommendations')?.textContent?.includes('Aquisição de combustível para a frota CI'),timeout);
+ note('Interactive KPI drilldown, fit filters and exact tender tracking identity OK');
 
  await page.locator('.rev-n-bell').click();
  await page.locator('#revNotifPanel:not([hidden])').waitFor({state:'visible',timeout});
@@ -170,7 +188,26 @@ try{
  await page.locator('#revSummary .rev-action').first().click();
  assert.ok(await page.locator('#rlbHomeDeadlines .rlb-home-deadline').count()>0,'Real deadline agenda present');
  assert.ok(await page.locator('#rlbHomePanorama .rlb-home-ring').count()===1,'Real tracking chart present');
- note('Executive home agenda and operation donut chart use persisted account data OK');
+ await page.locator('#rlbHomeDeadlineControls [data-home-period="30"]').click();
+ assert.equal(await page.locator('#rlbHomeDeadlineControls [data-home-period="30"]').getAttribute('aria-pressed'),'true');
+ await page.locator('#rlbHomeDeadlineControls [data-home-period="7"]').click();
+ assert.equal(await page.locator('#rlbHomeDeadlineControls [data-home-period="7"]').getAttribute('aria-pressed'),'true');
+ assert.ok(await page.locator('#rlbHomeDeadlines .rlb-home-deadline').count()>0,'Real deadline remains after filter toggles');
+ await page.locator('#rlbHomePanorama [data-home-stage="participating"]').click();
+ await page.locator('#view-operation.active').waitFor({timeout});
+ assert.equal(await page.locator('#view-operation .rev-op-filter').inputValue(),'participating','Donut legend opens matching group');
+ assert.ok((await page.locator('#view-operation .rev-op-items').textContent()).includes('Aquisição de combustível'));
+ assert.ok(await page.locator('#rlbPageNavBar').isVisible(),'Page breadcrumb appears away from home');
+ await page.locator('#rlbPageNavBar .rlb-page-back').click();
+ await page.locator('#view-home.active').waitFor({timeout});
+ assert.equal(await page.locator('#rlbPageNavBar').isVisible(),false);
+ await page.locator('#view-home [data-home-action="calendar"]').first().click();
+ await page.locator('#view-operation.active.calendar-focused').waitFor({timeout});
+ assert.equal(await page.locator('#view-operation .rev-op-side').evaluate(e=>getComputedStyle(e).order),'-1',
+   'Calendar appears first instead of scrolling down');
+ await page.locator('#rlbPageNavBar .rlb-page-back').click();
+ await page.locator('#view-home.active').waitFor({timeout});
+ note('Interactive deadline period, chart stage drilldown, calendar-first page and breadcrumb return OK');
 
  // Filtros avançados antigos não devem contaminar uma busca nova.
  await gotoSection(page,'radar');
@@ -185,6 +222,8 @@ try{
  await page.locator('#rlbHomeClosingDays').selectOption('7');
  await page.locator('#rlbHomeSearchForm [type="submit"]').click();
  await page.locator('#view-radar.active').waitFor({timeout});
+ await until(page,()=>window.scrollY<=4,timeout);
+ assert.ok(await page.locator('#rlbPageNavBar').isVisible(),'Search opens in dedicated page with breadcrumb');
  assert.equal(await page.locator('#searchKeyword').inputValue(),'combustível');
  assert.equal(await page.locator('#searchModality').inputValue(),'6');
  assert.equal(await page.locator('#radarClosingDays').inputValue(),'7');
@@ -193,6 +232,13 @@ try{
  assert.equal(await page.locator('#radarOrganization').inputValue(),'','Old organization filter cleared');
  assert.equal(await page.locator('#searchDays').inputValue(),'0','Old publication date filter cleared');
  note('Executive search transfers keyword, UF, modality and deadline without hidden legacy filters OK');
+ await page.evaluate(()=>{window.scrollTo(0,document.body.scrollHeight);document.querySelector('#mainNav [data-view="home"]').click()});
+ await page.locator('#view-home.active').waitFor({timeout});
+ await until(page,()=>window.scrollY<=4,timeout);
+ await page.evaluate(()=>{window.scrollTo(0,document.body.scrollHeight);document.querySelector('#mainNav [data-view="radar"]').click()});
+ await page.locator('#view-radar.active').waitFor({timeout});
+ await until(page,()=>window.scrollY<=4,timeout);
+ note('Navigation opens new pages at the top even after scrolling to bottom OK');
 
  await page.locator('#radarSaveSearch').click();
  await page.locator('#radarSaveDialog').waitFor({state:'visible'});
