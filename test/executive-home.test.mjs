@@ -57,7 +57,7 @@ test('links oficiais não aceitam javascript e os textos são renderizados como 
  assert.match(js,/const n=document.createElement\(tag\)/);
  assert.match(js,/n\.textContent=String\(value\)/);
  assert.match(js,/a\.rel='noopener noreferrer'/);
- assert.match(js,/Nenhum prazo futuro registrado/);
+ assert.match(js,/Nenhum prazo registrado nos próximos/);
 });
 
 
@@ -74,4 +74,49 @@ test('auditoria: Minha Operação sincroniza indicadores no dashboard',()=>{
  assert.match(js,/overview=d;render\(\);installTrackActions\(\);document\.dispatchEvent\(new CustomEvent\('radar:overview'/);
  assert.match(js,/document\.addEventListener\('radar:overview',event=>\{/);
  assert.match(js,/ui\.values\[i\]\.textContent=number\(metrics\[key\]\)/);
+});
+
+
+test('navegação abre áreas no topo e inclui retorno contextual sem rotas duplicadas',()=>{
+ assert.match(html,/id="rlbPageNavBar"/);
+ assert.match(html,/id="rlbPageNavCurrent"/);
+ assert.match(html,/data-view="home" class="rlb-page-back"/);
+ assert.match(js,/const previous=state\.view,changed=previous!==v/);
+ assert.match(js,/const breadcrumb=\$\('#rlbPageNavBar'\)/);
+ assert.match(js,/window\.scrollTo\(0,0\)/);
+ assert.match(js,/requestAnimationFrame\(resetPosition\)/);
+ assert.match(js,/target\.classList\.add\('rlb-view-enter'\)/);
+ assert.match(css,/@keyframes rlbPageReveal/);
+ assert.match(css,/prefers-reduced-motion:reduce/);
+});
+
+test('indicadores são botões que abrem ações reais sem gerar valores fictícios',()=>{
+ assert.match(js,/const m=el\('button','rev-stat'\)/);
+ assert.match(js,/m\.dataset\.homeAction=action/);
+ assert.match(js,/if\(\['today','high'\]\.includes\(action\)\)/);
+ assert.match(js,/radar:home-rec-filter/);
+ assert.match(js,/radar:operation-filter/);
+ assert.match(js,/radar:operation-focus/);
+ assert.match(css,/#view-home \.rev-kpi-arrow/);
+});
+
+test('filtros de recomendações continuam vinculados à licitação correta',()=>{
+ for(const name of ['rlbHomeRecommendationFilters','rlbHomeDeadlineControls','rlbHomeRecentFilters','rlbHomeFeedStatus'])assert.match(home,new RegExp('id="'+name+'"'));
+ assert.match(js,/recFilter='all',recCache=\[\]/);
+ assert.match(js,/if\(recFilter==='high'\)return Number\(x\.fit\?\.score\)>=85/);
+ assert.match(js,/if\(recFilter==='soon'\)/);
+ assert.match(js,/radar:recommendations-rendered/);
+ assert.match(js,/card\.dataset\.cnpj=String\(x\.org_cnpj\|\|''\)/);
+ assert.match(js,/b\.dataset\.cnpj=card\.dataset\.cnpj/);
+});
+
+test('agenda 7 ou 30 dias, feed vigente e estágios do gráfico são filtros funcionais',()=>{
+ assert.match(js,/deadlinePeriod=7,feedFilter='all',liveCache=\[\]/);
+ assert.match(js,/deadlinePeriod=next;setActive\('data-home-period',next\)/);
+ assert.match(js,/feedFilter=next;setActive\('data-home-feed',next\)/);
+ assert.match(js,/data\.funnel\|\|\{\}/);
+ assert.match(js,/item\.dataset\.homeStage=g\.status/);
+ assert.match(js,/if\(filter==='preparing'\)/);
+ assert.match(js,/calendar-focused/);
+ assert.match(css,/#view-operation\.calendar-focused \.rev-op-layout/);
 });
