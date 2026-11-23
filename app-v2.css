@@ -2833,3 +2833,5 @@ html[data-theme="dark"] #view-home .rlb-home-deadline-status[data-urgent=true]{b
 @media(prefers-reduced-motion:reduce){
  #view-home *{animation:none!important;transition:none!important;scroll-behavior:auto!important}
 }
+
+#view-home .rlb-home-disclaimer{font-size:9px;line-height:1.5;color:var(--rlb-home-muted);margin:11px 0 0}
