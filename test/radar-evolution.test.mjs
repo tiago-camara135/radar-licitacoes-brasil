@@ -53,3 +53,11 @@ test('saúde administrativa é consultada por demanda, sem serviços pagos',()=>
  assert.match(css, /focus-visible/);
  assert.match(css, /prefers-reduced-motion:reduce/);
 });
+
+
+test('evolução fica antes do marcador removido pelo runtime antigo',()=>{
+ const marker="\n\n(()=>{\n'use strict';\nconst CHECK_MS=5*60*1000;";
+ const stage=js.indexOf('/* Radar Evolution — Etapa 1');
+ const cutoff=js.indexOf(marker);
+ assert.ok(stage>0&&cutoff>stage,'componentes devem entrar no bundle antes do corte legado');
+});
