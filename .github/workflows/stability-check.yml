@@ -107,3 +107,11 @@ jobs:
             cat /tmp/rlb-integration.log
             exit 1
           fi
+          # Chrome is already installed on GitHub-hosted Ubuntu images; install only
+          # the lightweight automation protocol client, never a browser bundle.
+          npm install --no-save --ignore-scripts playwright-core@1.55.0
+          if ! node test/real-browser-e2e-smoke.mjs; then
+            echo "--- browser e2e failed, server log ---"
+            tail -n 180 /tmp/rlb-integration.log
+            exit 1
+          fi
