@@ -898,6 +898,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 'use strict';
 if(window.__radarEvolutionOperation)return;window.__radarEvolutionOperation=true;
 const $=(s,r=document)=>r.querySelector(s);
+const all=(selector,root=document)=>Array.from(root.querySelectorAll(selector));
 const el=(tag,cls,label)=>{const x=document.createElement(tag);if(cls)x.className=cls;if(label!==undefined)x.textContent=String(label);return x};
 const logged=()=>!!$('#appShell')&&!$('#appShell').classList.contains('hidden');
 const safeUrl=v=>{try{const u=new URL(v);return ['https:','http:'].includes(u.protocol)&&!u.username&&!u.password?u.href:''}catch{return''}};
@@ -925,7 +926,7 @@ function install(){
  observeDetails();
 }
 function installTrackActions(){
- const cards=$$('#revRecommendations .rev-rec');
+ const cards=all('#revRecommendations .rev-rec');
  const recs=Array.isArray(overview?.recommendations)?overview.recommendations.slice(0,3):[];
  cards.forEach((card,i)=>{
   const x=recs[i],side=$('.rev-rec-side',card);if(!x||!side||side.querySelector('[data-rev-track]'))return;
