@@ -175,7 +175,12 @@ try{
  // Evita nova inscrição após muitos testes HTTP sob o mesmo IP de runner.
  await pool.query("UPDATE users SET role='admin' WHERE id=$1",[userId]);
  await page.setViewportSize({width:1366,height:850});
+ const meBefore=await page.request.get(base+'/api/me',{timeout:8000});
+ console.log('[browser-qa] Admin escalation: me-before status='+meBefore.status());
  await page.reload({waitUntil:'domcontentloaded'});
+ await page.waitForTimeout(900);
+ const meAfter=await page.request.get(base+'/api/me',{timeout:8000});
+ console.log('[browser-qa] Admin escalation: me-after status='+meAfter.status()+' authMessage='+JSON.stringify(await page.locator('#authMessage').textContent())+' appHidden='+await page.locator('#appShell').evaluate(e=>e.classList.contains('hidden')));
  await page.locator('#appShell:not(.hidden)').waitFor({state:'visible',timeout});
  await page.locator('#adminNav').waitFor({state:'visible',timeout});
  await gotoSection(page,'admin');
