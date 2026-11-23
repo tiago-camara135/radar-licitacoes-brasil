@@ -96,6 +96,7 @@ function show(v){
   });
   const label=titles[v]?.[0]||'Minha Operação';
   if($('#pageTitle'))$('#pageTitle').textContent=label;
+  const brand=$('.sidebar-brand');if(brand)brand.dataset.pageLabel=label;
   if($('#pageSubtitle'))$('#pageSubtitle').textContent=titles[v]?.[1]||'';
   const breadcrumb=$('#rlbPageNavBar');
   if(breadcrumb){
@@ -1050,7 +1051,7 @@ function renderRecommendationItems(){
     }
     const url=safeUrl(x.pncp_url);
     if(url){const a=el('a','','Abrir PNCP');a.href=url;a.target='_blank';a.rel='noopener noreferrer';side.append(a)}
-    const icon=el('span','pulse-rec-icon','≡');icon.setAttribute('aria-hidden','true');
+    const icon=el('span','pulse-rec-icon');icon.dataset.icon=/manuten|reparo|obra/i.test(x.object_text||'')?'tools':'document';icon.setAttribute('aria-hidden','true');
     card.append(icon,info,side);list.append(card);
   }
   document.dispatchEvent(new CustomEvent('radar:recommendations-rendered'));
