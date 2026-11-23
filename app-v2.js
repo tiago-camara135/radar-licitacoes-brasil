@@ -21,7 +21,7 @@ function fillSelects(){for(const id of ['searchUf','alertUf']){const e=$('#'+id)
 function initTheme() {
   const buttons = $$('#radarTheme, #radarPublicTheme');
   const systemTheme = matchMedia('(prefers-color-scheme: dark)');
-  const choices = $('[data-pulse-theme]');
+  const choices = $$('[data-pulse-theme]');
   const normalizePreference = value => ['light','dark','auto'].includes(value) ? value : 'auto';
   let preference = 'auto';
   try { preference = normalizePreference(localStorage.getItem('rlb-theme-v2')); } catch {}
