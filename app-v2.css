@@ -3711,7 +3711,9 @@ html[data-theme="dark"] #view-home .rev-stat{
   background:var(--rlb-home-soft);
   border-color:var(--rlb-pulse-primary);
 }
-#view-home .rlb-fit-meter::-webkit-progress-value,
+#view-home .rlb-fit-meter::-webkit-progress-value{
+  background:var(--rlb-pulse-chart-gradient);
+}
 #view-home .rlb-fit-meter::-moz-progress-bar{
   background:var(--rlb-pulse-chart-gradient);
 }
