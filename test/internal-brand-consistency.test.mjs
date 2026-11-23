@@ -23,3 +23,13 @@ test('navegacao superior segue o modelo 1 com icones consistentes e acessiveis',
   assert.match(header,/button:focus-visible/);
   assert.match(header,/Inteligência para compras públicas/);
 });
+
+test('header and Radar share the theme surfaces and action colors',()=>{
+  const css=fs.readFileSync('app-v2.css','utf8');
+  assert.match(header,/--hdr-bg:[^;]*var\(--surface\)[^;]*var\(--surface3\)/);
+  assert.match(header,/--hdr-nav-title:var\(--text\)/);
+  assert.match(header,/\.nav-icon\{[^}]*color:var\(--emerald\)/);
+  assert.match(css,/html\[data-theme="dark"\] \.live-terminal\{[^}]*--rlb-panel-bg:var\(--terminal\)/);
+  assert.match(css,/#view-radar \.search-console,\s*#view-radar \.results-panel\{[^}]*var\(--surface\)/);
+  assert.match(html,/id="liveScope"[^>]*aria-label="Abrangência do Radar Nacional"/);
+});
