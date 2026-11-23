@@ -87,6 +87,27 @@ function modalityList(value){
   const raw=Array.isArray(value)?value:String(value??'').split(',');
   return [...new Set(raw.map(Number).filter(n=>Number.isInteger(n)&&n>=1&&n<=14))];
 }
+export function radarSearchTerms(keyword) {
+  return [...new Set(textNorm(keyword).trim().split(/\s+/).filter(Boolean)
+    .map(word => /^(?:pneus?|pneumaticos?)$/.test(word) ? 'pneu' : word))];
+}
+
+function radarRank(item, terms) {
+  const object = textNorm(item?.objetoCompra);
+  const number = textNorm([item?.numeroCompra, item?.numeroProcesso, item?.numeroControlePNCP,
+    item?.numeroCompra && item?.anoCompra ? `${item.numeroCompra}/${item.anoCompra}` : ''].join(' '));
+  const other = textNorm([municipalityOf(item), item?.informacaoComplementar,
+    item?.orgaoEntidade?.razaoSocial, item?.unidadeOrgao?.nomeUnidade].join(' '));
+  let score = 0;
+  for (const term of terms) {
+    if (number.includes(term)) score += 6;
+    else if (object.includes(term)) score += 3;
+    else if (other.includes(term)) score += 1;
+    else return -1;
+  }
+  return score;
+}
+
 export function normalizeSearchFilters(filters={}){
   const modalities=modalityList(filters.modalities?.length?filters.modalities:(filters.modality??filters.modalidade??''));
   const min=filters.minValue===''||filters.minValue==null?null:Number(filters.minValue);
@@ -95,6 +116,10 @@ export function normalizeSearchFilters(filters={}){
   const days=rawDays===0?0:Math.min(Math.max(Number.isFinite(rawDays)&&rawDays>0?rawDays:7,1),90);
   return {
     keyword:clean(filters.keyword,180),
+    workspace:filters.workspace === true,
+    states:[...new Set((Array.isArray(filters.states) ? filters.states : String(filters.states || '').split(','))
+      .map(uf => clean(uf,2).toUpperCase()).filter(uf => /^[A-Z]{2}$/.test(uf)))].slice(0,27),
+    closingDays:[1,7,30].includes(Number(filters.closingDays)) ? Number(filters.closingDays) : 0,
     uf:clean(filters.uf,2).toUpperCase(),
     municipality:clean(filters.municipality,120),
     municipalityIbge:digits(filters.municipalityIbge).slice(0,7),
@@ -106,7 +131,7 @@ export function normalizeSearchFilters(filters={}){
     maxValue:Number.isFinite(max)&&max>=0?max:null,
     openOnly:filters.openOnly===true||String(filters.openOnly)==='true',
     days,
-    order:['newest','value_desc','value_asc','deadline'].includes(filters.order)?filters.order:'newest'
+    order:['newest','value_desc','value_asc','deadline','relevance'].includes(filters.order)?filters.order:'newest'
   };
 }
 
@@ -117,7 +142,14 @@ export function applySearchFilters(items,filters={}){
   if(f.modalities.length)all=all.filter(x=>f.modalities.includes(Number(x?._modalidadeConsultada||x?.modalidadeId)));
   if(f.cnpj.length===14)all=all.filter(x=>digits(x?.orgaoEntidade?.cnpj)===f.cnpj);
   if(f.municipalityIbge.length===7)all=all.filter(x=>digits(x?.unidadeOrgao?.codigoIbge||x?.codigoMunicipioIbge)===f.municipalityIbge);
-  if(q)all=all.filter(x=>textNorm([x?.objetoCompra,x?.informacaoComplementar,x?.orgaoEntidade?.razaoSocial,x?.unidadeOrgao?.nomeUnidade].filter(Boolean).join(' ')).includes(q));
+  if(f.states.length)all=all.filter(x=>f.states.includes(String(x?.unidadeOrgao?.ufSigla||x?.ufSigla||'').toUpperCase()));
+  if(f.closingDays)all=all.filter(x=>{const t=Date.parse(closingOf(x)||'');return t>=now&&t<=now+f.closingDays*86400000});
+  const ranks=new Map();
+  if(q&&f.workspace){
+    const terms=radarSearchTerms(q);
+    all=all.filter(item=>{const score=radarRank(item,terms);ranks.set(item,score);return score>=0});
+  }
+  if(q&&!f.workspace)all=all.filter(x=>textNorm([x?.objetoCompra,x?.informacaoComplementar,x?.orgaoEntidade?.razaoSocial,x?.unidadeOrgao?.nomeUnidade].filter(Boolean).join(' ')).includes(q));
   if(oq)all=all.filter(x=>textNorm([x?.orgaoEntidade?.razaoSocial,x?.unidadeOrgao?.nomeUnidade].filter(Boolean).join(' ')).includes(oq));
   if(mq)all=all.filter(x=>textNorm(municipalityOf(x)).includes(mq));
   if(f.minValue!==null)all=all.filter(x=>Number(x?.valorTotalEstimado)>=f.minValue);
@@ -126,7 +158,8 @@ export function applySearchFilters(items,filters={}){
   const seen=new Set();
   all=all.filter(x=>{const k=resultKey(x);if(!k||seen.has(k))return false;seen.add(k);return true});
   const pub=x=>Date.parse(x?.dataPublicacaoPncp||x?.dataAtualizacao||0)||0;
-  if(f.order==='value_desc')all.sort((a,b)=>Number(b?.valorTotalEstimado||0)-Number(a?.valorTotalEstimado||0));
+  if(f.order==='relevance')all.sort((a,b)=>(ranks.get(b)||0)-(ranks.get(a)||0)||pub(b)-pub(a));
+  else if(f.order==='value_desc')all.sort((a,b)=>Number(b?.valorTotalEstimado||0)-Number(a?.valorTotalEstimado||0));
   else if(f.order==='value_asc')all.sort((a,b)=>Number(a?.valorTotalEstimado||0)-Number(b?.valorTotalEstimado||0));
   else if(f.order==='deadline')all.sort((a,b)=>(Date.parse(closingOf(a)||'')||Infinity)-(Date.parse(closingOf(b)||'')||Infinity));
   else all.sort((a,b)=>pub(b)-pub(a));
