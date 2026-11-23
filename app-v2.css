@@ -4112,3 +4112,39 @@ html[data-theme="dark"] #appShell #view-home .rev-stat:nth-child(4){--tile:#382b
 #appShell .pulse-rec-icon[data-icon="tools"]{--pulse-icon:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.7%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M15%203a5%205%200%2000-6%206l-6%206a2%202%200%20003%203l6-6a5%205%200%20006-6l-3%203-3-3z%22/%3E%3C/svg%3E")}
 
 #appShell .rev-n-bell{--pulse-icon:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.7%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M4%2017c2-2%202-4%202-7a6%206%200%200112%200c0%203%200%205%202%207z%20M10%2020q2%202%204%200%22/%3E%3C/svg%3E")}
+
+html[data-theme] #appShell #radarAccountControls {
+ display:flex!important;align-items:center!important;justify-content:flex-end;gap:5px!important;
+ width:auto!important;max-width:none!important;margin:0!important;padding:0!important;border:0!important;flex:0 0 auto!important;
+}
+#appShell #radarAccountControls :is(#pulseHeaderSearch,.rev-n-bell,#radarAccount summary){
+ display:inline-grid!important;place-items:center;position:relative;width:38px!important;height:38px!important;
+ min-width:0!important;padding:0!important;margin:0;border:0!important;border-radius:8px!important;
+ color:var(--pulse-ink)!important;background:transparent!important;box-shadow:none!important;cursor:pointer;
+}
+#appShell #radarAccountControls :is(#pulseHeaderSearch,.rev-n-bell,#radarAccount summary):hover{background:var(--pulse-inset)!important}
+#pulseHeaderSearch svg,#radarAccount summary svg{width:21px;height:21px}
+#appShell #radarAccountControls .rev-n-bell {font-size:0!important;gap:0}
+#appShell #radarAccountControls .rev-n-count{position:absolute;right:0;top:0;min-width:12px;font-size:9px}
+#appShell #radarAccountControls #radarAccount{position:relative;width:auto!important;border:none!important;background:transparent!important}
+#appShell #radarAccountControls #radarAccount summary::marker{content:''}
+#appShell #radarAccountControls #radarAccount>div,#appShell #revNotifPanel{position:absolute;right:0;top:calc(100% + 8px);z-index:60;color:var(--pulse-ink)!important;background:var(--pulse-paper)!important;border:1px solid var(--pulse-edge);border-radius:12px;box-shadow:0 12px 32px #06142c24}
+#appShell #radarAccount[open]>div{width:min(260px,85vw);padding:14px;gap:9px}
+#appShell #radarAccount .pulse-profile-name{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+#appShell #radarAccount #radarTheme{width:auto!important;display:flex;gap:8px;align-items:center}
+#appShell .main:has(#view-home.active)>.topbar{display:none!important}
+#appShell #view-home{background:var(--pulse-page);border-color:transparent}
+#appShell #view-home .rlb-home-main-grid>.rlb-home-card,#appShell #view-home .rlb-home-secondary-grid>.rlb-home-card{background:var(--pulse-paper);border-color:var(--pulse-edge)}
+@media(max-width:1159px){
+ #appShell.radar-layout .sidebar:has(#radarAccountControls){overflow:visible!important;z-index:20}
+ #appShell.radar-layout .sidebar-inner:has(#radarAccountControls){flex-wrap:wrap!important;align-items:center!important}
+ #appShell.radar-layout #radarAccountControls{order:2!important}
+ #appShell.radar-layout #radarMenuToggle{order:1!important}
+ #appShell #revNotifPanel{position:fixed;left:auto;right:8px;top:70px;width:min(360px,calc(100vw - 16px))}
+}
+
+#appShell .pulse-rec-icon[data-icon="vehicle"]{--pulse-icon:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.7%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M3%2015V9l3-5h12l3%205v8h-3m-12%200H3v-2m2-6h14M7%2013h1m8%200h1%20M6%2017v2m12-2v2%22/%3E%3C/svg%3E")}
+
+#appShell .pulse-rec-icon[data-icon="electric"]{--pulse-icon:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.7%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22m13%202-9%2012h7l-1%208%2010-13h-8z%22/%3E%3C/svg%3E")}
+
+#appShell .pulse-rec-icon[data-icon="health"]{--pulse-icon:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.7%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M9%203h6v6h6v6h-6v6H9v-6H3V9h6z%22/%3E%3C/svg%3E")}
