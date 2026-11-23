@@ -74,3 +74,14 @@ test('estabilidade: urgência muda ao atravessar 48h/24h e não mistura contas',
  assert.match(js,/recentInitialized=false;recentSeen\.clear\(\);recentPulse\.clear\(\)/);
  assert.match(js,/if\(noticeTimer\)clearTimeout\(noticeTimer\)/);
 });
+
+test('painel usa duas paletas reativas sem gradientes escuros fixos no tema claro',()=>{
+  assert.match(css,/Radar Pulse \| paleta adaptativa v2/);
+  assert.match(css,/#view-home\{\s*--rlb-home-ink:#142842/);
+  assert.match(css,/html\[data-theme="dark"\] #view-home\{\s*--rlb-home-ink:#edf5ff/);
+  assert.match(css,/--rlb-pulse-kpi-1:linear-gradient\(130deg,#f1f7ff,#dceaff\)/);
+  assert.match(css,/--rlb-pulse-kpi-1:linear-gradient\(130deg,#1d4479,#132c50\)/);
+  assert.match(css,/#view-home \.rev-stat:nth-child\(4\)\{background:var\(--rlb-pulse-kpi-4\)\}/);
+  assert.match(css,/--rlb-pulse-focus:#1768d6/);
+  assert.match(css,/--rlb-pulse-focus:#94c2ff/);
+});
