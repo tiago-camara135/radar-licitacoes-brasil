@@ -363,9 +363,9 @@ app.get("/api/calendar",requireAuth,asyncRoute(async(req,res)=>{
  const [transactions,rules]=await Promise.all([
   pool.query(
    "SELECT t.id,t.kind,t.description,t.amount,t.occurred_on,t.due_on,t.status,t.account_id,t.transfer_to_account_id,t.category_id,t.card_id,t.installment_number,t.installment_total,t.recurring_rule_id,t.recurring_due_on,"+
-   "COALESCE(t.due_on,t.occurred_on) AS event_date,c.name AS category_name,a.name AS account_name,ca.name AS card_name "+
+   "CASE WHEN t.status IN ('pending','overdue') THEN COALESCE(t.due_on,t.occurred_on) ELSE t.occurred_on END AS event_date,c.name AS category_name,a.name AS account_name,ca.name AS card_name "+
    "FROM public.transactions t LEFT JOIN public.categories c ON c.id=t.category_id LEFT JOIN public.accounts a ON a.id=t.account_id LEFT JOIN public.cards ca ON ca.id=t.card_id "+
-   "WHERE t.user_id=$1 AND t.status<>'cancelled' AND COALESCE(t.due_on,t.occurred_on) >= $2::date AND COALESCE(t.due_on,t.occurred_on) < $3::date ORDER BY COALESCE(t.due_on,t.occurred_on),t.created_at",[uid,bounds[0],bounds[1]]),
+   "WHERE t.user_id=$1 AND t.status<>'cancelled' AND (CASE WHEN t.status IN ('pending','overdue') THEN COALESCE(t.due_on,t.occurred_on) ELSE t.occurred_on END) >= $2::date AND (CASE WHEN t.status IN ('pending','overdue') THEN COALESCE(t.due_on,t.occurred_on) ELSE t.occurred_on END) < $3::date ORDER BY (CASE WHEN t.status IN ('pending','overdue') THEN COALESCE(t.due_on,t.occurred_on) ELSE t.occurred_on END),t.created_at",[uid,bounds[0],bounds[1]]),
   pool.query("SELECT r.id,r.account_id,r.category_id,r.description,r.amount,r.kind,r.frequency,r.next_due,a.name AS account_name,c.name AS category_name FROM public.recurring_rules r LEFT JOIN public.accounts a ON a.id=r.account_id LEFT JOIN public.categories c ON c.id=r.category_id WHERE r.user_id=$1 AND r.is_active=true ORDER BY r.next_due",[uid])
  ]);
  const events=transactions.rows.map(t=>({...t,source:"transaction",event_date:String(t.event_date).slice(0,10)})),existing=new Set(transactions.rows.filter(t=>t.recurring_rule_id&&t.recurring_due_on).map(t=>String(t.recurring_rule_id)+":"+String(t.recurring_due_on).slice(0,10)));
