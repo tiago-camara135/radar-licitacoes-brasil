@@ -7,7 +7,7 @@
 <meta name="description" content="TVC Control — controle financeiro pessoal com clareza e inteligência.">
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="icon" href="/icon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/styles.css?v=9">
+<link rel="stylesheet" href="/styles.css?v=10">
 <title>TVC Control | Gestão financeira</title>
 </head>
 <body>
@@ -47,6 +47,7 @@
     <div class="side-caption">MENU PRINCIPAL</div>
     <nav class="side-nav">
       <button class="nav-link active" data-page="dashboard"><span class="nav-icon">▦</span>Visão geral</button>
+      <button class="nav-link" data-page="calendar"><span class="nav-icon">▦</span>Calendário</button>
       <button class="nav-link" data-page="transactions"><span class="nav-icon">↕</span>Lançamentos</button>
       <button class="nav-link" data-page="accounts"><span class="nav-icon">▣</span>Minhas contas</button>
       <button class="nav-link" data-page="cards"><span class="nav-icon">▤</span>Cartões</button>
@@ -78,6 +79,7 @@
 
     <section class="page active" id="page-dashboard">
       <div class="welcome-row"><div><h2 id="welcome-title">Seu dinheiro em perspectiva.</h2><p>Acompanhe o que entra, o que sai e o que você está construindo.</p></div><div class="sync-indicator"><i></i> Dados sincronizados</div></div>
+      <section id="dashboard-alerts" class="smart-alerts" hidden></section>
       <div class="stats-grid">
         <article class="stat-card stat-main"><div class="stat-top"><span>Saldo total</span><span class="stat-icon">◈</span></div><div class="stat-value" id="stat-balance">R$ 0,00</div><div class="stat-foot"><span class="trend neutral">●</span> Saldo das suas contas</div><div class="stat-glow"></div></article>
         <article class="stat-card"><div class="stat-top"><span>Receitas do mês</span><span class="stat-icon green">↙</span></div><div class="stat-value positive" id="stat-income">R$ 0,00</div><div class="stat-foot">Entradas confirmadas</div></article>
@@ -117,6 +119,14 @@
       </div>
     </section>
 
+    <section class="page" id="page-calendar">
+      <div class="page-intro calendar-page-intro"><div><h2>Calendário financeiro</h2><p>Visualize pagamentos, recebimentos e recorrências por data.</p></div><div class="calendar-controls"><button class="btn btn-secondary" data-calendar-shift="-1" aria-label="Mês anterior">‹</button><b id="calendar-month-label">Mês</b><button class="btn btn-secondary" data-calendar-shift="1" aria-label="Próximo mês">›</button><button class="btn btn-secondary" data-calendar-today>Hoje</button></div></div>
+      <div class="calendar-layout">
+        <article class="panel calendar-panel"><div class="calendar-weekdays" id="calendar-weekdays"></div><div class="calendar-grid" id="calendar-grid"></div><div class="calendar-legend"><span><i class="income"></i>Receitas</span><span><i class="expense"></i>Despesas</span><span><i class="transfer"></i>Transferências</span></div></article>
+        <article class="panel calendar-day-panel"><div class="panel-heading"><div><h3 id="calendar-day-title">Dia selecionado</h3><p id="calendar-day-count">0 evento(s)</p></div></div><div class="calendar-day-total-label">Despesas do dia<strong id="calendar-day-total">R$ 0,00</strong></div><div id="calendar-day-events" class="calendar-event-list"><div class="empty-state">Selecione uma data para ver os compromissos.</div></div></article>
+      </div>
+    </section>
+
     <section class="page" id="page-transactions">
       <div class="page-intro"><div><h2>Seus lançamentos</h2><p>Registre e acompanhe cada movimentação financeira.</p></div><button class="btn btn-primary" data-create="transaction">＋ Novo lançamento</button></div>
       <article class="panel"><div class="table-toolbar"><div class="filter-search"><span>⌕</span><input id="transaction-search" placeholder="Buscar lançamento..."></div><select id="transaction-kind-filter" class="select-control"><option value="all">Todos os tipos</option><option value="income">Receitas</option><option value="expense">Despesas</option><option value="transfer">Transferências</option></select></div><div class="table-scroll"><table class="data-table"><thead><tr><th>DESCRIÇÃO</th><th>CATEGORIA</th><th>CONTA / CARTÃO</th><th>DATA</th><th>SITUAÇÃO</th><th class="align-right">VALOR</th><th></th></tr></thead><tbody id="transactions-table"></tbody></table></div></article>
@@ -150,7 +160,11 @@
     <section class="page" id="page-reports">
       <div class="page-intro"><div><h2>Relatórios</h2><p>Uma leitura clara da sua movimentação financeira.</p></div><button class="btn btn-secondary" id="export-csv">⇩ Exportar CSV</button></div>
       <div class="stats-grid report-stats"><article class="stat-card"><div class="stat-top"><span>Receitas</span><span class="stat-icon green">↙</span></div><div class="stat-value positive" id="report-income">R$ 0,00</div></article><article class="stat-card"><div class="stat-top"><span>Despesas</span><span class="stat-icon red">↗</span></div><div class="stat-value negative" id="report-expense">R$ 0,00</div></article><article class="stat-card"><div class="stat-top"><span>Resultado</span><span class="stat-icon">＝</span></div><div class="stat-value" id="report-net">R$ 0,00</div></article><article class="stat-card"><div class="stat-top"><span>Lançamentos</span><span class="stat-icon amber">▤</span></div><div class="stat-value" id="report-count">0</div></article></div>
-      <article class="panel"><div class="panel-heading"><div><h3>Resumo por categoria</h3><p>Despesas confirmadas no período selecionado</p></div></div><div id="report-categories" class="category-list"></div></article>
+      <div class="dashboard-grid report-detail-grid">
+         <article class="panel"><div class="panel-heading"><div><h3>Comparativo dos últimos 6 meses</h3><p>Receitas e despesas pagas mês a mês</p></div></div><div id="report-trend" class="report-trend"></div><p id="report-comparison" class="report-insight"></p></article>
+         <article class="panel"><div class="panel-heading"><div><h3>Resumo por categoria</h3><p>Despesas pagas e pendentes no período</p></div></div><div id="report-categories" class="category-list"></div><p id="report-insight" class="report-insight"></p></article>
+       </div>
+       <article class="panel report-accounts-panel"><div class="panel-heading"><div><h3>Posição das contas</h3><p>Saldo real, compromissos e saldo projetado por conta</p></div></div><div id="report-account-balances" class="report-account-list"></div></article>
     </section>
 
     <section class="page" id="page-settings">
@@ -165,6 +179,7 @@
   </main>
   <nav class="mobile-nav">
     <button class="mobile-link active" data-page="dashboard"><span>▦</span>Início</button>
+    <button class="mobile-link" data-page="calendar"><span>▦</span>Agenda</button>
     <button class="mobile-link" data-page="transactions"><span>↕</span>Lançamentos</button>
     <button class="mobile-link" data-page="accounts"><span>▣</span>Contas</button>
     <button class="mobile-link" data-page="cards"><span>▤</span>Cartões</button>
@@ -175,5 +190,5 @@
 
 <div id="modal" class="modal" hidden><div class="modal-backdrop" data-close-modal></div><section class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modal-title"><div class="modal-head"><div><div class="eyebrow">TVC CONTROL</div><h2 id="modal-title">Novo lançamento</h2></div><button class="icon-button" data-close-modal aria-label="Fechar">×</button></div><form id="modal-form" class="form-stack"><div id="modal-fields" class="modal-fields"></div><div class="modal-actions"><button class="btn btn-secondary" type="button" data-close-modal>Cancelar</button><button class="btn btn-primary" id="modal-submit" type="submit">Salvar</button></div></form></section></div>
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
-<script src="/app.js?v=9" defer></script>
+<script src="/app.js?v=10" defer></script>
 </body></html>

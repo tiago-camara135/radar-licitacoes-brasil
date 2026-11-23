@@ -55,11 +55,18 @@ function advanceRecurringDate(date,frequency){
 }
 function buildRecurringForecast(rule,endExclusive){
   const amount=asNumber(rule.amount),nextDue=String(rule.next_due).slice(0,10);let due=nextDue,periodTotal=0,occurrences=0,iterations=0;
-  while(due<endExclusive&&iterations<600){
-    periodTotal+=amount;occurrences++;due=advanceRecurringDate(due,rule.frequency);iterations++;
-  }
-  return {rule_id:rule.id,description:rule.description,amount,frequency:rule.frequency,due_on:nextDue,account_name:rule.account_name,category_name:rule.category_name||"Sem categoria",occurrences,period_total:periodTotal};
+  while(due<endExclusive&&iterations<600){periodTotal+=amount;occurrences++;due=advanceRecurringDate(due,rule.frequency);iterations++;}
+  return {rule_id:rule.id,account_id:rule.account_id||null,description:rule.description,amount,frequency:rule.frequency,due_on:nextDue,account_name:rule.account_name,category_name:rule.category_name||"Sem categoria",occurrences,period_total:periodTotal};
 }
+function recurrenceDatesInRange(rule,startInclusive,endExclusive){
+  let due=String(rule.next_due).slice(0,10),iterations=0;const dates=[];
+  while(due<startInclusive&&iterations<600){due=advanceRecurringDate(due,rule.frequency);iterations++;}
+  while(due<endExclusive&&iterations<1200){dates.push(due);due=advanceRecurringDate(due,rule.frequency);iterations++;}
+  return dates;
+}
+function dateDifference(from,to){const a=new Date(String(from).slice(0,10)+"T12:00:00Z"),b=new Date(String(to).slice(0,10)+"T12:00:00Z");return Math.round((b.getTime()-a.getTime())/86400000);}
+const saoPauloToday=()=>new Intl.DateTimeFormat("sv-SE",{timeZone:"America/Sao_Paulo",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
+const saoPauloMonth=()=>saoPauloToday().slice(0,7);
 function setSession(res,user){
   const token=jwt.sign({sub:user.id,email:user.email,name:user.full_name},process.env.JWT_SECRET,{expiresIn:SESSION_SECONDS,issuer:"tvc-control"});
   res.cookie(COOKIE,token,{httpOnly:true,secure:process.env.NODE_ENV==="production",sameSite:"lax",path:"/",maxAge:SESSION_SECONDS*1000});
@@ -141,12 +148,20 @@ app.post("/api/categories",requireAuth,asyncRoute(async(req,res)=>{
 }));
 
 app.get("/api/accounts",requireAuth,asyncRoute(async(req,res)=>{
-  const r=await pool.query(
-    "SELECT a.id,a.name,a.account_type,a.institution,a.opening_balance,a.color,a.is_active,"+
-    "a.opening_balance+COALESCE(SUM(CASE WHEN t.status='paid' AND t.kind='income' THEN t.amount WHEN t.status='paid' AND t.kind='expense' THEN -t.amount WHEN t.status='paid' AND t.kind='transfer' AND t.account_id=a.id THEN -t.amount WHEN t.status='paid' AND t.kind='transfer' AND t.transfer_to_account_id=a.id THEN t.amount ELSE 0 END),0) AS current_balance "+
-    "FROM public.accounts a LEFT JOIN public.transactions t ON (t.account_id=a.id OR t.transfer_to_account_id=a.id) AND t.user_id=a.user_id "+
-    "WHERE a.user_id=$1 AND a.is_active=true GROUP BY a.id ORDER BY a.created_at",[req.user.id]);
-  res.json({accounts:r.rows});
+  const uid=req.user.id,bounds=monthBounds(saoPauloMonth());
+  const [r,rules]=await Promise.all([
+    pool.query(
+      "SELECT a.id,a.name,a.account_type,a.institution,a.opening_balance,a.color,a.is_active,"+
+      "a.opening_balance+COALESCE(SUM(CASE WHEN t.status='paid' AND t.kind='income' THEN t.amount WHEN t.status='paid' AND t.kind='expense' THEN -t.amount WHEN t.status='paid' AND t.kind='transfer' AND t.account_id=a.id THEN -t.amount WHEN t.status='paid' AND t.kind='transfer' AND t.transfer_to_account_id=a.id THEN t.amount ELSE 0 END),0) AS current_balance,"+
+      "COALESCE((SELECT SUM(p.amount) FROM public.transactions p WHERE p.user_id=a.user_id AND p.account_id=a.id AND p.kind='expense' AND p.status IN ('pending','overdue')),0) AS pending_commitments "+
+      "FROM public.accounts a LEFT JOIN public.transactions t ON (t.account_id=a.id OR t.transfer_to_account_id=a.id) AND t.user_id=a.user_id "+
+      "WHERE a.user_id=$1 AND a.is_active=true GROUP BY a.id ORDER BY a.created_at",[uid]),
+    pool.query("SELECT id,account_id,description,amount,frequency,next_due FROM public.recurring_rules WHERE user_id=$1 AND kind='expense' AND is_active=true AND account_id IS NOT NULL",[uid])
+  ]);
+  const fixedByAccount={};
+  for(const rule of rules.rows){const total=buildRecurringForecast(rule,bounds[1]).period_total;fixedByAccount[rule.account_id]=(fixedByAccount[rule.account_id]||0)+total;}
+  const accounts=r.rows.map(a=>{const fixed=asNumber(fixedByAccount[a.id]),pending=asNumber(a.pending_commitments);return {...a,fixed_commitments:fixed,total_committed:pending+fixed,projected_balance:asNumber(a.current_balance)-pending-fixed};});
+  res.json({accounts});
 }));
 app.post("/api/accounts",requireAuth,asyncRoute(async(req,res)=>{
   const b=req.body||{},accountType=typeof b.accountType==="string"?b.accountType.trim():"",opening=Number(b.openingBalance||0);
@@ -275,6 +290,30 @@ app.delete("/api/goals/:id",requireAuth,asyncRoute(async(req,res)=>{
 }));
 
 
+app.post("/api/recurring/auto-generate",requireAuth,asyncRoute(async(req,res)=>{
+ const client=await pool.connect();
+ try{
+  await client.query("BEGIN");
+  const today=saoPauloToday(),rules=await client.query("SELECT * FROM public.recurring_rules WHERE user_id=$1 AND is_active=true AND next_due <= $2::date ORDER BY next_due FOR UPDATE",[req.user.id,today]);
+  let created=0,processed=0,backlog=false;
+  for(const rule of rules.rows){
+   let due=String(rule.next_due).slice(0,10),iterations=0;
+   while(due<=today&&iterations<240){
+    const inserted=await client.query(
+     "INSERT INTO public.transactions(user_id,account_id,category_id,kind,description,amount,occurred_on,due_on,status,is_recurring,recurring_rule_id,recurring_due_on) "+
+     "VALUES($1,$2,$3,$4,$5,$6,$7,$7,'pending',true,$8,$7) "+
+     "ON CONFLICT (recurring_rule_id,recurring_due_on) WHERE recurring_rule_id IS NOT NULL DO NOTHING RETURNING id",
+     [req.user.id,rule.account_id,rule.category_id,rule.kind,rule.description,rule.amount,due,rule.id]);
+    if(inserted.rowCount)created++;
+    due=advanceRecurringDate(due,rule.frequency);iterations++;
+   }
+   if(due<=today)backlog=true;
+   await client.query("UPDATE public.recurring_rules SET next_due=$2 WHERE id=$1 AND user_id=$3",[rule.id,due,req.user.id]);
+   processed++;
+  }
+  await client.query("COMMIT");res.json({ok:true,created,processed,backlog});
+ }catch(err){await client.query("ROLLBACK");throw err;}finally{client.release();}
+}));
 app.get("/api/recurring",requireAuth,asyncRoute(async(req,res)=>{
  const r=await pool.query("SELECT r.id,r.description,r.amount,r.kind,r.frequency,r.next_due,r.is_active,r.account_id,r.category_id,a.name AS account_name,c.name AS category_name FROM public.recurring_rules r LEFT JOIN public.accounts a ON a.id=r.account_id LEFT JOIN public.categories c ON c.id=r.category_id WHERE r.user_id=$1 ORDER BY r.next_due",[req.user.id]);
  res.json({recurring:r.rows});
@@ -306,18 +345,41 @@ app.post("/api/recurring/:id/record",requireAuth,asyncRoute(async(req,res)=>{
   await client.query("BEGIN");
   const found=await client.query("SELECT * FROM public.recurring_rules WHERE id=$1 AND user_id=$2 AND is_active=true FOR UPDATE",[req.params.id,req.user.id]);
   if(!found.rowCount){await client.query("ROLLBACK");return res.status(404).json({error:"Regra recorrente não encontrada ou inativa."});}
-  const rule=found.rows[0],date=String(rule.next_due).slice(0,10);
-  const created=await client.query("INSERT INTO public.transactions(user_id,account_id,category_id,kind,description,amount,occurred_on,due_on,status,is_recurring) VALUES($1,$2,$3,$4,$5,$6,$7,$7,'pending',true) RETURNING id",
-   [req.user.id,rule.account_id,rule.category_id,rule.kind,rule.description,rule.amount,date]);
-  await client.query("UPDATE public.recurring_rules SET next_due=CASE frequency WHEN 'weekly' THEN next_due+7 WHEN 'monthly' THEN (next_due+interval '1 month')::date WHEN 'yearly' THEN (next_due+interval '1 year')::date END WHERE id=$1",[rule.id]);
-  await client.query("COMMIT");res.status(201).json({ok:true,transactionId:created.rows[0].id});
+  const rule=found.rows[0],date=String(rule.next_due).slice(0,10),nextDue=advanceRecurringDate(date,rule.frequency);
+  const created=await client.query(
+   "INSERT INTO public.transactions(user_id,account_id,category_id,kind,description,amount,occurred_on,due_on,status,is_recurring,recurring_rule_id,recurring_due_on) "+
+   "VALUES($1,$2,$3,$4,$5,$6,$7,$7,'pending',true,$8,$7) "+
+   "ON CONFLICT (recurring_rule_id,recurring_due_on) WHERE recurring_rule_id IS NOT NULL DO NOTHING RETURNING id",
+   [req.user.id,rule.account_id,rule.category_id,rule.kind,rule.description,rule.amount,date,rule.id]);
+  let transactionId=created.rows[0]?.id;
+  if(!transactionId){const existing=await client.query("SELECT id FROM public.transactions WHERE recurring_rule_id=$1 AND recurring_due_on=$2::date",[rule.id,date]);transactionId=existing.rows[0]?.id;}
+  await client.query("UPDATE public.recurring_rules SET next_due=$2 WHERE id=$1 AND user_id=$3",[rule.id,nextDue,req.user.id]);
+  await client.query("COMMIT");res.status(201).json({ok:true,transactionId,alreadyExisted:!created.rowCount});
  }catch(err){await client.query("ROLLBACK");throw err;}finally{client.release();}
 }));
 
+app.get("/api/calendar",requireAuth,asyncRoute(async(req,res)=>{
+ const month=/^\d{4}-\d{2}$/.test(req.query.month||"")?req.query.month:saoPauloMonth(),bounds=monthBounds(month),uid=req.user.id;
+ const [transactions,rules]=await Promise.all([
+  pool.query(
+   "SELECT t.id,t.kind,t.description,t.amount,t.occurred_on,t.due_on,t.status,t.account_id,t.transfer_to_account_id,t.category_id,t.card_id,t.installment_number,t.installment_total,t.recurring_rule_id,t.recurring_due_on,"+
+   "COALESCE(t.due_on,t.occurred_on) AS event_date,c.name AS category_name,a.name AS account_name,ca.name AS card_name "+
+   "FROM public.transactions t LEFT JOIN public.categories c ON c.id=t.category_id LEFT JOIN public.accounts a ON a.id=t.account_id LEFT JOIN public.cards ca ON ca.id=t.card_id "+
+   "WHERE t.user_id=$1 AND t.status<>'cancelled' AND COALESCE(t.due_on,t.occurred_on) >= $2::date AND COALESCE(t.due_on,t.occurred_on) < $3::date ORDER BY COALESCE(t.due_on,t.occurred_on),t.created_at",[uid,bounds[0],bounds[1]]),
+  pool.query("SELECT r.id,r.account_id,r.category_id,r.description,r.amount,r.kind,r.frequency,r.next_due,a.name AS account_name,c.name AS category_name FROM public.recurring_rules r LEFT JOIN public.accounts a ON a.id=r.account_id LEFT JOIN public.categories c ON c.id=r.category_id WHERE r.user_id=$1 AND r.is_active=true ORDER BY r.next_due",[uid])
+ ]);
+ const events=transactions.rows.map(t=>({...t,source:"transaction",event_date:String(t.event_date).slice(0,10)})),existing=new Set(transactions.rows.filter(t=>t.recurring_rule_id&&t.recurring_due_on).map(t=>String(t.recurring_rule_id)+":"+String(t.recurring_due_on).slice(0,10)));
+ for(const rule of rules.rows)for(const date of recurrenceDatesInRange(rule,bounds[0],bounds[1])){
+  if(existing.has(String(rule.id)+":"+date))continue;
+  events.push({id:"rec-"+rule.id+"-"+date,source:"recurring",rule_id:rule.id,kind:rule.kind,description:rule.description,amount:rule.amount,status:"scheduled",event_date:date,occurred_on:date,due_on:date,account_id:rule.account_id,category_id:rule.category_id,account_name:rule.account_name,category_name:rule.category_name||"Sem categoria"});
+ }
+ events.sort((a,b)=>String(a.event_date).localeCompare(String(b.event_date))||String(a.description).localeCompare(String(b.description)));
+ res.json({month,events});
+}));
 app.get("/api/dashboard",requireAuth,asyncRoute(async(req,res)=>{
   const month=/^\d{4}-\d{2}$/.test(req.query.month||"")?req.query.month:new Date().toISOString().slice(0,7),bounds=monthBounds(month),uid=req.user.id;
   const q=[
-    pool.query("SELECT a.id,a.name,a.account_type,a.institution,a.color,a.opening_balance,a.opening_balance+COALESCE(SUM(CASE WHEN t.status='paid' AND t.kind='income' THEN t.amount WHEN t.status='paid' AND t.kind='expense' THEN -t.amount WHEN t.status='paid' AND t.kind='transfer' AND t.account_id=a.id THEN -t.amount WHEN t.status='paid' AND t.kind='transfer' AND t.transfer_to_account_id=a.id THEN t.amount ELSE 0 END),0) AS current_balance FROM public.accounts a LEFT JOIN public.transactions t ON (t.account_id=a.id OR t.transfer_to_account_id=a.id) AND t.user_id=a.user_id WHERE a.user_id=$1 AND a.is_active=true GROUP BY a.id ORDER BY a.created_at",[uid]),
+    pool.query("SELECT a.id,a.name,a.account_type,a.institution,a.color,a.opening_balance,a.opening_balance+COALESCE(SUM(CASE WHEN t.status='paid' AND t.kind='income' THEN t.amount WHEN t.status='paid' AND t.kind='expense' THEN -t.amount WHEN t.status='paid' AND t.kind='transfer' AND t.account_id=a.id THEN -t.amount WHEN t.status='paid' AND t.kind='transfer' AND t.transfer_to_account_id=a.id THEN t.amount ELSE 0 END),0) AS current_balance,COALESCE((SELECT SUM(p.amount) FROM public.transactions p WHERE p.user_id=a.user_id AND p.account_id=a.id AND p.kind='expense' AND p.status IN ('pending','overdue')),0) AS pending_commitments FROM public.accounts a LEFT JOIN public.transactions t ON (t.account_id=a.id OR t.transfer_to_account_id=a.id) AND t.user_id=a.user_id WHERE a.user_id=$1 AND a.is_active=true GROUP BY a.id ORDER BY a.created_at",[uid]),
     pool.query("SELECT COALESCE(SUM(amount) FILTER(WHERE kind='income' AND status='paid'),0) AS income,COALESCE(SUM(amount) FILTER(WHERE kind='expense' AND status='paid'),0) AS expense,COALESCE(SUM(amount) FILTER(WHERE kind='income' AND status='pending'),0) AS pending_income,COALESCE(SUM(amount) FILTER(WHERE kind='expense' AND status IN ('pending','overdue') AND COALESCE(due_on,occurred_on) >= $2::date AND COALESCE(due_on,occurred_on) < $3::date),0) AS pending_expense_month,COALESCE(SUM(amount) FILTER(WHERE kind='expense' AND status IN ('pending','overdue')),0) AS pending_expense,(SELECT COALESCE(SUM(t2.amount),0) FROM public.transactions t2 WHERE t2.user_id=$1 AND t2.kind='expense' AND t2.status IN ('pending','overdue') AND COALESCE(t2.due_on,t2.occurred_on) < $3::date) AS outstanding_expense,COUNT(*) AS transaction_count FROM public.transactions WHERE user_id=$1 AND occurred_on >= $2::date AND occurred_on < $3::date",[uid,bounds[0],bounds[1]]),
     pool.query("SELECT COALESCE(c.name,'Sem categoria') AS name,COALESCE(c.color,'#8792A5') AS color,SUM(t.amount) AS amount FROM public.transactions t LEFT JOIN public.categories c ON c.id=t.category_id WHERE t.user_id=$1 AND t.kind='expense' AND ((t.status='paid' AND t.occurred_on >= $2::date AND t.occurred_on < $3::date) OR (t.status IN ('pending','overdue') AND COALESCE(t.due_on,t.occurred_on) >= $2::date AND COALESCE(t.due_on,t.occurred_on) < $3::date)) GROUP BY c.name,c.color ORDER BY amount DESC LIMIT 7",[uid,bounds[0],bounds[1]]),
     pool.query("SELECT to_char(date_trunc('month',occurred_on),'YYYY-MM') AS month,COALESCE(SUM(amount) FILTER(WHERE kind='income' AND status='paid'),0) AS income,COALESCE(SUM(amount) FILTER(WHERE kind='expense' AND status='paid'),0) AS expense FROM public.transactions WHERE user_id=$1 AND occurred_on >= (date_trunc('month',$2::date)-interval '5 months')::date AND occurred_on < (date_trunc('month',$2::date)+interval '1 month')::date GROUP BY 1 ORDER BY 1",[uid,bounds[0]]),
@@ -327,10 +389,20 @@ app.get("/api/dashboard",requireAuth,asyncRoute(async(req,res)=>{
     pool.query("SELECT id,name,target_amount,current_amount,target_date FROM public.goals WHERE user_id=$1 ORDER BY created_at DESC LIMIT 4",[uid]),
     pool.query("SELECT c.id,c.name,c.brand,c.last_four,c.credit_limit,c.closing_day,c.due_day,COALESCE(SUM(t.amount) FILTER(WHERE t.status IN ('pending','overdue') AND t.kind='expense'),0) AS used_amount FROM public.cards c LEFT JOIN public.transactions t ON t.card_id=c.id AND t.user_id=c.user_id WHERE c.user_id=$1 GROUP BY c.id ORDER BY c.created_at DESC LIMIT 4",[uid]),
     pool.query("SELECT r.id,r.description,r.amount,r.frequency,r.next_due,a.name AS account_name,COALESCE(c.name,'Sem categoria') AS category_name FROM public.recurring_rules r LEFT JOIN public.accounts a ON a.id=r.account_id LEFT JOIN public.categories c ON c.id=r.category_id WHERE r.user_id=$1 AND r.kind='expense' AND r.is_active=true ORDER BY r.next_due,r.created_at",[uid]),
-    pool.query("SELECT t.id,t.description,t.amount,t.occurred_on,t.due_on,t.status,COALESCE(c.name,'Sem categoria') AS category_name,a.name AS account_name FROM public.transactions t LEFT JOIN public.categories c ON c.id=t.category_id LEFT JOIN public.accounts a ON a.id=t.account_id WHERE t.user_id=$1 AND t.kind='expense' AND t.status<>'cancelled' AND ((t.status='paid' AND t.occurred_on >= $2::date AND t.occurred_on < $3::date) OR (t.status IN ('pending','overdue') AND COALESCE(t.due_on,t.occurred_on) < $3::date)) ORDER BY t.created_at DESC,COALESCE(t.due_on,t.occurred_on) ASC LIMIT 12",[uid,bounds[0],bounds[1]])
+    pool.query("SELECT t.id,t.description,t.amount,t.occurred_on,t.due_on,t.status,COALESCE(c.name,'Sem categoria') AS category_name,a.name AS account_name FROM public.transactions t LEFT JOIN public.categories c ON c.id=t.category_id LEFT JOIN public.accounts a ON a.id=t.account_id WHERE t.user_id=$1 AND t.kind='expense' AND t.status<>'cancelled' AND ((t.status='paid' AND t.occurred_on >= $2::date AND t.occurred_on < $3::date) OR (t.status IN ('pending','overdue') AND COALESCE(t.due_on,t.occurred_on) < $3::date)) ORDER BY t.created_at DESC,COALESCE(t.due_on,t.occurred_on) ASC LIMIT 12",[uid,bounds[0],bounds[1]]),
+    pool.query("SELECT t.id,t.kind,t.description,t.amount,t.occurred_on,t.due_on,t.status,t.recurring_rule_id,t.recurring_due_on,COALESCE(c.name,'Sem categoria') AS category_name,a.name AS account_name FROM public.transactions t LEFT JOIN public.categories c ON c.id=t.category_id LEFT JOIN public.accounts a ON a.id=t.account_id WHERE t.user_id=$1 AND t.status IN ('pending','overdue') AND t.kind IN ('expense','income') AND COALESCE(t.due_on,t.occurred_on) <= ((now() AT TIME ZONE 'America/Sao_Paulo')::date + 7) ORDER BY COALESCE(t.due_on,t.occurred_on),t.created_at LIMIT 30",[uid])
   ];
   const results=await Promise.all(q),accounts=results[0].rows,totals=results[1].rows[0],balance=accounts.reduce((s,a)=>s+asNumber(a.current_balance),0),fixedExpenses=results[9].rows.map(rule=>buildRecurringForecast(rule,bounds[1])).sort((a,b)=>a.due_on.localeCompare(b.due_on)||a.description.localeCompare(b.description)),fixedExpenseTotal=fixedExpenses.reduce((sum,item)=>sum+item.period_total,0),outstandingExpense=asNumber(totals.outstanding_expense),committedExpense=outstandingExpense+fixedExpenseTotal,expenseTotal=asNumber(totals.expense)+asNumber(totals.pending_expense_month);
-  res.json({month,balance,income:asNumber(totals.income),expense:asNumber(totals.expense),expenseTotal,pendingExpenseMonth:asNumber(totals.pending_expense_month),pendingIncome:asNumber(totals.pending_income),pendingExpense:asNumber(totals.pending_expense),outstandingExpense,fixedExpenseTotal,committedExpense,projectedBalance:balance-committedExpense,fixedExpenses,expenseTransactions:results[10].rows,transactionCount:Number(totals.transaction_count),accounts,categories:results[2].rows,chart:results[3].rows,upcoming:results[4].rows,transactions:results[5].rows,budgets:results[6].rows,goals:results[7].rows,cards:results[8].rows});
+  const fixedByAccount={};for(const item of fixedExpenses)if(item.account_id)fixedByAccount[item.account_id]=(fixedByAccount[item.account_id]||0)+item.period_total;
+  for(const account of accounts){const fixed=asNumber(fixedByAccount[account.id]),pending=asNumber(account.pending_commitments);account.fixed_commitments=fixed;account.total_committed=pending+fixed;account.projected_balance=asNumber(account.current_balance)-pending-fixed;}
+  const today=saoPauloToday(),alerts=[];
+  for(const t of results[11].rows){const due=String(t.due_on||t.occurred_on).slice(0,10),days=dateDifference(today,due),isExpense=t.kind==="expense";alerts.push({type:days<0?"overdue":"upcoming",priority:days<0?1:days<=3?2:3,title:days<0?(isExpense?"Pagamento atrasado":"Recebimento atrasado"):(isExpense?"Conta próxima do vencimento":"Recebimento previsto"),description:t.description,amount:asNumber(t.amount),date:due,detail:(t.account_name||t.category_name||"Sem conta vinculada")+(days<0?" · vencida há "+Math.abs(days)+" dia(s)":days===0?" · vence hoje":" · vence em "+days+" dia(s)")});}
+  const existingRecurring=new Set(results[11].rows.filter(t=>t.recurring_rule_id&&t.recurring_due_on).map(t=>String(t.recurring_rule_id)+":"+String(t.recurring_due_on).slice(0,10)));
+  for(const rule of results[9].rows){const due=String(rule.next_due).slice(0,10),days=dateDifference(today,due);if(days>=0&&days<=7&&!existingRecurring.has(String(rule.id)+":"+due))alerts.push({type:"upcoming",priority:days<=3?2:3,title:"Despesa fixa próxima do vencimento",description:rule.description,amount:asNumber(rule.amount),date:due,detail:(rule.account_name||rule.category_name||"Sem conta vinculada")+" · vence em "+days+" dia(s)"});}
+  if(balance-committedExpense<0)alerts.push({type:"negative",priority:0,title:"Saldo projetado negativo",description:"Os compromissos previstos superam o saldo atual das suas contas.",amount:Math.abs(balance-committedExpense),date:today,detail:"Revise os próximos pagamentos e recebimentos."});
+  for(const account of accounts){if(asNumber(account.projected_balance)<0)alerts.push({type:"negative",priority:1,title:"Saldo comprometido: "+account.name,description:"Os pagamentos vinculados a esta conta superam o saldo atual.",amount:Math.abs(asNumber(account.projected_balance)),date:today,detail:"Saldo projetado da conta negativo."});}
+  alerts.sort((a,b)=>a.priority-b.priority||a.date.localeCompare(b.date));
+  res.json({month,balance,income:asNumber(totals.income),expense:asNumber(totals.expense),expenseTotal,pendingExpenseMonth:asNumber(totals.pending_expense_month),pendingIncome:asNumber(totals.pending_income),pendingExpense:asNumber(totals.pending_expense),outstandingExpense,fixedExpenseTotal,committedExpense,projectedBalance:balance-committedExpense,fixedExpenses,expenseTransactions:results[10].rows,alerts:alerts.slice(0,10),transactionCount:Number(totals.transaction_count),accounts,categories:results[2].rows,chart:results[3].rows,upcoming:results[4].rows,transactions:results[5].rows,budgets:results[6].rows,goals:results[7].rows,cards:results[8].rows});
 }));
 
 app.use("/api",(_req,res)=>res.status(404).json({error:"Rota não encontrada."}));
