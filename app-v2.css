@@ -2721,8 +2721,8 @@ html[data-theme="dark"] #view-home{
 #view-home .rev-recs-head{display:none}
 #view-home .rev-recs-list{gap:7px;display:grid}
 #view-home .rev-rec{background:var(--rlb-home-soft);border:1px solid var(--rlb-home-border);border-radius:10px;padding:10px 12px;gap:11px;min-height:76px}
-#view-home .rev-rec-main strong{font-size:11px;line-height:1.4;font-weight:750;-webkit-line-clamp:2}
-#view-home .rev-rec-main small{font-size:9.5px;line-height:1.35;color:var(--rlb-home-muted)}
+#view-home .rev-rec-main strong{font-size:12px;line-height:1.4;font-weight:750;-webkit-line-clamp:2}
+#view-home .rev-rec-main small{font-size:10px;line-height:1.35;color:var(--rlb-home-muted)}
 #view-home .rev-rec-why{max-width:560px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 #view-home .rev-rec-side{display:grid;grid-template-columns:minmax(62px,auto) auto;align-items:center;column-gap:7px;row-gap:3px;justify-items:center;min-width:145px}
 #view-home .rev-rec-side b{font-size:16px;font-weight:820;line-height:1.1;border-radius:8px;padding:7px 6px 0;color:#067850;background:#dff8e9;grid-column:1;grid-row:1}
@@ -2738,7 +2738,7 @@ html[data-theme="dark"] #view-home .rev-rec-side :is(b,small){background:#114e40
 #view-home .rlb-home-date strong{font-size:17px;font-weight:820;line-height:1.15;letter-spacing:-.03em;color:var(--rlb-home-ink)}
 #view-home .rlb-home-date span{font-size:9px;font-weight:770;color:var(--rlb-home-muted)}
 #view-home .rlb-home-deadline-copy{display:grid;gap:3px;min-width:0}
-#view-home .rlb-home-deadline-copy strong{font-size:10.5px;font-weight:730;line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;color:var(--rlb-home-ink)}
+#view-home .rlb-home-deadline-copy strong{font-size:11.5px;font-weight:730;line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;color:var(--rlb-home-ink)}
 #view-home .rlb-home-deadline-copy small{font-size:9px;line-height:1.4;color:var(--rlb-home-muted);display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden}
 #view-home .rlb-home-deadline-status{font-size:9px;font-weight:750;white-space:nowrap;padding:5px 6px;border-radius:7px;background:rgba(36,111,231,.1);color:var(--radar-blue,#0b5bd3)}
 #view-home .rlb-home-deadline-status[data-urgent=true]{background:#fff0e9;color:#ca4330}
@@ -2771,7 +2771,7 @@ html[data-theme="dark"] #view-home .rlb-home-deadline-status[data-urgent=true]{b
 #view-home .rlb-home-table-row{padding:10px;border-bottom:1px solid var(--rlb-home-border);min-height:58px;color:var(--rlb-home-ink);font-size:10px}
 #view-home .rlb-home-table-row:last-child{border-bottom:0}
 #view-home .rlb-home-object{display:grid;gap:3px;min-width:0}
-#view-home .rlb-home-object strong{font-size:10px;font-weight:760;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+#view-home .rlb-home-object strong{font-size:11px;font-weight:760;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 #view-home .rlb-home-object small{font-size:9px;color:var(--rlb-home-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 #view-home .rlb-home-table-modality{line-height:1.35;color:var(--radar-blue,#185be0);font-weight:650}
 #view-home .rlb-home-table-deadline{color:var(--rlb-home-muted);line-height:1.4}
