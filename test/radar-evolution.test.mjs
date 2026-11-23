@@ -38,3 +38,18 @@ test('backend permite limpar anotações sem excluir licitações',()=>{
  assert.match(backend,/WHERE t\.user_id=\$1/);
  assert.match(backend,/ON CONFLICT\(user_id,pncp_key\)/);
 });
+
+
+test('respostas atrasadas não reexpõem dados após logout',()=>{
+ assert.match(js,/requestEpoch!==epoch/);
+ assert.match(js,/generation\+\+/);
+ assert.match(js,/revRecommendations.*remove/);
+});
+test('saúde administrativa é consultada por demanda, sem serviços pagos',()=>{
+ assert.match(js,/Radar Evolution — Etapa 4/);
+ assert.match(js,/\/api\/health/);
+ assert.match(js,/id='revHealth'/);
+ assert.match(css,/\.rev-health-status/);
+ assert.match(css, /focus-visible/);
+ assert.match(css, /prefers-reduced-motion:reduce/);
+});
