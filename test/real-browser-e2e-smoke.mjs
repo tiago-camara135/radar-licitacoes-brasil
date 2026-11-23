@@ -97,7 +97,9 @@ try{
  note('Admin health, role separation and ordinary account isolation OK');
  await adminCtx.close();
 
- await gotoSection(page,'alerts');
+ await gotoSection(page,'home');
+ await page.locator('#view-home [data-home-action="alerts"]').click();
+ await page.locator('#view-alerts.active').waitFor({timeout});
  await page.locator('#alertName').fill('Combustíveis QA '+token);
  await page.locator('#alertKeyword').fill('combustível');
  await page.locator('#alertUf').selectOption('RN');
@@ -115,6 +117,10 @@ try{
  await pool.query("INSERT INTO notification_deliveries(user_id,alert_id,pncp_id,channel,status,payload,created_at,sent_at) VALUES($1,$2,$3,'onsite','sent',$4::jsonb,NOW(),NOW())",[userId,alertId,pncpId,JSON.stringify(notificationPayload)]);
 
  await gotoSection(page,'home');
+ await page.evaluate(item=>document.dispatchEvent(new CustomEvent('radar:live-feed',{detail:{items:[item]}})),raw);
+ await until(page,()=>document.querySelector('#rlbHomeRecent')?.textContent?.includes('Aquisição de combustível para a frota CI'),10000);
+ const recentHref=await page.locator('#rlbHomeRecent a.rlb-home-table-open').first().getAttribute('href');
+ assert.ok(recentHref?.startsWith('https://pncp.gov.br/app/editais/'),'Recent item links to official PNCP');
  await page.locator('#revSummary .rev-action').first().click();
  await until(page,()=>document.querySelector('#revRecommendations')?.textContent?.includes('Aquisição de combustível para a frota CI'),25000).catch(()=>{throw Error('Recommendations did not render the seeded matching tender')});
  await page.locator('#revRecommendations .rev-rec').first().waitFor({timeout});
