@@ -839,15 +839,15 @@ function install(){
   ui.list=el('div','rev-n-list');ui.message=el('p','rev-n-message','Carregando…');ui.message.setAttribute('role','status');
   ui.panel.append(head,controls,ui.message,ui.list);ui.wrap.append(ui.bell,ui.panel);bar.insertBefore(ui.wrap,$('#radarAccount'));
   ui.bell.setAttribute('aria-label','Notificações');ui.bell.title='Notificações';
-  const profile=$('#radarAccount');
+  const profileMenu=$('#radarAccount');
   $('#pulseHeaderSearch').addEventListener('click',()=>{
-    profile.open=false;setOpen(false);
+    profileMenu.open=false;setOpen(false);
     $('#mainNav [data-view="radar"]').click();
     $('#searchKeyword')?.focus();
   });
-  profile.addEventListener('toggle',()=>{if(profile.open)setOpen(false)});
-  document.addEventListener('pointerdown',e=>{if(profile.open&&!profile.contains(e.target))profile.open=false});
-  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&profile.open){profile.open=false;profile.querySelector('summary').focus()}});
+  profileMenu.addEventListener('toggle',()=>{if(profileMenu.open)setOpen(false)});
+  document.addEventListener('pointerdown',e=>{if(profileMenu.open&&!profileMenu.contains(e.target))profileMenu.open=false});
+  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&profileMenu.open){profileMenu.open=false;profileMenu.querySelector('summary').focus()}});
 
   ui.bell.addEventListener('click',()=>setOpen(!open));
   ui.close.addEventListener('click',()=>setOpen(false));
