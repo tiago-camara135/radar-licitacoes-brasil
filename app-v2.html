@@ -139,23 +139,7 @@
           <span class="rlb-home-context"><span class="rlb-home-live-dot" aria-hidden="true"></span> Dados da sua conta e fontes oficiais</span>
         </header>
 
-        <form id="rlbHomeSearchForm" class="rlb-home-search" role="search">
-          <label class="rlb-home-search-keyword"><span class="radar-visually-hidden">Pesquisar licitações</span>
-            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m16.5 16.5 5 5"/></svg>
-            <input id="rlbHomeKeyword" type="search" maxlength="180" placeholder="Objeto, órgão, município ou número do edital" autocomplete="off">
-          </label>
-          <label class="rlb-home-search-field"><span class="radar-visually-hidden">Unidade da Federação</span>
-            <select id="rlbHomeUf" aria-label="Estado da pesquisa"><option value="">Brasil inteiro</option></select>
-          </label>
-          <label class="rlb-home-search-field"><span class="radar-visually-hidden">Modalidade</span>
-            <select id="rlbHomeModality" aria-label="Modalidade da pesquisa"><option value="">Todas as modalidades</option></select>
-          </label>
-          <label class="rlb-home-search-field rlb-home-search-deadline"><span class="radar-visually-hidden">Prazo</span>
-            <select id="rlbHomeClosingDays" aria-label="Prazo de encerramento"><option value="0">Prazos vigentes</option><option value="1">Próximas 24h</option><option value="7">Próximos 7 dias</option><option value="30">Próximos 30 dias</option></select>
-          </label>
-          <button type="submit" class="rlb-home-search-submit">Buscar</button>
-          <button type="button" id="rlbHomeAdvanced" class="rlb-home-search-advanced">Filtros <span aria-hidden="true">☷</span></button>
-        </form>
+
 
         <div id="rlbHomeKpis" class="rlb-home-kpis" aria-label="Indicadores personalizados"></div>
 
@@ -216,17 +200,23 @@
       </section>
 
       <section id="view-radar" class="view">
-        <form id="radarSearchForm" class="radar-search">
-          <label for="searchKeyword" class="radar-visually-hidden">O que você procura?</label>
-          <div class="radar-search-bar">
-            <input id="searchKeyword" type="search" maxlength="180" placeholder="Objeto, órgão, município ou número do edital">
-            <button class="radar-primary" type="submit">Buscar</button>
-            <button type="button" id="radarFiltersToggle" class="radar-button" aria-controls="radarFilters" aria-expanded="false">Filtros</button>
+        <div class="rlb-radar-search-heading">
+          <div>
+            <span class="rlb-radar-search-eyebrow">BUSCA DE LICITAÇÕES</span>
+            <h2 id="rlbRadarSearchTitle">Encontre oportunidades no Brasil</h2>
+            <p>Pesquise por objeto, órgão e localidade. Refine os resultados pelos critérios que importam para você.</p>
           </div>
-          <div id="radarFilters" hidden>
-          <div class="radar-quick-filters">
-            <details id="radarStatePicker">
-              <summary><span>UF</span><strong id="radarStateSummary">Todo o Brasil</strong></summary>
+          <span class="rlb-radar-search-source"><span aria-hidden="true"></span> Consulta a fontes oficiais</span>
+        </div>
+        <form id="radarSearchForm" class="radar-search" role="search" aria-labelledby="rlbRadarSearchTitle">
+          <div class="radar-search-bar">
+            <label for="searchKeyword" class="rlb-radar-keyword">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m16.5 16.5 5 5"></path></svg>
+              <span class="radar-visually-hidden">Pesquisar objeto, órgão, município ou número do edital</span>
+              <input id="searchKeyword" type="search" maxlength="180" placeholder="Objeto, órgão, município ou número do edital" autocomplete="off">
+            </label>
+            <details id="radarStatePicker" class="rlb-radar-uf">
+              <summary aria-label="Filtrar por estado"><span>UF</span><strong id="radarStateSummary">Todo o Brasil</strong></summary>
               <div class="radar-state-popover">
                 <label for="radarStateSearch">Buscar estado</label><input id="radarStateSearch" type="search" placeholder="Nome ou sigla">
                 <fieldset><legend>Estados</legend><div id="radarStates"></div></fieldset>
@@ -234,15 +224,21 @@
                 <button type="button" id="radarStateDone" class="radar-button">Concluir seleção</button>
               </div>
             </details>
-            <label>Modalidade<select id="searchModality"><option value="">Todas</option></select></label>
-            <label>Prazo para propostas<select id="radarClosingDays"><option value="0">Prazos vigentes</option><option value="1">Próximas 24 horas</option><option value="7">Próximos 7 dias</option><option value="30">Próximos 30 dias</option></select></label>
-
+            <label for="searchModality" class="rlb-radar-select"><span class="radar-visually-hidden">Modalidade</span>
+              <select id="searchModality" aria-label="Modalidade"><option value="">Todas as modalidades</option></select>
+            </label>
+            <label for="radarClosingDays" class="rlb-radar-select rlb-radar-period"><span class="radar-visually-hidden">Prazo para propostas</span>
+              <select id="radarClosingDays" aria-label="Prazo para propostas"><option value="0">Prazos vigentes</option><option value="1">Próximas 24 horas</option><option value="7">Próximos 7 dias</option><option value="30">Próximos 30 dias</option></select>
+            </label>
+            <button class="radar-primary" type="submit">Buscar</button>
+            <button type="button" id="radarFiltersToggle" class="radar-button" aria-controls="radarFilters" aria-expanded="false">Filtros</button>
           </div>
-          <div class="radar-filters">
-            <label>Município<input id="radarMunicipality" maxlength="120"></label>
-            <label>Órgão<input id="radarOrganization" maxlength="180"></label>
-            <label>Publicação<select id="searchDays"><option value="0">Qualquer data</option><option value="1">Últimas 24 horas</option><option value="7">Últimos 7 dias</option><option value="30">Últimos 30 dias</option><option value="90">Últimos 90 dias</option></select></label>
-          </div>
+          <div id="radarFilters" hidden>
+            <div class="radar-filters">
+              <label>Município<input id="radarMunicipality" maxlength="120"></label>
+              <label>Órgão<input id="radarOrganization" maxlength="180"></label>
+              <label>Publicação<select id="searchDays"><option value="0">Qualquer data</option><option value="1">Últimas 24 horas</option><option value="7">Últimos 7 dias</option><option value="30">Últimos 30 dias</option><option value="90">Últimos 90 dias</option></select></label>
+            </div>
           </div>
           <div class="radar-filter-bar">
             <div id="radarChips"></div>
