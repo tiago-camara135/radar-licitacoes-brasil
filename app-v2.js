@@ -853,6 +853,7 @@ const dayKey=(v,type)=>{if(type==='document'&&typeof v==='string')return v.slice
 const readable=v=>{const d=new Date(v);return Number.isNaN(d.getTime())?'Data não informada':new Intl.DateTimeFormat('pt-BR',{timeZone:zone,dateStyle:'short',timeStyle:'short'}).format(d)};
 const status={analisar:'Em análise',preparando_documentacao:'Preparando documentação',proposta_pronta:'Proposta pronta',participando:'Participando',recurso:'Em recurso',vencida:'Vencida',perdida:'Não vencida',arquivada:'Arquivada'};
 let overview=null,loading=false,filter='all',selected='',month=new Date().getMonth(),year=new Date().getFullYear(),generation=0;
+const updateQueues=new Map();
 const ui={};
 function notice(txt,bad){const t=$('#toast');if(!t)return;t.textContent=txt;t.className='toast show'+(bad?' error':'');clearTimeout(notice.timer);notice.timer=setTimeout(()=>t.className='toast',3500)}
 function install(){
@@ -866,7 +867,7 @@ function install(){
  b.addEventListener('click',()=>{if($('#pageTitle'))$('#pageTitle').textContent='Minha Operação';if($('#pageSubtitle'))$('#pageSubtitle').textContent='Acompanhamento e calendário';if(logged())load(false)});
  document.addEventListener('radar:overview',e=>{if(!logged())return;overview=e.detail;installTrackActions();if(ui.page.classList.contains('active')&&!ui.root.querySelector('textarea:focus'))render()});
  const shell=$('#appShell');
- new MutationObserver(()=>{if(!logged()){generation++;overview=null;ui.root.replaceChildren(el('p','rev-op-loading','Entre para consultar sua operação.'))}else installTrackActions()}).observe(shell,{attributes:true,attributeFilter:['class']});
+ new MutationObserver(()=>{if(!logged()){generation++;updateQueues.clear();overview=null;ui.root.replaceChildren(el('p','rev-op-loading','Entre para consultar sua operação.'))}else installTrackActions()}).observe(shell,{attributes:true,attributeFilter:['class']});
  document.addEventListener('click',e=>{const button=e.target.closest('[data-rev-track]');if(button&&logged())addTracking(button)});
  const observeDetails=()=>{for(const id of ['#radarDetail','#radarSavedDetail']){const root=$(id);if(root)new MutationObserver(()=>decorateDetail(root)).observe(root,{subtree:true,childList:true})}};
  observeDetails();
@@ -913,10 +914,31 @@ async function addTracking(b){
 }
 async function update(item,fields,button){
  if(!item||!logged())return;
+ const sessionGeneration=generation;
+ const key=String(item.id||[item.org_cnpj,item.year,item.sequence].join('-'));
+ const previous=updateQueues.get(key)||Promise.resolve();
  button.disabled=true;
- try{await request('/api/dashboard/tracking','POST',{cnpj:item.org_cnpj,year:item.year,sequence:item.sequence,status:fields.status||item.status,...('notes' in fields?{notes:fields.notes}:{})});notice('Acompanhamento atualizado.');await load(true)}
- catch(e){notice(e.message,true);if(button.tagName==='SELECT')button.value=item.status}
- finally{button.disabled=false}
+ // Serializa alterações da mesma licitação: uma anotação enviada logo após
+ // mudar o status precisa conservar o status mais recente, sem perder o texto.
+ const task=previous.catch(()=>{}).then(async()=>{
+   if(!logged()||sessionGeneration!==generation)return;
+   const nextStatus=fields.status===undefined?item.status:fields.status;
+   await request('/api/dashboard/tracking','POST',{
+     cnpj:item.org_cnpj,year:item.year,sequence:item.sequence,status:nextStatus,
+     ...('notes' in fields?{notes:fields.notes}:{})
+   });
+   if(!logged()||sessionGeneration!==generation)return;
+   if(fields.status!==undefined)item.status=fields.status;
+   if(fields.notes!==undefined)item.notes=fields.notes;
+   // Não reconstrói a tela após cada gravação: preserva anotações ainda em edição.
+   notice('Acompanhamento atualizado.');
+ });
+ updateQueues.set(key,task);
+ try{await task}
+ catch(e){if(logged()&&sessionGeneration===generation){
+   notice(e.message,true);if(button.tagName==='SELECT')button.value=item.status;
+ }}
+ finally{if(updateQueues.get(key)===task)updateQueues.delete(key);button.disabled=false}
 }
 function render(){
  if(!ui.root||!overview)return;
