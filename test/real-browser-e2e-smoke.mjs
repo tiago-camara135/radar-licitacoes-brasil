@@ -180,7 +180,7 @@ try{
  note('Recent feed toggles use real closing dates; no simulated opportunity numbers OK');
  const recentHref=await page.locator('#rlbHomeRecent a.rlb-home-table-open').first().getAttribute('href');
  assert.ok(recentHref?.startsWith('https://pncp.gov.br/app/editais/'),'Recent item links to official PNCP');
- await page.locator('#revSummary .rev-action').first().click();
+ await page.locator('#rlbHomeRefresh').click();
  await until(page,()=>document.querySelector('#revRecommendations')?.textContent?.includes('Aquisição de combustível para a frota CI'),25000).catch(()=>{throw Error('Recommendations did not render the seeded matching tender')});
  await page.locator('#revRecommendations .rev-rec').first().waitFor({timeout});
  const score=await page.locator('#revRecommendations .rev-rec .rev-rec-side b').first().textContent();
@@ -307,7 +307,7 @@ try{
  // sem exigir botão Atualizar nem esperar o cache expirar.
  await until(page,()=>document.querySelector('#rlbHomePanorama .pulse-stage-chart')?.getAttribute('aria-label')==='1 licitações acompanhadas',18000);
  await until(page,()=>document.querySelector('#rlbHomeKpis .rev-stat:nth-child(3) .rev-value')?.textContent?.trim()==='1',18000);
- await page.locator('#revSummary .rev-action').first().click();
+ await page.locator('#rlbHomeRefresh').click();
  assert.ok(await page.locator('#rlbHomeDeadlines .rlb-home-deadline').count()>0,'Real deadline agenda present');
  assert.ok(await page.locator('#rlbHomePanorama .pulse-stage-chart').count()===1,'Real tracking chart present');
  await page.locator('#rlbHomeDeadlineControls [data-home-period="30"]').click();
