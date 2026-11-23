@@ -15,7 +15,8 @@ test('Visão Geral é uma página independente da busca avançada',()=>{
  assert.match(html, /id="view-radar" class="view"/);
  assert.match(js,/show\('home'\);startLive\(\);startRadarDashboard\(\)/);
  assert.match(js,/home:\['Visão Geral'/);
- assert.match(home,/id="rlbHomeSearchForm"/);
+ assert.doesNotMatch(home,/id="rlbHomeSearchForm"/);
+ assert.match(home,/data-home-action="radar"/);
  assert.match(html,/id="radarSearchForm"/);
  assert.equal((html.match(/id="radarSearchForm"/g)||[]).length,1);
 });
@@ -32,12 +33,18 @@ test('home usa dados existentes e não inventa contagens ou tendências',()=>{
  assert.doesNotMatch(home, /89%|347 novas|92% de aderência|crescimento de 24%/i);
 });
 
-test('busca da Visão Geral preserva filtros e reaproveita a busca completa',()=>{
- for(const id of ['rlbHomeKeyword','rlbHomeUf','rlbHomeModality','rlbHomeClosingDays','rlbHomeAdvanced'])assert.match(home,new RegExp('id="'+id+'"'));
- assert.match(js,/querySelectorAll\(selector\)/);
- assert.match(js, /#radarSearchForm'\)\?\.requestSubmit\(\)/);
- assert.match(js, /c\.checked=Boolean\(uf\.value\)&&c\.value===uf\.value/);
- assert.match(js, /if\(deadline\)deadline\.value=\$\('#rlbHomeClosingDays'\)\.value/);
+test('pesquisa existe somente na página do Radar, com filtros essenciais sempre visíveis',()=>{
+ const radar=html.slice(html.indexOf('<section id="view-radar"'));
+ for(const id of ['searchKeyword','radarStatePicker','radarStates','searchModality','radarClosingDays','radarFiltersToggle','radarFilters'])assert.match(radar,new RegExp('id="'+id+'"'));
+ assert.equal((html.match(/id="radarSearchForm"/g)||[]).length,1);
+ assert.doesNotMatch(home,/<form|rlbHomeKeyword|rlbHomeSearchForm/);
+ const bar=radar.slice(radar.indexOf('<div class="radar-search-bar">'),radar.indexOf('<div id="radarFilters"'));
+ for(const id of ['searchKeyword','radarStatePicker','searchModality','radarClosingDays','radarFiltersToggle'])assert.match(bar,new RegExp('id="'+id+'"'));
+ assert.match(js,/form\.addEventListener\('change', renderDashboardChips\)/);
+ assert.match(js,/const states = selectedRadarStates\(\)/);
+ assert.match(js,/picker\.open = false/);
+ assert.doesNotMatch(js,/function setupSearch\(\)/);
+ assert.match(js,/function setupHomeActions\(\)/);
 });
 
 test('layout tem hierarquia visual e tema claro/escuro, incluindo dispositivos móveis',()=>{
@@ -65,10 +72,12 @@ test('auditoria: home é atualizada por eventos de monitoramento nacional',()=>{
  assert.match(js,/state\.view==='radar'\|\|state\.view==='home'/);
  assert.match(js,/document\.dispatchEvent\(new CustomEvent\('radar:live-feed'/);
 });
-test('auditoria: novos filtros de busca não são contaminados por filtros antigos',()=>{
- assert.match(js,/for\(const id of \['radarMunicipality','radarOrganization'\]\)/);
- assert.match(js,/if\(\$\('#searchDays'\)\)\$\('#searchDays'\)\.value='0'/);
- assert.match(js,/#radarSearchForm'\)\?\.requestSubmit\(\)/);
+test('auditoria: filtros detalhados permanecem na mesma pesquisa, sem redirecionamentos',()=>{
+ const filters=html.slice(html.indexOf('<div id="radarFilters"'),html.indexOf('<div class="radar-filter-bar">'));
+ for(const id of ['radarMunicipality','radarOrganization','searchDays'])assert.match(filters,new RegExp('id="'+id+'"'));
+ assert.match(js,/form\.addEventListener\('submit', event => \{/);
+ assert.match(js,/runDashboardSearch\(\)/);
+ assert.match(js,/\$\('#radarFiltersToggle'\)\.addEventListener\('click'/);
 });
 test('auditoria: Minha Operação sincroniza indicadores no dashboard',()=>{
  assert.match(js,/overview=d;render\(\);installTrackActions\(\);document\.dispatchEvent\(new CustomEvent\('radar:overview'/);
@@ -134,6 +143,16 @@ test('refinamento visual evita contornos azuis automáticos e preserva foco por 
  assert.match(css,/Radar UX refinado · navegação limpa/);
  assert.match(css,/#appShell :is\(#rlbPageNavCurrent,#pageTitle,#rlbHomeTitle,#radarResultsTitle\)\[tabindex="-1"\]:focus/);
  assert.match(css,/#appShell\.radar-layout :is\(button,a,select,summary\):focus-visible/);
- assert.match(css,/#appShell #view-home \.rlb-home-search :is\(\.rlb-home-search-field,\.rlb-home-search-keyword\):focus-within/);
+ assert.match(css,/#appShell #view-radar #radarSearchForm \.radar-search-bar \.rlb-radar-keyword:focus-within/);
  assert.match(css,/#appShell #view-radar \.radar-search-bar #searchKeyword:focus-visible/);
+});
+
+
+test('layout adaptado mantém os filtros essenciais no Radar nos temas e telas pequenas',()=>{
+ assert.match(css,/Radar · página única de pesquisa/);
+ assert.match(css,/#appShell #view-radar #radarSearchForm \.radar-search-bar/);
+ assert.match(css,/@media\(max-width:700px\)/);
+ assert.match(css,/\.rlb-radar-search-heading/);
+ assert.match(html,/id="rlbRadarSearchTitle"/);
+ assert.doesNotMatch(home,/radar-search-bar|rlb-home-search/);
 });

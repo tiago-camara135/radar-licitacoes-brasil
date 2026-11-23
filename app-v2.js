@@ -579,9 +579,11 @@ function bindRadarDashboard() {
   form.addEventListener('submit', event => {
     event.preventDefault();
     if (!$('#radarFilters').hidden) $('#radarFiltersToggle').click();
+    picker.open = false;
+    renderDashboardChips();
     runDashboardSearch();
   });
-  $('#radarFilters').addEventListener('change', renderDashboardChips);
+  form.addEventListener('change', renderDashboardChips); // Inclui UF, modalidade e prazo na barra principal.
   $('#radarFilters').addEventListener('input', event => {
     if (event.target.matches('#radarMunicipality, #radarOrganization')) renderDashboardChips();
   });
@@ -1241,43 +1243,7 @@ function greeting(){
   const name=clean($('#radarUserName')?.textContent,100).split(/\s+/).filter(Boolean)[0]||'bem-vindo';
   if($('#rlbHomeName'))$('#rlbHomeName').textContent=name;
 }
-function setupSearch(){
-  const form=$('#rlbHomeSearchForm');
-  if(!form)return;
-  const uf=$('#rlbHomeUf'),modality=$('#rlbHomeModality');
-  for(const c of all('#radarStates input[type="checkbox"]')){
-    uf.add(new Option(c.value,c.value));
-  }
-  for(const o of all('#searchModality option')){
-    if(!o.value)continue;
-    modality.add(new Option(o.textContent,o.value));
-  }
-  form.addEventListener('submit',event=>{
-    event.preventDefault();
-    if(!logged())return;
-    openSection('radar');
-    // Uma nova pesquisa não deve herdar município, órgão ou período
-    // ocultos que foram usados anteriormente na busca avançada.
-    for(const id of ['radarMunicipality','radarOrganization']){
-      const control=$('#'+id);
-      if(control)control.value='';
-    }
-    if($('#searchDays'))$('#searchDays').value='0';
-    const keyword=$('#searchKeyword'),modal=$('#searchModality'),deadline=$('#radarClosingDays');
-    if(keyword)keyword.value=$('#rlbHomeKeyword').value.trim();
-    if(modal)modal.value=modality.value;
-    if(deadline)deadline.value=$('#rlbHomeClosingDays').value;
-    for(const c of all('#radarStates input[type="checkbox"]')){
-      c.checked=Boolean(uf.value)&&c.value===uf.value;
-    }
-    $('#radarSearchForm')?.requestSubmit();
-    $('#radarResultsTitle')?.focus({preventScroll:true});
-  });
-  $('#rlbHomeAdvanced')?.addEventListener('click',()=>{
-    if(!logged())return;
-    openSection('radar');
-    if($('#radarFilters')?.hidden)$('#radarFiltersToggle')?.click();
-  });
+function setupHomeActions(){
   $('#view-home')?.addEventListener('click',event=>{
     const button=event.target.closest('[data-home-action]');
     if(!button)return;
@@ -1417,7 +1383,7 @@ function clearPrivateData(){
 }
 function boot(){
   if(!$('#view-home'))return;
-  setupSearch();
+  setupHomeActions();
   const setActive=(attr,value)=>{
     document.querySelectorAll('#view-home ['+attr+']').forEach(button=>{
       const selected=button.getAttribute(attr)===String(value);
