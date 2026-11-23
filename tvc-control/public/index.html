@@ -3,11 +3,11 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#f5f7fb">
+<meta name="theme-color" content="#f2f6fc">
 <meta name="description" content="TVC Control — controle financeiro pessoal com clareza e inteligência.">
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="icon" href="/icon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/styles.css?v=11">
+<link rel="stylesheet" href="/styles.css?v=12">
 <title>TVC Control | Gestão financeira</title>
 </head>
 <body>
@@ -70,52 +70,58 @@
   <main class="main-area">
     <header class="topbar">
       <div class="topbar-left"><div class="eyebrow" id="today-label">PAINEL FINANCEIRO</div><h1 id="page-title">Visão geral</h1></div>
+      <label class="global-search" aria-label="Buscar lançamentos"><span>⌕</span><input id="global-search" type="search" placeholder="Buscar lançamentos..." autocomplete="off"><kbd>Ctrl + K</kbd></label>
       <div class="topbar-actions">
-        <label class="month-control" id="month-control"><span>Período</span><input id="month-picker" type="month"></label>
-        <button class="icon-button theme-mobile" id="theme-toggle-mobile" title="Alternar tema">◐</button>
+        <label class="month-control" id="month-control"><span>Período</span><input id="month-picker" type="month" aria-label="Selecionar período"></label>
+        <button class="icon-button theme-mobile" id="theme-toggle-mobile" title="Alternar tema" aria-label="Alternar tema">◐</button>
         <button class="btn btn-primary" id="new-transaction"><span class="plus">＋</span><span class="new-label">Novo lançamento</span></button>
       </div>
     </header>
 
     <section class="page active" id="page-dashboard">
-      <div class="welcome-row"><div><h2 id="welcome-title">Seu dinheiro em perspectiva.</h2><p>Acompanhe o que entra, o que sai e o que você está construindo.</p></div><div class="sync-indicator"><i></i> Dados sincronizados</div></div>
-      <section id="dashboard-alerts" class="smart-alerts" hidden></section>
+      <div class="welcome-row">
+        <div><h2 id="welcome-title">Olá! 👋</h2><p>Seu panorama financeiro em um só lugar. Acompanhe saldos, compromissos e próximos vencimentos.</p></div>
+        <div class="sync-indicator"><i></i> Dados sincronizados</div>
+      </div>
       <div class="stats-grid">
-        <article class="stat-card stat-main"><div class="stat-top"><span>Saldo total</span><span class="stat-icon">◈</span></div><div class="stat-value" id="stat-balance">R$ 0,00</div><div class="stat-foot"><span class="trend neutral">●</span> Saldo das suas contas</div><div class="stat-glow"></div></article>
-        <article class="stat-card"><div class="stat-top"><span>Receitas do mês</span><span class="stat-icon green">↙</span></div><div class="stat-value positive" id="stat-income">R$ 0,00</div><div class="stat-foot">Entradas confirmadas</div></article>
-        <article class="stat-card"><div class="stat-top"><span>Despesas registradas</span><span class="stat-icon red">↗</span></div><div class="stat-value negative" id="stat-expense">R$ 0,00</div><div class="stat-foot">Pagas + lançadas a pagar</div></article>
-        <article class="stat-card"><div class="stat-top"><span>Saldo disponível projetado</span><span class="stat-icon amber">◷</span></div><div class="stat-value" id="stat-pending">R$ 0,00</div><div class="stat-foot" id="stat-pending-note">Após contas pendentes e despesas fixas previstas</div></article>
+        <article class="stat-card stat-main"><div class="stat-top"><span>Saldo total</span><span class="stat-icon">▣</span></div><div class="stat-value" id="stat-balance">R$ 0,00</div><div class="stat-foot"><span class="trend neutral">●</span> Saldo real das suas contas</div><div class="stat-glow"></div></article>
+        <article class="stat-card"><div class="stat-top"><span>Receitas do mês</span><span class="stat-icon green">↓</span></div><div class="stat-value positive" id="stat-income">R$ 0,00</div><div class="stat-foot">Entradas confirmadas no período</div></article>
+        <article class="stat-card"><div class="stat-top"><span>Despesas do mês</span><span class="stat-icon red">↗</span></div><div class="stat-value negative" id="stat-expense">R$ 0,00</div><div class="stat-foot">Pagas e lançadas a pagar</div></article>
+        <article class="stat-card stat-projected"><div class="stat-top"><span>Saldo projetado</span><span class="stat-icon amber">◎</span></div><div class="stat-value" id="stat-pending">R$ 0,00</div><div class="stat-foot" id="stat-pending-note">Após compromissos e despesas previstas</div></article>
       </div>
-      <div class="dashboard-grid fixed-overview-grid">
-        <article class="panel fixed-overview-panel expense-overview-panel">
-          <div class="panel-heading"><div><h3>Despesas lançadas</h3><p>Pagamentos confirmados, pendentes e atrasados</p></div><button class="link-button" data-go="transactions">Ver lançamentos <span>→</span></button></div>
-          <div class="fixed-summary expense-summary">
-            <div class="fixed-summary-item"><span>Total do período</span><strong id="period-expense-total">R$ 0,00</strong><small>Pagas + a pagar no mês</small></div>
-            <div class="fixed-summary-item"><span>Pagas</span><strong id="period-expense-paid">R$ 0,00</strong><small>Já saíram do saldo real</small></div>
-            <div class="fixed-summary-item"><span>A pagar</span><strong id="period-expense-pending">R$ 0,00</strong><small>Reduzem o saldo projetado</small></div>
+
+      <div class="dashboard-grid dashboard-primary-grid">
+        <article class="panel commitment-panel">
+          <div class="panel-heading"><div><h3>Despesas e compromissos</h3><p>Valores registrados e despesas fixas previstas</p></div><button class="link-button" data-go="recurring">Gerenciar <span>→</span></button></div>
+          <div class="fixed-summary expense-summary commitment-summary">
+            <div class="fixed-summary-item"><span>Total de despesas</span><strong id="period-expense-total">R$ 0,00</strong><small>Pagas + a pagar no mês</small></div>
+            <div class="fixed-summary-item"><span>Já pagas</span><strong id="period-expense-paid">R$ 0,00</strong><small>Saídas confirmadas</small></div>
+            <div class="fixed-summary-item"><span>A pagar</span><strong id="period-expense-pending">R$ 0,00</strong><small>Compromissos pendentes</small></div>
+            <div class="fixed-summary-item"><span>Fixas previstas</span><strong id="fixed-expense-total">R$ 0,00</strong><small><b id="fixed-expense-count">0</b> regras ativas</small></div>
           </div>
-          <div id="expense-transactions-preview" class="expense-transactions-list"><div class="empty-state">Suas despesas lançadas aparecerão aqui.</div></div>
-        </article>
-        <article class="panel fixed-overview-panel">
-          <div class="panel-heading"><div><h3>Despesas fixas previstas</h3><p>Compromissos recorrentes ainda não lançados</p></div><button class="link-button" data-go="recurring">Gerenciar <span>→</span></button></div>
-          <div class="fixed-summary">
-            <div class="fixed-summary-item"><span>Total previsto</span><strong id="fixed-expense-total">R$ 0,00</strong><small>Até o fim do período selecionado</small></div>
-            <div class="fixed-summary-item"><span>Regras ativas</span><strong id="fixed-expense-count">0</strong><small>Despesas recorrentes cadastradas</small></div>
+          <div class="commitment-sections">
+            <section class="commitment-section"><div class="subsection-heading"><b>Despesas lançadas</b><button class="link-button" data-go="transactions">Ver todas →</button></div><div id="expense-transactions-preview" class="expense-transactions-list"><div class="empty-state">Suas despesas lançadas aparecerão aqui.</div></div></section>
+            <section class="commitment-section"><div class="subsection-heading"><b>Despesas fixas previstas</b><button class="link-button" data-go="recurring">Ver recorrências →</button></div><div id="fixed-expenses-preview" class="fixed-expenses-list"><div class="empty-state">Suas despesas fixas aparecerão aqui.</div></div></section>
           </div>
-          <div id="fixed-expenses-preview" class="fixed-expenses-list"><div class="empty-state">Suas despesas fixas aparecerão aqui.</div></div>
         </article>
+        <article class="panel chart-panel"><div class="panel-heading"><div><h3>Fluxo financeiro</h3><p>Receitas e despesas ao longo dos últimos seis meses</p></div><span class="panel-tag">6 MESES</span></div><div id="cashflow-chart" class="chart-area"><div class="empty-state">Seus gráficos aparecerão aqui quando você registrar lançamentos.</div></div><div class="chart-legend"><span><i class="legend-dot income-dot"></i>Receitas</span><span><i class="legend-dot expense-dot"></i>Despesas</span></div></article>
       </div>
-      <div class="dashboard-grid">
-        <article class="panel chart-panel"><div class="panel-heading"><div><h3>Fluxo financeiro</h3><p>Receitas e despesas ao longo dos últimos meses</p></div><span class="panel-tag">6 MESES</span></div><div id="cashflow-chart" class="chart-area"><div class="empty-state">Seus gráficos aparecerão aqui quando você registrar lançamentos.</div></div><div class="chart-legend"><span><i class="legend-dot income-dot"></i>Receitas</span><span><i class="legend-dot expense-dot"></i>Despesas</span></div></article>
-        <article class="panel"><div class="panel-heading"><div><h3>Despesas por categoria</h3><p>Despesas pagas e a pagar no período</p></div><span class="panel-more">ESTE MÊS</span></div><div id="expense-categories" class="category-list"><div class="empty-state">Nenhuma despesa registrada neste período.</div></div></article>
+
+      <div class="dashboard-bottom-grid">
+        <article class="panel dashboard-accounts-panel"><div class="panel-heading"><div><h3>Contas</h3><p>Saldo e disponibilidade por conta</p></div><div class="panel-heading-actions"><button class="icon-button small-action" type="button" data-create="account" aria-label="Adicionar conta">＋</button><button class="link-button" data-go="accounts">Ver todas →</button></div></div><div id="dashboard-accounts-list" class="dashboard-accounts-list"><div class="empty-state">Suas contas aparecerão aqui.</div></div><div class="dashboard-account-total"><span>Saldo total</span><strong id="dashboard-accounts-total">R$ 0,00</strong></div></article>
+
+        <article class="panel dashboard-recent-panel"><div class="panel-heading"><div><h3>Lançamentos recentes</h3><p>Últimas movimentações das suas contas</p></div><button class="link-button" data-go="transactions">Ver todos →</button></div><div id="recent-transactions" class="transaction-list"><div class="empty-state">Seus lançamentos aparecerão aqui.</div></div></article>
+
+        <article class="panel smart-alerts" id="dashboard-alerts"><div class="panel-heading"><div><h3>Alertas</h3><p>Itens que merecem sua atenção</p></div><span class="alert-count">0</span></div><div class="dashboard-alert-list"><div class="empty-state">Nenhum alerta no momento.</div></div></article>
+
+        <article class="panel dashboard-calendar-panel"><div class="panel-heading"><div><h3>Calendário financeiro</h3><p>Compromissos do mês</p></div><button class="link-button" data-go="calendar">Abrir →</button></div><div class="mini-calendar-header"><button class="icon-button small-action" type="button" data-dashboard-calendar-shift="-1" aria-label="Mês anterior">‹</button><b id="dashboard-calendar-month">Mês</b><button class="icon-button small-action" type="button" data-dashboard-calendar-shift="1" aria-label="Próximo mês">›</button></div><div class="mini-calendar-weekdays" id="dashboard-calendar-weekdays"></div><div class="mini-calendar-grid" id="dashboard-calendar-grid"></div><div class="mini-calendar-legend"><span><i class="income"></i>Receita</span><span><i class="expense"></i>Despesa</span></div></article>
       </div>
-      <div class="dashboard-grid lower-grid">
-        <article class="panel"><div class="panel-heading"><div><h3>Últimos lançamentos</h3><p>Movimentações recentes da sua conta</p></div><button class="link-button" data-go="transactions">Ver todos <span>→</span></button></div><div id="recent-transactions" class="transaction-list"><div class="empty-state">Seus lançamentos aparecerão aqui.</div></div></article>
-        <article class="panel"><div class="panel-heading"><div><h3>Próximos vencimentos</h3><p>Não deixe nenhuma conta passar</p></div><button class="link-button" data-go="transactions">Ver agenda <span>→</span></button></div><div id="upcoming-list" class="upcoming-list"><div class="empty-state">Nenhuma conta pendente.</div></div></article>
-      </div>
-      <div class="dashboard-grid lower-grid">
-        <article class="panel"><div class="panel-heading"><div><h3>Orçamentos em andamento</h3><p>Controle seus limites por categoria</p></div><button class="link-button" data-go="budgets">Gerenciar <span>→</span></button></div><div id="budget-preview" class="budget-list"><div class="empty-state">Defina um limite para começar a acompanhar.</div></div></article>
-        <article class="panel"><div class="panel-heading"><div><h3>Metas em destaque</h3><p>Seus planos ganhando forma</p></div><button class="link-button" data-go="goals">Ver metas <span>→</span></button></div><div id="goal-preview" class="goal-list"><div class="empty-state">Crie sua primeira meta financeira.</div></div></article>
+
+      <div class="dashboard-support-grid">
+        <article class="panel"><div class="panel-heading"><div><h3>Despesas por categoria</h3><p>Onde seu dinheiro está sendo utilizado</p></div><button class="link-button" data-go="reports">Relatórios →</button></div><div id="expense-categories" class="category-list"><div class="empty-state">Nenhuma despesa registrada neste período.</div></div></article>
+        <article class="panel"><div class="panel-heading"><div><h3>Próximos vencimentos</h3><p>Contas que exigem atenção</p></div><button class="link-button" data-go="calendar">Ver agenda →</button></div><div id="upcoming-list" class="upcoming-list"><div class="empty-state">Nenhuma conta pendente.</div></div></article>
+        <article class="panel"><div class="panel-heading"><div><h3>Orçamentos</h3><p>Acompanhe seus limites por categoria</p></div><button class="link-button" data-go="budgets">Gerenciar →</button></div><div id="budget-preview" class="budget-list"><div class="empty-state">Defina um limite para começar a acompanhar.</div></div></article>
+        <article class="panel"><div class="panel-heading"><div><h3>Metas e sonhos</h3><p>Seus objetivos financeiros</p></div><button class="link-button" data-go="goals">Ver metas →</button></div><div id="goal-preview" class="goal-list"><div class="empty-state">Crie sua primeira meta financeira.</div></div></article>
       </div>
     </section>
 
@@ -190,5 +196,5 @@
 
 <div id="modal" class="modal" hidden><div class="modal-backdrop" data-close-modal></div><section class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modal-title"><div class="modal-head"><div><div class="eyebrow">TVC CONTROL</div><h2 id="modal-title">Novo lançamento</h2></div><button class="icon-button" data-close-modal aria-label="Fechar">×</button></div><form id="modal-form" class="form-stack"><div id="modal-fields" class="modal-fields"></div><div class="modal-actions"><button class="btn btn-secondary" type="button" data-close-modal>Cancelar</button><button class="btn btn-primary" id="modal-submit" type="submit">Salvar</button></div></form></section></div>
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
-<script src="/app.js?v=10" defer></script>
+<script src="/app.js?v=11" defer></script>
 </body></html>

@@ -4,8 +4,8 @@
   "description": "Gestão financeira pessoal",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#f5f7fb",
-  "theme_color": "#203b78",
+  "background_color": "#f2f6fc",
+  "theme_color": "#1769ed",
   "lang": "pt-BR",
   "icons": [
     {
