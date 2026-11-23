@@ -1825,3 +1825,58 @@ button.radar-chip:hover { border-color: #4384ff; }
   .radar-pagination span { order: 1; margin: 0 auto; }
   .radar-pagination button:last-child { order: 2; }
 }
+
+@font-face {
+  font-family: "Radar Inter";
+  src: url("/assets/radar-inter-v5.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+#appShell.radar-layout {
+  font-family: "Radar Inter", Inter, system-ui, sans-serif !important;
+  --radar-navy: #071638;
+  --radar-blue: #064bea;
+}
+#appShell.radar-layout :is(.page-title,.sidebar-brand strong,.main-nav b,#view-radar button,#view-radar input,#view-radar select,#view-radar a) {
+  font-family: inherit !important;
+}
+#radarResultsTitle, #radarDetail h2, #radarSavedDetail h2 { font-weight: 780; letter-spacing: -.035em; }
+.radar-opportunity-copy strong { font-weight: 720; }
+.radar-detail-card h3 { display: flex; align-items: center; gap: 8px; font-weight: 750; }
+.radar-detail-card :is(h3,.radar-detail-actions,.radar-file-download) svg {
+  width: 19px;
+  height: 19px;
+  flex: none;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.radar-detail-actions :is(.radar-official,[data-radar-save]) { flex: 1 1 125px; min-height: 42px; gap: 8px; }
+.radar-detail-actions [data-radar-save] { border-color: #4384ff; }
+.radar-detail-actions > a:not(.radar-official) { min-height: 34px; }
+.radar-documents .radar-file {
+  display: grid;
+  grid-template-columns: 25px minmax(0,1fr) 40px;
+  gap: 9px;
+  min-height: 48px;
+  padding: 5px 7px 5px 9px;
+  background: var(--radar-paper);
+}
+.radar-file-copy { min-width: 0; overflow-wrap: anywhere; }
+.radar-file-copy > a { font-weight: 620; }
+.radar-file-copy > a:hover { text-decoration: underline; }
+.radar-file-copy small { font-size: 11px; margin-top: 2px; }
+.radar-file-icon { color: #345790; position: relative; display: grid; place-items: end center; width: 23px; height: 27px; }
+.radar-file-icon svg { position: absolute; inset: 0; width: 100%; height: 100%; fill: currentColor; }
+.radar-file-icon b { position: relative; color: #fff; font-size: 7px; line-height: 1; margin-bottom: 5px; }
+.radar-file-pdf { color: #d83243; }
+.radar-file-fold { fill: #ffffff65; }
+.radar-file-download { display: grid; place-items: center; width: 40px; min-height: 40px; border-radius: 7px; color: #1750a8; }
+.radar-file-download:hover { background: var(--radar-soft); }
+html[data-theme="dark"] .radar-file-download { color: #9fc3ff; }
+@media (max-width: 760px) {
+  .radar-detail-actions :is(.radar-official,[data-radar-save]) { flex-basis: 105px; }
+}

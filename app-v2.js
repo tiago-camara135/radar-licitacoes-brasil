@@ -299,6 +299,30 @@ function externalRadarLink(url, label, className = 'radar-button') {
   return href ? `<a class="${className}" href="${esc(href)}" target="_blank" rel="noopener noreferrer">${esc(label)} <span aria-hidden="true">↗</span></a>` : '';
 }
 
+const radarDownloadIcon = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-4-4 4 4 4-4M5 15v5h14v-5"/></svg>';
+const radarOpenIcon = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 4h7v7m0-7-9 9m7-1v8H4V6h8"/></svg>';
+const radarBookmarkIcon = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4h12v16l-6-4-6 4z"/></svg>';
+
+function radarSaveLabel(saved) {
+  return radarBookmarkIcon + (saved ? 'Remover dos salvos' : 'Salvar');
+}
+
+function radarDocumentRow(doc, group, ids) {
+  const url = dashboardUrl(doc.url);
+  if (!url) return '';
+  const pdf = /\.pdf(?:$|[?#])/i.test(doc.url) || /\.pdf$/i.test(doc.title);
+  const type = pdf ? 'PDF' : (doc.title.match(/\.([a-z0-9]{2,5})$/i)?.[1]?.toUpperCase() || 'ARQ');
+  const official = doc.source === 'PNCP' && /^\d{1,10}$/.test(String(doc.id)) && Number(doc.id) > 0;
+  const download = official ? `/api/radar/documents/${ids.slice(1).join('/')}/${doc.id}/download?${new URLSearchParams({name:doc.title})}` : url;
+  return `<li class="radar-file">
+    <span class="radar-file-icon${pdf ? ' radar-file-pdf' : ''}" aria-hidden="true"><svg viewBox="0 0 28 32"><path d="M4 0h13l11 11v17a4 4 0 0 1-4 4H4a4 4 0 0 1-4-4V4a4 4 0 0 1 4-4Z"/><path d="M17 0v8a3 3 0 0 0 3 3h8" class="radar-file-fold"/></svg><b>${type}</b></span>
+    <div class="radar-file-copy"><a href="${esc(url)}" target="_blank" rel="noopener noreferrer">${esc(doc.title)}</a>${group === 'Retificações' ? ' <span class="radar-correction">Retificação</span>' : ''}
+      <small>${esc([doc.type, doc.source, doc.publishedAt && when(doc.publishedAt)].filter(Boolean).join(' · '))}</small></div>
+    <a class="radar-file-download" href="${esc(download)}" target="_blank" rel="noopener noreferrer"
+      title="${official ? 'Baixar arquivo' : 'Abrir arquivo na fonte'}" aria-label="${esc((official ? 'Baixar ' : 'Abrir na fonte ') + doc.title)}">${radarDownloadIcon}</a>
+    </li>`;
+}
+
 function renderRadarDetail(panel, item, index = -1) {
   if (!item) {
     panel.innerHTML = '<p class="radar-message">Selecione uma oportunidade para consultar os detalhes e documentos.</p>';
@@ -312,12 +336,12 @@ function renderRadarDetail(panel, item, index = -1) {
     <button type="button" class="radar-button radar-back" data-radar-back>Voltar à lista</button>
     <h2 tabindex="-1">${esc(item.title)}</h2>
     <div class="radar-actions radar-detail-actions">
-      ${externalRadarLink(item.official, 'Ver edital no PNCP', 'radar-primary')}
-      ${/^[\w-]{1,100}$/.test(item.key) ? `<button type="button" data-radar-save class="radar-button" aria-pressed="${saved}">${saved ? 'Remover dos salvos' : 'Salvar'}</button>` : ''}
+      ${dashboardUrl(item.official) ? `<a class="radar-primary radar-official" href="${esc(dashboardUrl(item.official))}" target="_blank" rel="noopener noreferrer">${radarOpenIcon}Ver edital</a>` : ''}
+      ${/^[\w-]{1,100}$/.test(item.key) ? `<button type="button" data-radar-save class="radar-button" aria-pressed="${saved}">${radarSaveLabel(saved)}</button>` : ''}
       ${item.origin !== item.official ? externalRadarLink(item.origin, 'Portal de origem') : ''}
     </div>
     <dl>${rows.filter(([, value])=>value).map(([label,value])=>`<div><dt>${label}</dt><dd>${esc(value)}</dd></div>`).join('')}</dl>
-    <h3>Documentos da licitação</h3><div class="radar-documents" aria-live="polite"></div>
+    <h3>${opportunityIcon} Documentos</h3><div class="radar-documents" aria-live="polite"></div>
     ${index >= 0 ? `<nav class="radar-detail-navigation" aria-label="Navegação entre oportunidades">
       <button type="button" class="radar-button" data-radar-step="-1" ${index === 0 ? 'disabled' : ''}>‹ Oportunidade anterior</button>
       <button type="button" class="radar-button" data-radar-step="1" ${index + 1 === dashboard.items.length ? 'disabled' : ''}>Próxima oportunidade ›</button>
@@ -353,11 +377,7 @@ async function loadRadarDocuments(root, item) {
       groups.get(group).push(doc);
     }
     root.innerHTML = [...groups].filter(([, docs]) => docs.length).map(([group, docs]) =>
-      `<section class="radar-document-group"><h4>${group}</h4><ul>${docs.map(doc => `<li>
-        <div><strong>${esc(doc.title)}</strong>${group === 'Retificações' ? ' <span class="radar-correction">Retificação</span>' : ''}
-        <small>${esc([doc.type, doc.source, doc.publishedAt && when(doc.publishedAt)].filter(Boolean).join(' · '))}</small></div>
-        ${externalRadarLink(doc.url, /\.pdf(?:$|[?#])/i.test(doc.url) || /\.pdf$/i.test(doc.title) ? 'Abrir PDF' : 'Abrir arquivo')}
-        </li>`).join('')}</ul></section>`).join('') || '<p>Nenhum arquivo listado. Consulte a publicação oficial.</p>';
+      `<section class="radar-document-group"><h4>${group}</h4><ul>${docs.map(doc => radarDocumentRow(doc, group, ids)).join('')}</ul></section>`).join('') || '<p>Nenhum arquivo listado. Consulte a publicação oficial.</p>';
   } catch (error) {
     if (dashboard.documents.get(item.key) === pending) dashboard.documents.delete(item.key);
     if (root.isConnected) root.innerHTML = `<p>${esc(error.message)}</p><button type="button" class="radar-button" data-radar-doc-retry>Tentar novamente</button>`;
@@ -409,7 +429,7 @@ async function refreshDashboardSaved(kind) {
 
 function updateSaveButton(button, saved) {
   button.setAttribute('aria-pressed', String(saved));
-  button.textContent = saved ? 'Remover dos salvos' : 'Salvar';
+  button.innerHTML = radarSaveLabel(saved);
 }
 
 async function changeRadarSave(item, button) {
