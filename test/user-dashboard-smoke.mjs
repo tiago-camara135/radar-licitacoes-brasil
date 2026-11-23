@@ -32,6 +32,14 @@ try{
   r=await get('/api/dashboard/overview',c2);assert.equal(r.status,200);const d2=await r.json();assert.equal(d2.recommendations.some(x=>x.pncp_id===pncpId),false);
 
   r=await post('/api/dashboard/tracking',{cnpj,year,sequence,status:'participando'},c1);assert.equal(r.status,200);j=await r.json();assert.equal(j.ok,true);
+  r=await post('/api/dashboard/tracking',{cnpj,year,sequence,status:'participando',notes:'Anotação de teste somente da conta A'},c1);assert.equal(r.status,200);
+  r=await get('/api/dashboard/tracking',c1);assert.equal(r.status,200);let privateRows=(await r.json()).items;
+  assert.equal(privateRows.find(x=>x.org_cnpj===cnpj&&x.year===year&&x.sequence===sequence)?.notes,'Anotação de teste somente da conta A');
+  r=await get('/api/dashboard/tracking',c2);assert.equal(r.status,200);assert.equal((await r.json()).items.some(x=>x.org_cnpj===cnpj&&x.year===year&&x.sequence===sequence),false);
+  r=await post('/api/dashboard/tracking',{cnpj,year,sequence,status:'participando',notes:''},c1);assert.equal(r.status,200);
+  r=await get('/api/dashboard/tracking',c1);assert.equal(r.status,200);privateRows=(await r.json()).items;
+  assert.equal(privateRows.find(x=>x.org_cnpj===cnpj&&x.year===year&&x.sequence===sequence)?.notes,'');
+
   r=await get('/api/dashboard/overview',c1);assert.equal(r.status,200);const tracked=await r.json();assert.equal(tracked.funnel.participando,1);
   r=await get('/api/dashboard/overview',c2);assert.equal(r.status,200);const isolated=await r.json();assert.equal(isolated.tracking.length,0);
 

@@ -18,14 +18,14 @@ await waitForServer();
 const jsResponse=await fetch(base+'/assets/app-v2.js',{headers:{accept:'application/javascript'},cache:'no-store'});
 assert.equal(jsResponse.status,200,'app-v2.js deve ser servido');
 const js=await jsResponse.text();
-for(const marker of ['__rlbCompanyDocumentsV1','habilitationNav','view-habilitation','__rlbCompanyVerificationV1','__rlbTenderReadinessQuickV1']){
+for(const marker of ['__rlbCompanyDocumentsV1','habilitationNav','view-habilitation','__rlbCompanyVerificationV1','__rlbTenderReadinessQuickV1','__radarEvolutionSummary','__radarEvolutionAlerts','__radarEvolutionOperation','__radarEvolutionHealth']){
   assert.ok(js.includes(marker),`bundle servido deve conter ${marker}`);
 }
 
 const cssResponse=await fetch(base+'/assets/app-v2.css',{headers:{accept:'text/css'},cache:'no-store'});
 assert.equal(cssResponse.status,200,'app-v2.css deve ser servido');
 const css=await cssResponse.text();
-for(const marker of ['.habilitation-view','.hab-nav-badge']){
+for(const marker of ['.habilitation-view','.hab-nav-badge','.rev-summary','.rev-n-panel','.rev-op-layout','.rev-health']){
   assert.ok(css.includes(marker),`CSS servido deve conter ${marker}`);
 }
 

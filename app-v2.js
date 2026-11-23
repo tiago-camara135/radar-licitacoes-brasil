@@ -666,6 +666,371 @@ async function boot(){try{bind();const m=$('#runtimeMessage');if(m){m.textConten
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 })();
 
+/* Radar Evolution — Etapa 1: resumo personalizado */
+;(()=>{
+'use strict';
+if(window.__radarEvolutionSummary)return;window.__radarEvolutionSummary=true;
+const $=(s,r=document)=>r.querySelector(s);
+const el=(tag,cls,text)=>{const a=document.createElement(tag);if(cls)a.className=cls;if(text!==undefined)a.textContent=String(text);return a};
+const number=v=>Number.isFinite(Number(v))&&v!==undefined&&v!==null?Number(v).toLocaleString('pt-BR'):'—';
+let busy=false,lastLoad=0,lastIdentity='',epoch=0;
+const ui={};
+function logged(){return !!$('#appShell')&&!$('#appShell').classList.contains('hidden')}
+function identity(){return String($('#radarUserName')?.textContent||'').trim()}
+function install(){
+ const view=$('#view-radar');if(!view||$('#revSummary'))return;
+ const panel=el('section','rev-summary');panel.id='revSummary';panel.setAttribute('aria-label','Resumo estratégico da conta');
+ const head=el('div','rev-summary-head'),heading=el('div','rev-heading');
+ heading.append(el('span','rev-eyebrow','SEU RADAR HOJE'),el('h2','','Resumo de oportunidades'));
+ ui.status=el('p','rev-status','Dados personalizados da sua conta.');ui.status.setAttribute('role','status');heading.append(ui.status);
+ ui.refresh=el('button','rev-action','Atualizar');ui.refresh.type='button';ui.refresh.addEventListener('click',()=>load(true));head.append(heading,ui.refresh);
+ const grid=el('div','rev-grid');ui.values=[];
+ for(const [label,subtitle] of [['Novas compatíveis','Detectadas hoje'],['Alta aderência','Recomendações'],['Em acompanhamento','Na operação'],['Prazos próximos','Nos próximos 7 dias']]){
+   const m=el('div','rev-stat'),value=el('strong','rev-value','—');m.append(el('span','rev-label',label),value,el('small','rev-sub',subtitle));grid.append(m);ui.values.push(value);
+ }
+ const footer=el('div','rev-summary-footer');
+ ui.next=el('span','','Acompanhe seus alertas para receber recomendações.');
+ const go=el('button','rev-action','Gerenciar alertas');go.type='button';go.addEventListener('click',()=>$('#mainNav [data-view="alerts"]')?.click());
+ footer.append(ui.next,go);panel.append(head,grid,footer);view.insertBefore(panel,$('#radarSearchForm')||view.firstChild);
+ const shell=$('#appShell');
+ if(shell)new MutationObserver(()=>{if(!logged()){epoch++;lastLoad=0;lastIdentity='';ui.values.forEach(x=>x.textContent='—');ui.status.textContent='Entre na conta para consultar os indicadores.'}else load(false)}).observe(shell,{attributes:true,attributeFilter:['class']});
+ document.addEventListener('click',e=>{if(e.target.closest('#mainNav [data-view="radar"]'))load(false)});
+ document.addEventListener('visibilitychange',()=>{if(!document.hidden&&Date.now()-lastLoad>180000)load(false)});
+ if(logged())load(false);
+}
+async function load(force){
+ if(!logged()||busy)return;
+ const who=identity();if(!force&&lastIdentity===who&&Date.now()-lastLoad<180000)return;
+ const requestEpoch=epoch;busy=true;ui.refresh.disabled=true;ui.refresh.textContent='Atualizando…';ui.status.textContent='Consultando indicadores…';
+ const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),12000);
+ try{
+   const r=await fetch('/api/dashboard/overview',{credentials:'same-origin',cache:'no-store',signal:controller.signal,headers:{accept:'application/json'}});
+   if(!r.ok)throw Error(r.status===401?'Sessão expirada. Entre novamente.':'Não foi possível consultar os indicadores.');
+   const d=await r.json(),m=d.metrics||{};if(!logged()||requestEpoch!==epoch)return;
+   ['new_matches_today','recommended_high','tracked_active','upcoming_7d'].forEach((k,i)=>ui.values[i].textContent=number(m[k]));
+   const priorities=Array.isArray(d.priorities)?d.priorities:[];
+   const critical=priorities.filter(x=>x&&['high','critical'].includes(x.tone)).length;
+   ui.next.textContent=critical?critical+' prioridade(s) para revisar.':'Nenhuma prioridade crítica identificada nos dados cadastrados.';
+   ui.status.textContent='Atualizado às '+new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})+' • Dados da sua conta';
+   lastIdentity=who;lastLoad=Date.now();
+   document.dispatchEvent(new CustomEvent('radar:overview',{detail:d}));
+ }catch(e){
+   if(!logged()||requestEpoch!==epoch)return;
+   ui.status.textContent=e.name==='AbortError'?'A consulta demorou. Tente novamente.':e.message;
+   ui.next.textContent='As demais funcionalidades do Radar continuam disponíveis.';
+ }finally{clearTimeout(timeout);busy=false;ui.refresh.disabled=false;ui.refresh.textContent='Atualizar'}
+}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});else install();
+})();
+
+
+/* Radar Evolution — Etapa 2: central de alertas e aderência fundamentada */
+;(()=>{
+'use strict';
+if(window.__radarEvolutionAlerts)return;window.__radarEvolutionAlerts=true;
+const $=(s,r=document)=>r.querySelector(s);
+const el=(tag,cls,txt)=>{const v=document.createElement(tag);if(cls)v.className=cls;if(txt!==undefined)v.textContent=String(txt);return v};
+const logged=()=>!!$('#appShell')&&!$('#appShell').classList.contains('hidden');
+const safeUrl=raw=>{try{const u=new URL(raw);return ['http:','https:'].includes(u.protocol)&&!u.username&&!u.password?u.href:''}catch{return''}};
+const formatted=x=>{const d=new Date(x);return Number.isNaN(d.getTime())?'Data não informada':d.toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'})};
+let rows=[],filter='all',open=false,loading=false,lastProfile=0,epoch=0;
+const ui={};
+function install(){
+  const bar=$('#appShell .topbar');if(!bar)return;
+  ui.wrap=el('div','rev-n-wrap');
+  ui.bell=el('button','rev-n-bell','Notificações');ui.bell.type='button';ui.bell.setAttribute('aria-controls','revNotifPanel');ui.bell.setAttribute('aria-expanded','false');
+  ui.count=el('span','rev-n-count','—');ui.count.setAttribute('aria-label','Contagem de notificações não lidas');ui.bell.append(ui.count);
+  ui.panel=el('section','rev-n-panel');ui.panel.id='revNotifPanel';ui.panel.hidden=true;ui.panel.setAttribute('aria-label','Central de notificações');
+  const head=el('div','rev-n-head'),title=el('div','');
+  title.append(el('strong','','Central de notificações'),el('small','','Histórico dos alertas da sua conta'));
+  ui.close=el('button','rev-n-close','×');ui.close.type='button';ui.close.setAttribute('aria-label','Fechar notificações');
+  head.append(title,ui.close);
+  const controls=el('div','rev-n-controls');
+  ui.all=el('button','rev-n-filter active','Todos');ui.all.type='button';
+  ui.unread=el('button','rev-n-filter','Não lidos');ui.unread.type='button';
+  ui.mark=el('button','rev-n-mark','Marcar todas como lidas');ui.mark.type='button';
+  controls.append(ui.all,ui.unread,ui.mark);
+  ui.list=el('div','rev-n-list');ui.message=el('p','rev-n-message','Carregando…');ui.message.setAttribute('role','status');
+  ui.panel.append(head,controls,ui.message,ui.list);ui.wrap.append(ui.bell,ui.panel);bar.append(ui.wrap);
+  ui.bell.addEventListener('click',()=>setOpen(!open));
+  ui.close.addEventListener('click',()=>setOpen(false));
+  ui.all.addEventListener('click',()=>{filter='all';render()});
+  ui.unread.addEventListener('click',()=>{filter='unread';render()});
+  ui.mark.addEventListener('click',markAll);
+  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&open){setOpen(false);ui.bell.focus()}});
+  document.addEventListener('pointerdown',e=>{if(open&&!ui.wrap.contains(e.target))setOpen(false)});
+  document.addEventListener('radar:overview',e=>recommendations(e.detail));
+  const shell=$('#appShell');
+  new MutationObserver(()=>{if(!logged()){epoch++;setOpen(false);rows=[];lastProfile=0;ui.count.textContent='—';$('#revRecommendations')?.remove()}else profile()}).observe(shell,{attributes:true,attributeFilter:['class']});
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden&&logged()&&Date.now()-lastProfile>90000)profile()});
+  if(logged())profile();
+}
+function setOpen(next){open=Boolean(next);ui.panel.hidden=!open;ui.bell.setAttribute('aria-expanded',String(open));if(open)load()}
+async function profile(){
+  if(!logged())return;const requestEpoch=epoch;
+  try{const controller=new AbortController(),t=setTimeout(()=>controller.abort(),12000);
+    try{const r=await fetch('/api/notifications/profile',{credentials:'same-origin',cache:'no-store',signal:controller.signal});
+      if(!r.ok)throw Error('Sem contagem');const d=await r.json();if(!logged()||requestEpoch!==epoch)return;const n=Math.max(0,Number(d.unread_count||0));
+      ui.count.textContent=n>99?'99+':String(n);lastProfile=Date.now();
+    }finally{clearTimeout(t)}
+  }catch{if(logged()&&requestEpoch===epoch)ui.count.textContent='—'}
+}
+async function load(){
+  if(!logged()||loading)return;const requestEpoch=epoch;loading=true;ui.message.textContent='Carregando notificações…';
+  const controller=new AbortController(),t=setTimeout(()=>controller.abort(),12000);
+  try{
+    const r=await fetch('/api/notifications/deliveries?limit=100',{credentials:'same-origin',cache:'no-store',signal:controller.signal,headers:{accept:'application/json'}});
+    if(!r.ok)throw Error(r.status===401?'Acesse sua conta para consultar os alertas.':'Falha ao consultar notificações.');
+    const d=await r.json();if(!logged()||requestEpoch!==epoch)return;rows=(Array.isArray(d.items)?d.items:[]).filter(x=>x.channel==='onsite');
+    render();await profile();
+  }catch(e){if(!logged()||requestEpoch!==epoch)return;ui.list.replaceChildren();ui.message.textContent=e.name==='AbortError'?'A consulta demorou. Tente novamente.':e.message;
+    const retry=el('button','rev-n-filter','Tentar novamente');retry.type='button';retry.addEventListener('click',load);ui.list.append(retry)
+  }finally{clearTimeout(t);loading=false}
+}
+function render(){
+  ui.all.classList.toggle('active',filter==='all');ui.unread.classList.toggle('active',filter==='unread');
+  ui.list.replaceChildren();
+  const visible=rows.filter(x=>filter!=='unread'||!x.read_at);
+  ui.message.textContent=visible.length?'Exibindo '+visible.length+' notificação(ões) recentes.':'Nenhum alerta '+(filter==='unread'?'não lido.':'registrado neste histórico.');
+  for(const item of visible){
+    const payload=item.payload||{},card=el('article','rev-n-item'+(item.read_at?'':' unread'));
+    const flag=el('span','rev-n-flag',item.read_at?'Lida':'Não lida');
+    const name=el('strong','',payload.object||'Nova oportunidade relacionada ao seu alerta');
+    const org=el('small','',String(payload.org||'Órgão não informado')+' • '+String(payload.municipality||'Brasil')+(payload.uf?'/'+payload.uf:''));
+    const line=el('div','rev-n-line'),stamp=el('time','',formatted(item.created_at));
+    line.append(stamp);
+    const url=safeUrl(payload.pncp_url)||safeUrl(payload.origin_url);
+    if(url){const a=el('a','','Ver edital');a.href=url;a.target='_blank';a.rel='noopener noreferrer';line.append(a)}
+    card.append(flag,name,org,line);ui.list.append(card);
+  }
+}
+async function markAll(){
+  if(!logged()||loading)return;ui.mark.disabled=true;
+  try{const controller=new AbortController(),t=setTimeout(()=>controller.abort(),12000);
+    try{const r=await fetch('/api/notifications/read-all',{method:'POST',credentials:'same-origin',cache:'no-store',signal:controller.signal,headers:{'content-type':'application/json'},body:'{}'});
+      if(!r.ok)throw Error('Falha ao marcar notificações.');await load()
+    }finally{clearTimeout(t)}
+  }catch(e){ui.message.textContent=e.message}finally{ui.mark.disabled=false}
+}
+function recommendations(d){
+  const panel=$('#revSummary');if(!panel)return;
+  let target=$('#revRecommendations');
+  if(!target){target=el('div','rev-recommendations');target.id='revRecommendations';const foot=$('.rev-summary-footer',panel);panel.insertBefore(target,foot||null)}
+  const recs=Array.isArray(d?.recommendations)?d.recommendations.slice(0,3):[];
+  target.replaceChildren();
+  const head=el('div','rev-recs-head'),title=el('strong','','Recomendadas para seus alertas'),note=el('small','','Aderência estimada aos critérios; não representa chance de vencer.');
+  head.append(title,note);target.append(head);
+  if(!recs.length){target.append(el('p','rev-recs-empty','Configure alertas com palavras-chave para receber recomendações.'));return}
+  const list=el('div','rev-recs-list');target.append(list);
+  for(const x of recs){
+    const card=el('article','rev-rec'),info=el('div','rev-rec-main');
+    info.append(el('strong','',x.object_text||'Oportunidade sem descrição'),el('small','',[x.modality_name,x.municipality,x.uf].filter(Boolean).join(' • ')));
+    const why=Array.isArray(x.fit?.reasons)?x.fit.reasons.slice(0,2):[];
+    if(why.length)info.append(el('small','rev-rec-why',why.join(' · ')));
+    const side=el('div','rev-rec-side');
+    const score=Number(x.fit?.score);
+    side.append(el('b','',Number.isFinite(score)?Math.round(Math.min(100,Math.max(0,score)))+'%':'—'),el('small','','aderência'));
+    const url=safeUrl(x.pncp_url);
+    if(url){const a=el('a','','Abrir PNCP');a.href=url;a.target='_blank';a.rel='noopener noreferrer';side.append(a)}
+    card.append(info,side);list.append(card);
+  }
+}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});else install();
+})();
+
+
+/* Radar Evolution — Etapa 3: acompanhamento e calendário integrado */
+;(()=>{
+'use strict';
+if(window.__radarEvolutionOperation)return;window.__radarEvolutionOperation=true;
+const $=(s,r=document)=>r.querySelector(s);
+const all=(selector,root=document)=>Array.from(root.querySelectorAll(selector));
+const el=(tag,cls,label)=>{const x=document.createElement(tag);if(cls)x.className=cls;if(label!==undefined)x.textContent=String(label);return x};
+const logged=()=>!!$('#appShell')&&!$('#appShell').classList.contains('hidden');
+const safeUrl=v=>{try{const u=new URL(v);return ['https:','http:'].includes(u.protocol)&&!u.username&&!u.password?u.href:''}catch{return''}};
+const zone='America/Fortaleza';
+const dayKey=(v,type)=>{if(type==='document'&&typeof v==='string')return v.slice(0,10);const d=new Date(v);return Number.isNaN(d.getTime())?'':new Intl.DateTimeFormat('sv-SE',{timeZone:zone,year:'numeric',month:'2-digit',day:'2-digit'}).format(d)};
+const readable=v=>{const d=new Date(v);return Number.isNaN(d.getTime())?'Data não informada':new Intl.DateTimeFormat('pt-BR',{timeZone:zone,dateStyle:'short',timeStyle:'short'}).format(d)};
+const status={analisar:'Em análise',preparando_documentacao:'Preparando documentação',proposta_pronta:'Proposta pronta',participando:'Participando',recurso:'Em recurso',vencida:'Vencida',perdida:'Não vencida',arquivada:'Arquivada'};
+let overview=null,loading=false,filter='all',selected='',month=new Date().getMonth(),year=new Date().getFullYear(),generation=0;
+const ui={};
+function notice(txt,bad){const t=$('#toast');if(!t)return;t.textContent=txt;t.className='toast show'+(bad?' error':'');clearTimeout(notice.timer);notice.timer=setTimeout(()=>t.className='toast',3500)}
+function install(){
+ const nav=$('#mainNav'),main=$('main.main');if(!nav||!main||$('#revOperationNav'))return;
+ const b=el('button','','Minha Operação');b.type='button';b.id='revOperationNav';b.dataset.view='operation';
+ b.replaceChildren();b.append(el('span','nav-icon','▤'));const label=el('span','');label.append(el('b','','Minha Operação'),el('small','','Acompanhamentos e prazos'));b.append(label);
+ const radar=$('#mainNav [data-view="radar"]');nav.insertBefore(b,radar?.nextSibling||null);
+ ui.page=el('section','view rev-operation');ui.page.id='view-operation';
+ ui.root=el('div','rev-op-root');ui.root.append(el('p','rev-op-loading','Carregando licitações acompanhadas…'));ui.page.append(ui.root);
+ main.insertBefore(ui.page,$('#view-saved')||null);
+ b.addEventListener('click',()=>{if($('#pageTitle'))$('#pageTitle').textContent='Minha Operação';if($('#pageSubtitle'))$('#pageSubtitle').textContent='Acompanhamento e calendário';if(logged())load(false)});
+ document.addEventListener('radar:overview',e=>{if(!logged())return;overview=e.detail;installTrackActions();if(ui.page.classList.contains('active')&&!ui.root.querySelector('textarea:focus'))render()});
+ const shell=$('#appShell');
+ new MutationObserver(()=>{if(!logged()){generation++;overview=null;ui.root.replaceChildren(el('p','rev-op-loading','Entre para consultar sua operação.'))}else installTrackActions()}).observe(shell,{attributes:true,attributeFilter:['class']});
+ document.addEventListener('click',e=>{const button=e.target.closest('[data-rev-track]');if(button&&logged())addTracking(button)});
+ const observeDetails=()=>{for(const id of ['#radarDetail','#radarSavedDetail']){const root=$(id);if(root)new MutationObserver(()=>decorateDetail(root)).observe(root,{subtree:true,childList:true})}};
+ observeDetails();
+}
+function installTrackActions(){
+ const cards=all('#revRecommendations .rev-rec');
+ const recs=Array.isArray(overview?.recommendations)?overview.recommendations.slice(0,3):[];
+ cards.forEach((card,i)=>{
+  const x=recs[i],side=$('.rev-rec-side',card);if(!x||!side||side.querySelector('[data-rev-track]'))return;
+  const b=el('button','rev-track-button','Acompanhar');b.type='button';b.dataset.revTrack='1';b.dataset.cnpj=x.org_cnpj||'';b.dataset.year=x.year;b.dataset.seq=x.sequence;side.append(b);
+ });
+ for(const id of ['#radarDetail','#radarSavedDetail']){const root=$(id);if(root)decorateDetail(root)}
+}
+function decorateDetail(root){
+ if(root.querySelector('[data-rev-track]'))return;
+ const link=[...root.querySelectorAll('a[href]')].find(a=>/pncp\.gov\.br\/app\/editais\/\d{14}\/\d{4}\/\d+/.test(a.href));
+ if(!link)return;
+ const match=link.href.match(/\/app\/editais\/(\d{14})\/(\d{4})\/(\d+)/);if(!match)return;
+ const bar=el('div','rev-detail-track');
+ const b=el('button','rev-track-button','Acompanhar na Minha Operação');b.type='button';b.dataset.revTrack='1';b.dataset.cnpj=match[1];b.dataset.year=match[2];b.dataset.seq=match[3];
+ bar.append(b);root.append(bar);
+}
+async function request(path,method,data){
+ const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),15000);
+ try{const r=await fetch(path,{method:method||'GET',credentials:'same-origin',cache:'no-store',signal:controller.signal,headers:{accept:'application/json',...(data?{'content-type':'application/json'}:{})},...(data?{body:JSON.stringify(data)}:{})});
+ const d=await r.json().catch(()=>({}));if(!r.ok)throw Error(d.error||'Não foi possível concluir a operação.');return d}
+ finally{clearTimeout(timeout)}
+}
+async function load(force){
+ if(!logged()||loading)return;
+ if(overview&&!force){render();return}
+ loading=true;ui.root.replaceChildren(el('p','rev-op-loading','Carregando dados da conta…'));
+ const seq=generation;
+ try{const d=await request('/api/dashboard/overview');if(!logged()||seq!==generation)return;overview=d;render();installTrackActions()}
+ catch(e){if(seq!==generation||!logged())return;ui.root.replaceChildren(el('p','rev-op-error',e.message));const retry=el('button','rev-track-button','Tentar novamente');retry.type='button';retry.addEventListener('click',()=>load(true));ui.root.append(retry)}
+ finally{loading=false}
+}
+async function addTracking(b){
+ const cnpj=b.dataset.cnpj,yr=Number(b.dataset.year),seq=Number(b.dataset.seq);if(!/^\d{14}$/.test(cnpj||'')||!Number.isInteger(yr)||!Number.isInteger(seq))return notice('Identificação PNCP inválida.',true);
+ b.disabled=true;
+ try{await request('/api/dashboard/tracking','POST',{cnpj,year:yr,sequence:seq,status:'analisar'});notice('Licitação adicionada ao acompanhamento.');await load(true);$('#revOperationNav')?.click()}
+ catch(e){notice(e.message,true)}
+ finally{b.disabled=false}
+}
+async function update(item,fields,button){
+ if(!item||!logged())return;
+ button.disabled=true;
+ try{await request('/api/dashboard/tracking','POST',{cnpj:item.org_cnpj,year:item.year,sequence:item.sequence,status:fields.status||item.status,...('notes' in fields?{notes:fields.notes}:{})});notice('Acompanhamento atualizado.');await load(true)}
+ catch(e){notice(e.message,true);if(button.tagName==='SELECT')button.value=item.status}
+ finally{button.disabled=false}
+}
+function render(){
+ if(!ui.root||!overview)return;
+ ui.root.replaceChildren();
+ const head=el('div','rev-op-head'),intro=el('div','');
+ intro.append(el('span','rev-eyebrow','GESTÃO DA SUA CONTA'),el('h2','','Minha Operação'),el('p','','Acompanhe licitações, registre anotações e confira prazos oficiais.'));
+ const refresh=el('button','rev-action','Atualizar');refresh.type='button';refresh.addEventListener('click',()=>load(true));head.append(intro,refresh);ui.root.append(head);
+ const grid=el('div','rev-op-layout'),main=el('section','rev-op-list'),right=el('aside','rev-op-side');
+ const items=Array.isArray(overview.tracking)?overview.tracking:[];
+ const select=el('select','rev-op-filter');select.setAttribute('aria-label','Filtrar licitações por situação');
+ for(const [value,label] of [['all','Todos os estágios'],...Object.entries(status)]){const o=el('option','',label);o.value=value;select.append(o)}
+ select.value=filter;select.addEventListener('change',()=>{filter=select.value;render()});
+ const topline=el('div','rev-op-section-head');topline.append(el('strong','','Licitações acompanhadas ('+items.length+')'),select);main.append(topline);
+ const list=el('div','rev-op-items'),visible=items.filter(x=>filter==='all'||x.status===filter);
+ if(!visible.length)list.append(el('p','rev-op-empty','Nenhuma licitação neste estágio. Utilize “Acompanhar” no detalhe ou nas recomendações do Radar.'));
+ for(const x of visible)list.append(itemCard(x));main.append(list);
+ const legend=el('p','rev-op-disclaimer','Datas de encerramento são as registradas na fonte consultada. Confirme sempre eventuais alterações no edital e no portal oficial.');
+ right.append(calendar(),legend);grid.append(main,right);ui.root.append(grid);
+}
+function itemCard(x){
+ const card=el('article','rev-op-item'),top=el('div','rev-op-item-top'),info=el('div','');
+ info.append(el('strong','',x.object_text||x.pncp_key||'Licitação acompanhada'),el('small','',[x.modality_name,x.org_name,x.municipality,x.uf].filter(Boolean).join(' • ')));
+ if(x.closes_at)info.append(el('small','rev-op-deadline','Encerramento informado: '+readable(x.closes_at)));
+ top.append(info);
+ const href=safeUrl(x.pncp_url);
+ if(href){const a=el('a','rev-op-link','Abrir edital');a.href=href;a.target='_blank';a.rel='noopener noreferrer';top.append(a)}
+ const controls=el('div','rev-op-item-controls'),s=el('select','');
+ s.setAttribute('aria-label','Situação da licitação');
+ for(const [value,label] of Object.entries(status)){const o=el('option','',label);o.value=value;s.append(o)}
+ s.value=x.status||'analisar';s.addEventListener('change',()=>update(x,{status:s.value},s));controls.append(s);
+ const notes=el('textarea','');notes.maxLength=1500;notes.rows=2;notes.placeholder='Anotações privadas desta licitação';notes.value=x.notes||'';notes.setAttribute('aria-label','Anotações da licitação');
+ const save=el('button','rev-track-button','Salvar anotação');save.type='button';save.addEventListener('click',()=>update(x,{notes:notes.value},save));
+ controls.append(save);card.append(top,controls,notes);return card;
+}
+function calendar(){
+ const box=el('section','rev-calendar'),heading=el('div','rev-op-section-head'),title=el('strong','','Agenda de prazos');
+ const arrows=el('div','rev-cal-arrows');
+ for(const [txt,step] of [['‹',-1],['›',1]]){const b=el('button','rev-cal-arrow',txt);b.type='button';b.setAttribute('aria-label',step<0?'Mês anterior':'Próximo mês');b.addEventListener('click',()=>{const d=new Date(year,month+step,1);year=d.getFullYear();month=d.getMonth();selected='';render()});arrows.append(b)}
+ heading.append(title,arrows);box.append(heading,el('p','rev-cal-month',new Date(year,month,1).toLocaleDateString('pt-BR',{month:'long',year:'numeric'})));
+ const g=el('div','rev-cal-grid');
+ for(const day of ['D','S','T','Q','Q','S','S'])g.append(el('b','rev-cal-week',day));
+ const offset=new Date(year,month,1).getDay(),days=new Date(year,month+1,0).getDate();
+ const events=Array.isArray(overview.agenda)?overview.agenda:[];
+ const counts=new Map();for(const e of events){const k=dayKey(e.date,e.type);if(k)counts.set(k,(counts.get(k)||0)+1)}
+ for(let i=0;i<offset;i++)g.append(el('span','rev-cal-blank',''));
+ for(let i=1;i<=days;i++){
+  const k=String(year)+'-'+String(month+1).padStart(2,'0')+'-'+String(i).padStart(2,'0');
+  const b=el('button','rev-cal-day'+(counts.has(k)?' has-event':'')+(selected===k?' selected':''),i);
+  b.type='button';b.setAttribute('aria-label',i+' de '+new Date(year,month,1).toLocaleDateString('pt-BR',{month:'long'})+', '+(counts.get(k)||0)+' evento(s)');
+  if(counts.has(k))b.append(el('i','rev-cal-dot',''));
+  b.addEventListener('click',()=>{selected=k;render()});g.append(b);
+ }
+ box.append(g);
+ const selectedEvents=selected?events.filter(x=>dayKey(x.date,x.type)===selected):events.filter(x=>dayKey(x.date,x.type).slice(0,7)===String(year)+'-'+String(month+1).padStart(2,'0'));
+ const list=el('div','rev-cal-events');list.append(el('strong','','Prazos '+(selected?'do dia':'do mês')));
+ if(!selectedEvents.length)list.append(el('p','rev-op-empty','Nenhum prazo cadastrado para este período.'));
+ for(const e of selectedEvents.slice(0,20)){
+  const item=el('div','rev-cal-event');
+  item.append(el('b','',e.type==='document'?'Vencimento documental':'Prazo informado da oportunidade'),el('span','',e.title||'Evento'),el('small','',e.type==='document'?String(e.date).slice(0,10):readable(e.date)));
+  list.append(item);
+ }
+ box.append(list);return box;
+}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});else install();
+})();
+
+
+/* Radar Evolution — Etapa 4: diagnóstico administrativo sob demanda */
+;(()=>{
+'use strict';
+if(window.__radarEvolutionHealth)return;window.__radarEvolutionHealth=true;
+const $=(s,r=document)=>r.querySelector(s);
+const el=(tag,cls,text)=>{const e=document.createElement(tag);if(cls)e.className=cls;if(text!==undefined)e.textContent=String(text);return e};
+let loading=false,epoch=0;
+const logged=()=>!!$('#appShell')&&!$('#appShell').classList.contains('hidden');
+function install(){
+ const admin=$('#view-admin');if(!admin)return null;
+ let panel=$('#revHealth');if(panel)return panel;
+ panel=el('section','rev-health');panel.id='revHealth';
+ const head=el('div','rev-health-head'),left=el('div','');
+ left.append(el('strong','','Saúde da plataforma'),el('small','','Consulta técnica sob demanda • sem dados pessoais'));
+ const button=el('button','rev-action','Verificar agora');button.type='button';button.addEventListener('click',()=>check());
+ head.append(left,button);
+ const status=el('p','rev-health-status','Clique para consultar o estado atual dos serviços.');status.id='revHealthStatus';status.setAttribute('role','status');
+ panel.append(head,status);const intro=$('.section-intro',admin);intro?.insertAdjacentElement('afterend',panel);if(!intro)admin.prepend(panel);
+ return panel;
+}
+async function check(){
+ if(!logged()||$('#adminNav')?.classList.contains('hidden')||loading)return;
+ const panel=install(),button=panel.querySelector('button'),status=$('#revHealthStatus');
+ const rev=epoch;loading=true;button.disabled=true;status.textContent='Verificando serviço e banco de dados…';
+ const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),8000);
+ try{
+ const r=await fetch('/api/health',{credentials:'same-origin',cache:'no-store',signal:controller.signal,headers:{accept:'application/json'}});
+ const d=await r.json().catch(()=>({}));if(!logged()||rev!==epoch)return;
+ if(!r.ok||!d.ok){status.textContent='Serviço com indisponibilidade. Consulte os logs do Render.';status.dataset.ok='no';return}
+ status.dataset.ok='yes';
+ const database=d.database?.ok?'Banco conectado':'Banco requer atenção';
+ const pncp=d.pncp_documents?.circuit_open?'Consulta de documentos PNCP temporariamente limitada':'Consulta de documentos PNCP sem bloqueio informado';
+ status.textContent='Serviço operacional • '+database+' • '+pncp+' • Verificado às '+new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+ }catch(e){if(logged()&&rev===epoch){status.dataset.ok='no';status.textContent=e.name==='AbortError'?'Verificação expirou. Tente novamente.':'Falha ao consultar a saúde do serviço.'}}
+ finally{clearTimeout(timer);loading=false;button.disabled=false}
+}
+function boot(){
+ install();
+ document.addEventListener('click',e=>{if(e.target.closest('#mainNav [data-view="admin"]')){install();if(logged())check()}});
+ const shell=$('#appShell');if(shell)new MutationObserver(()=>{if(!logged()){epoch++;const status=$('#revHealthStatus');if(status){status.textContent='Entre como administrador para consultar o estado do serviço.';status.removeAttribute('data-ok')}}}).observe(shell,{attributes:true,attributeFilter:['class']});
+}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
+})();
+
+
+
+
 (()=>{
 'use strict';
 const CHECK_MS=5*60*1000;
@@ -720,3 +1085,4 @@ function observeLogin(){const shell=document.getElementById('appShell');if(!shel
 function boot(){schedule();observeLogin();addEventListener('resize',reposition,{passive:true});document.addEventListener('visibilitychange',()=>{if(!document.hidden&&Date.now()-lastCheck>=CHECK_MS)check()})}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 })();
+

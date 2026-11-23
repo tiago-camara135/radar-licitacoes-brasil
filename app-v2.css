@@ -2478,3 +2478,103 @@ html[data-theme="dark"] .toast:not(.error) {
   background: var(--radar-blue-hover) !important;
   color: #fff !important;
 }
+
+
+/* Radar Evolution — Etapa 1: resumo estratégico */
+#view-radar .rev-summary{display:grid;gap:12px;margin-bottom:16px;padding:16px 18px;border:1px solid var(--radar-line,var(--line));border-radius:15px;background:var(--radar-paper,var(--surface));color:var(--radar-text,var(--text));box-shadow:0 12px 30px rgba(14,36,62,.07)}
+.rev-summary-head,.rev-summary-footer{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.rev-heading h2{font-size:clamp(17px,2vw,22px);line-height:1.2;letter-spacing:-.035em;margin:4px 0}
+.rev-eyebrow{font-size:10px;font-weight:800;letter-spacing:.08em;color:var(--radar-blue,var(--brand))}
+.rev-status{margin:0;font-size:11px;color:var(--radar-muted,var(--muted))}
+.rev-action{border:1px solid var(--radar-line,var(--line));background:var(--radar-soft,var(--surface2));color:var(--radar-text,var(--text));font-size:11px;font-weight:700;border-radius:8px;padding:8px 10px;cursor:pointer;white-space:nowrap}
+.rev-action:hover{border-color:var(--radar-blue,var(--brand))}.rev-action:disabled{opacity:.6;cursor:wait}
+.rev-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px}
+.rev-stat{display:grid;gap:4px;min-width:0;border:1px solid var(--radar-line,var(--line));border-radius:11px;background:var(--radar-soft,var(--surface2));padding:12px}
+.rev-label{font-size:10px;font-weight:700;color:var(--radar-muted,var(--muted))}
+.rev-value{font-size:clamp(20px,2.4vw,28px);font-variant-numeric:tabular-nums;letter-spacing:-.04em;line-height:1.1}
+.rev-sub{font-size:9px;color:var(--radar-muted,var(--muted));line-height:1.4}
+.rev-stat:nth-child(2) .rev-value{color:var(--radar-blue,var(--brand))}.rev-stat:nth-child(3) .rev-value{color:var(--emerald)}
+.rev-summary-footer{border-top:1px solid var(--radar-line,var(--line));padding-top:10px}
+.rev-summary-footer span{font-size:11px;color:var(--radar-muted,var(--muted))}
+@media(max-width:760px){.rev-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.rev-summary-head{align-items:flex-start}}
+@media(max-width:390px){#view-radar .rev-summary{padding:12px}.rev-summary-footer{align-items:flex-start;flex-direction:column}}
+
+
+/* Radar Evolution — Etapa 2: central de notificações e aderência */
+#appShell .topbar{position:relative}
+.rev-n-wrap{position:relative;margin-left:auto}
+.rev-n-bell{display:flex;gap:7px;align-items:center;justify-content:center;min-height:37px;padding:7px 10px;border-radius:9px;background:var(--radar-paper,var(--surface));border:1px solid var(--radar-line,var(--line));color:var(--radar-text,var(--text));font-size:11px;font-weight:700;cursor:pointer}
+.rev-n-count{min-width:20px;height:20px;border-radius:50%;padding:0 4px;background:var(--radar-blue,var(--brand));color:#fff;display:grid;place-items:center;font-size:10px;font-variant-numeric:tabular-nums}
+.rev-n-panel[hidden]{display:none}
+.rev-n-panel{position:absolute;top:calc(100% + 8px);right:0;width:min(356px,calc(100vw - 25px));z-index:600;padding:13px;border:1px solid var(--radar-line,var(--line));border-radius:13px;background:var(--radar-paper,var(--surface));color:var(--radar-text,var(--text));box-shadow:0 20px 52px rgba(0,0,0,.22)}
+.rev-n-head,.rev-n-controls{display:flex;justify-content:space-between;align-items:center;gap:6px}.rev-n-head div{display:grid;gap:2px}
+.rev-n-head strong{font-size:13px}.rev-n-head small{font-size:10px;color:var(--radar-muted,var(--muted))}
+.rev-n-close{width:28px;height:28px;border:1px solid var(--radar-line,var(--line));border-radius:8px;background:transparent;color:inherit;font-size:20px;line-height:1}
+.rev-n-controls{justify-content:flex-start;flex-wrap:wrap;margin:12px 0}
+.rev-n-filter,.rev-n-mark{padding:6px 8px;border:1px solid var(--radar-line,var(--line));border-radius:7px;background:var(--radar-soft,var(--surface2));color:inherit;font-size:10px;font-weight:700}
+.rev-n-filter.active{background:var(--radar-blue,var(--brand));color:#fff;border-color:transparent}
+.rev-n-mark{margin-left:auto}
+.rev-n-message{font-size:10px;color:var(--radar-muted,var(--muted));margin:6px 0}
+.rev-n-list{display:grid;gap:7px;max-height:min(52vh,430px);overflow:auto;overscroll-behavior:contain}
+.rev-n-item{display:grid;gap:5px;padding:10px;border:1px solid var(--radar-line,var(--line));border-radius:9px;background:var(--radar-soft,var(--surface2))}
+.rev-n-item.unread{border-left:3px solid var(--radar-blue,var(--brand))}
+.rev-n-flag{color:var(--radar-blue,var(--brand));font-size:9px;font-weight:800}
+.rev-n-item strong{font-size:11px;line-height:1.35;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden}
+.rev-n-item small,.rev-n-line{font-size:10px;color:var(--radar-muted,var(--muted))}
+.rev-n-line{display:flex;align-items:center;justify-content:space-between;gap:8px}.rev-n-line a{color:var(--radar-blue,var(--brand));font-weight:750}
+.rev-recommendations{display:grid;gap:9px;border-top:1px solid var(--radar-line,var(--line));padding-top:11px}
+.rev-recs-head{display:flex;gap:6px 12px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.rev-recs-head strong{font-size:12px}.rev-recs-head small,.rev-recs-empty{font-size:10px;color:var(--radar-muted,var(--muted))}
+.rev-recs-list{display:grid;gap:7px}.rev-rec{display:flex;justify-content:space-between;align-items:center;gap:10px;border:1px solid var(--radar-line,var(--line));border-radius:9px;padding:9px 10px;background:var(--radar-soft,var(--surface2))}
+.rev-rec-main{display:grid;gap:3px;min-width:0}.rev-rec-main strong{font-size:11px;font-weight:730;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.rev-rec-main small{font-size:9px;color:var(--radar-muted,var(--muted));overflow-wrap:anywhere}
+.rev-rec-side{display:grid;gap:1px;flex:0 0 auto;text-align:right}.rev-rec-side b{font-size:18px;color:var(--radar-blue,var(--brand))}.rev-rec-side small{font-size:9px;color:var(--radar-muted,var(--muted))}.rev-rec-side a{font-size:10px;color:var(--radar-blue,var(--brand));font-weight:750;margin-top:4px}
+@media(max-width:540px){.rev-n-wrap{margin-left:5px}.rev-n-bell{font-size:0;gap:0;padding:7px}.rev-n-count{font-size:10px}.rev-n-panel{right:-4px;max-width:calc(100vw - 25px)}.rev-recs-head{align-items:start;flex-direction:column}}
+
+
+/* Radar Evolution — Etapa 3: Minha Operação e agenda */
+.rev-operation{color:var(--radar-text,var(--text))}
+.rev-op-root{display:grid;gap:16px}
+.rev-op-head,.rev-op-section-head,.rev-op-item-top{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.rev-op-head h2{font-size:clamp(21px,2.6vw,30px);margin:6px 0 4px;letter-spacing:-.04em}
+.rev-op-head p,.rev-op-disclaimer{font-size:11px;color:var(--radar-muted,var(--muted));margin:0}
+.rev-op-layout{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(255px,.75fr);gap:14px;align-items:start}
+.rev-op-list,.rev-calendar{min-width:0;padding:15px;border:1px solid var(--radar-line,var(--line));border-radius:13px;background:var(--radar-paper,var(--surface))}
+.rev-op-section-head strong{font-size:13px}
+.rev-op-filter,.rev-op-item-controls select{max-width:100%;padding:7px 8px;border:1px solid var(--radar-line,var(--line));border-radius:8px;background:var(--radar-soft,var(--surface2));color:var(--radar-text,var(--text));font-size:11px}
+.rev-op-items{display:grid;gap:10px;margin-top:12px}
+.rev-op-item{display:grid;gap:11px;padding:12px;border:1px solid var(--radar-line,var(--line));border-radius:10px;background:var(--radar-soft,var(--surface2))}
+.rev-op-item-top{align-items:flex-start}.rev-op-item-top>div{min-width:0;display:grid;gap:5px}
+.rev-op-item-top strong{font-size:12px;line-height:1.45}.rev-op-item-top small{font-size:10px;color:var(--radar-muted,var(--muted))}
+.rev-op-deadline{color:var(--radar-blue,var(--brand))!important}.rev-op-link{flex:0 0 auto;font-size:10px;font-weight:750;color:var(--radar-blue,var(--brand))}
+.rev-op-item-controls{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
+.rev-track-button{padding:7px 10px;border:1px solid var(--radar-line,var(--line));border-radius:8px;background:var(--radar-blue,var(--brand));color:white;font-size:10px;font-weight:700;cursor:pointer}
+.rev-track-button:hover{filter:brightness(1.08)}.rev-track-button:disabled{opacity:.6;cursor:wait}
+.rev-op-item textarea{width:100%;resize:vertical;min-height:58px;border:1px solid var(--radar-line,var(--line));border-radius:8px;background:var(--radar-paper,var(--surface));color:var(--radar-text,var(--text));padding:9px;font-size:11px}
+.rev-op-loading,.rev-op-error,.rev-op-empty{font-size:12px;color:var(--radar-muted,var(--muted));line-height:1.5}
+.rev-detail-track{display:flex;padding:8px 0 4px}
+.rev-op-side{display:grid;gap:10px;position:sticky;top:12px}
+.rev-cal-arrows{display:flex;gap:5px}
+.rev-cal-arrow{width:27px;height:27px;border:1px solid var(--radar-line,var(--line));border-radius:7px;background:var(--radar-soft,var(--surface2));color:inherit}
+.rev-cal-month{font-size:12px;font-weight:720;text-transform:capitalize;margin:12px 0}
+.rev-cal-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:3px}
+.rev-cal-week{text-align:center;font-size:10px;color:var(--radar-muted,var(--muted));padding:5px 0}
+.rev-cal-day{display:grid;place-items:center;gap:3px;min-height:35px;padding:5px 0;border:1px solid transparent;background:var(--radar-soft,var(--surface2));color:inherit;border-radius:7px;font-size:11px;cursor:pointer}
+.rev-cal-day:hover,.rev-cal-day.selected{border-color:var(--radar-blue,var(--brand))}
+.rev-cal-day.has-event{font-weight:750}.rev-cal-dot{height:4px;width:4px;border-radius:50%;background:var(--radar-blue,var(--brand))}
+.rev-cal-events{display:grid;gap:8px;border-top:1px solid var(--radar-line,var(--line));margin-top:13px;padding-top:10px}.rev-cal-events>strong{font-size:11px}
+.rev-cal-event{display:grid;gap:3px;padding:7px;border-radius:7px;background:var(--radar-soft,var(--surface2))}
+.rev-cal-event b{font-size:9px;color:var(--radar-blue,var(--brand))}.rev-cal-event span{font-size:10px;line-height:1.35}.rev-cal-event small{font-size:9px;color:var(--radar-muted,var(--muted))}
+@media(max-width:900px){.rev-op-layout{grid-template-columns:1fr}.rev-op-side{position:static}}
+@media(max-width:480px){.rev-op-head{align-items:flex-start;flex-direction:column}.rev-op-item-top{flex-direction:column}.rev-op-section-head{align-items:flex-start;flex-wrap:wrap}}
+
+
+/* Radar Evolution — Etapa 4: foco, leitura e diagnóstico */
+#appShell :is(.rev-action,.rev-n-bell,.rev-n-filter,.rev-n-mark,.rev-n-close,.rev-cal-day,.rev-cal-arrow,.rev-track-button,.rev-op-link,.rev-rec-side a):focus-visible{outline:2px solid var(--radar-blue,var(--brand));outline-offset:3px}
+.rev-health{display:grid;gap:11px;padding:14px 16px;margin:12px 0;border:1px solid var(--radar-line,var(--line));border-radius:13px;background:var(--radar-paper,var(--surface));color:var(--radar-text,var(--text))}
+.rev-health-head{display:flex;align-items:center;justify-content:space-between;gap:14px}.rev-health-head>div{display:grid;gap:4px}
+.rev-health-head strong{font-size:13px}.rev-health-head small{font-size:10px;color:var(--radar-muted,var(--muted))}
+.rev-health-status{font-size:11px;line-height:1.6;margin:0;color:var(--radar-muted,var(--muted))}
+.rev-health-status[data-ok="yes"]{color:var(--emerald)}.rev-health-status[data-ok="no"]{color:var(--coral)}
+@media(max-width:450px){.rev-health-head{align-items:flex-start;flex-direction:column}.rev-n-panel{max-height:75svh;overflow:auto}.rev-n-controls{gap:4px}.rev-n-mark{margin-left:0}}
+@media(prefers-reduced-motion:reduce){.rev-summary *,.rev-n-panel *,.rev-operation *{animation:none!important;transition-duration:0ms!important;scroll-behavior:auto!important}}
