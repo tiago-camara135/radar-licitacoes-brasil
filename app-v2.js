@@ -978,8 +978,11 @@ function install(){
  ui.page=el('section','view rev-operation');ui.page.id='view-operation';
  ui.root=el('div','rev-op-root');ui.root.append(el('p','rev-op-loading','Carregando licitações acompanhadas…'));ui.page.append(ui.root);
  main.insertBefore(ui.page,$('#view-saved')||null);
- b.addEventListener('click',()=>{if($('#pageTitle'))$('#pageTitle').textContent='Minha Operação';if($('#pageSubtitle'))$('#pageSubtitle').textContent='Acompanhamento e calendário';if(logged())load(false)});
+ b.addEventListener('click',()=>{ui.page.classList.remove('calendar-focused');if($('#pageTitle'))$('#pageTitle').textContent='Minha Operação';if($('#pageSubtitle'))$('#pageSubtitle').textContent='Acompanhamento e calendário';if(logged())load(false)});
  document.addEventListener('radar:overview',e=>{if(!logged())return;overview=e.detail;installTrackActions();if(ui.page.classList.contains('active')&&!ui.root.querySelector('textarea:focus'))render()});
+ document.addEventListener('radar:operation-focus',event=>{
+   ui.page.classList.toggle('calendar-focused',event.detail?.focus==='calendar');
+ });
  document.addEventListener('radar:operation-filter',event=>{
    const requested=event.detail?.status;
    if(!['all','analisar','preparing','participating','closed'].includes(requested))return;
