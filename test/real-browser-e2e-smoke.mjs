@@ -171,17 +171,16 @@ try{
  assert.equal(await page.locator('#revNotifPanel').getAttribute('hidden'),'','Escape closes notification panel');
  note('Mobile 390px responsiveness, notifications and keyboard Escape OK');
 
- // Administrative UI is tested with its own isolated account and role.
- const c2=await browser.newContext({viewport:{width:1366,height:850},locale:'pt-BR'});
- const admin=await c2.newPage();admin.on('pageerror',e=>problems.push('admin: '+e.message));
- adminId=await register(admin,adminEmail);
- await pool.query("UPDATE users SET role='admin' WHERE id=$1",[adminId]);
- await admin.reload({waitUntil:'domcontentloaded'});
- await admin.locator('#appShell:not(.hidden)').waitFor({state:'visible',timeout});
- await admin.locator('#adminNav').waitFor({state:'visible',timeout});
- await gotoSection(admin,'admin');
- await admin.locator('#revHealth .rev-action').click();
- await until(admin,()=>document.querySelector('#revHealthStatus')?.textContent?.includes('Serviço operacional'),timeout);
+ // Escala apenas o usuário efêmero do banco CI para validar papéis e admin.
+ // Evita nova inscrição após muitos testes HTTP sob o mesmo IP de runner.
+ await pool.query("UPDATE users SET role='admin' WHERE id=$1",[userId]);
+ await page.setViewportSize({width:1366,height:850});
+ await page.reload({waitUntil:'domcontentloaded'});
+ await page.locator('#appShell:not(.hidden)').waitFor({state:'visible',timeout});
+ await page.locator('#adminNav').waitFor({state:'visible',timeout});
+ await gotoSection(page,'admin');
+ await page.locator('#revHealth .rev-action').click();
+ await until(page,()=>document.querySelector('#revHealthStatus')?.textContent?.includes('Serviço operacional'),timeout);
  note('Admin-only navigation and live health diagnostic OK');
 
  const fatal=problems.filter(x=>!(/ERR_CONNECTION|Failed to fetch|network error/i.test(x)));
