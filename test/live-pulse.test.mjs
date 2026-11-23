@@ -19,3 +19,18 @@ test('etapa 1: identidade visual premium adicionada sem remover home e busca',()
  assert.match(css,/@media\(max-width:460px\)/);
  assert.match(css,/@media\(prefers-reduced-motion:reduce\)/);
 });
+
+
+test('etapa 2: polling real do dashboard a cada cinco minutos, sem inventar licitações',()=>{
+ assert.match(js,/const DASHBOARD_REFRESH_MS=5\*60\*1000/);
+ assert.match(js,/setInterval\(syncDashboardRefreshClock,1000\)/);
+ assert.match(js,/if\(!logged\(\)\|\|document\.hidden\)return/);
+ assert.match(js,/nextDashboardRefresh=lastDashboardRefreshAttempt\+DASHBOARD_REFRESH_MS/);
+ assert.match(js,/radar:overview-refresh-request/);
+ assert.match(js,/radar:live-refresh-request/);
+ assert.match(js,/refreshLive\(\); \/\/ Consulta dados monitorados/);
+ assert.match(js,/credentials:'same-origin',cache:'no-store'/);
+ assert.match(html,/id="rlbHomeLastUpdate"/);
+ assert.match(html,/id="rlbHomeNextUpdate"/);
+ assert.match(js,/setAttribute\('aria-busy','true'\)/);
+});
