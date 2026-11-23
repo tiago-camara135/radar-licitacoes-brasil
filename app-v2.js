@@ -811,7 +811,9 @@ const logged=()=>!!$('#appShell')&&!$('#appShell').classList.contains('hidden');
 const safeUrl=raw=>{try{const u=new URL(raw);return ['http:','https:'].includes(u.protocol)&&!u.username&&!u.password?u.href:''}catch{return''}};
 const formatted=x=>{const d=new Date(x);return Number.isNaN(d.getTime())?'Data não informada':d.toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'})};
 let rows=[],filter='all',open=false,loading=false,lastProfile=0,epoch=0;
-let recFilter='all',recCache=[];
+let recFilter='all',recCache=[],recInitialized=false,renderedRecSignature='',recPulse=new Map();
+const recKey=x=>[x?.org_cnpj,x?.year,x?.sequence].map(String).join('-');
+const recVersion=x=>JSON.stringify([x?.object_text,x?.closes_at,Number(x?.fit?.score),x?.modality_name]);
 const ui={};
 function install(){
   const bar=$('#appShell .topbar');if(!bar)return;
@@ -845,7 +847,7 @@ function install(){
   });
   document.addEventListener('radar:home-rec-filter',event=>setRecommendationFilter(event.detail?.filter));
   const shell=$('#appShell');
-  new MutationObserver(()=>{if(!logged()){epoch++;setOpen(false);rows=[];lastProfile=0;recCache=[];recFilter='all';ui.count.textContent='—';$('#revRecommendations')?.remove()}else profile()}).observe(shell,{attributes:true,attributeFilter:['class']});
+  new MutationObserver(()=>{if(!logged()){epoch++;setOpen(false);rows=[];lastProfile=0;recCache=[];recFilter='all';recInitialized=false;renderedRecSignature='';recPulse.clear();ui.count.textContent='—';$('#revRecommendations')?.remove()}else profile()}).observe(shell,{attributes:true,attributeFilter:['class']});
   document.addEventListener('visibilitychange',()=>{if(!document.hidden&&logged()&&Date.now()-lastProfile>90000)profile()});
   if(logged())profile();
 }
@@ -902,7 +904,22 @@ function setRecommendationFilter(value){
   renderRecommendationItems();
 }
 function recommendations(d){
-  recCache=Array.isArray(d?.recommendations)?d.recommendations:[];
+  const incoming=Array.isArray(d?.recommendations)?d.recommendations:[];
+  const before=new Map(recCache.map(x=>[recKey(x),recVersion(x)]));
+  let added=0,changed=0;
+  recPulse.clear();
+  if(recInitialized){
+    for(const item of incoming){
+      const key=recKey(item),version=recVersion(item);
+      if(!before.has(key)){recPulse.set(key,'new');added++}
+      else if(before.get(key)!==version){recPulse.set(key,'changed');changed++}
+    }
+  }
+  recInitialized=true;
+  recCache=incoming;
+  if(added||changed)document.dispatchEvent(new CustomEvent('radar:pulse-updates',{
+    detail:{source:'recommendations',added,changed}
+  }));
   renderRecommendationItems();
 }
 function renderRecommendationItems(){
@@ -933,6 +950,9 @@ function renderRecommendationItems(){
       button.setAttribute('aria-pressed',String(selected));
     });
   }
+  const signature=JSON.stringify([recFilter,recs.map(x=>[recKey(x),recVersion(x)])]);
+  if(renderedRecSignature===signature&&target.querySelector('.rev-recs-list'))return;
+  renderedRecSignature=signature;
   target.replaceChildren();
   const head=el('div','rev-recs-head'),title=el('strong','','Recomendadas para seus alertas'),note=el('small','','Aderência estimada aos critérios; não representa chance de vencer.');
   head.append(title,note);target.append(head);
@@ -948,7 +968,17 @@ function renderRecommendationItems(){
     card.dataset.cnpj=String(x.org_cnpj||'');
     card.dataset.year=String(x.year||'');
     card.dataset.seq=String(x.sequence||'');
+    const pulse=recPulse.get(recKey(x));
+    if(pulse){
+      card.classList.add('rlb-pulse-item');
+      card.dataset.pulseState=pulse;
+    }
     info.append(el('strong','',x.object_text||'Oportunidade sem descrição'),el('small','',[x.modality_name,x.municipality,x.uf].filter(Boolean).join(' • ')));
+    if(pulse){
+      const badge=el('span','rlb-pulse-chip',pulse==='new'?'Nova oportunidade':'Atualizada');
+      info.append(badge);
+      setTimeout(()=>{card.classList.remove('rlb-pulse-item');card.removeAttribute('data-pulse-state');badge.remove()},10000);
+    }
     const why=Array.isArray(x.fit?.reasons)?x.fit.reasons.slice(0,2):[];
     if(why.length)info.append(el('small','rev-rec-why',why.join(' · ')));
     const side=el('div','rev-rec-side');
