@@ -1880,3 +1880,130 @@ html[data-theme="dark"] .radar-file-download { color: #9fc3ff; }
 @media (max-width: 760px) {
   .radar-detail-actions :is(.radar-official,[data-radar-save]) { flex-basis: 105px; }
 }
+
+/* Tipografia e organização dos módulos */
+html.rlb-corporate-v3 body :is(button,input,select,textarea) { font-family: inherit !important; }
+#appShell .main :is(.section-intro,.hab-intro) { margin: 0 0 18px; padding: 0; }
+#appShell .main :is(.section-intro,.hab-intro) h1 {
+  color: var(--radar-text) !important;
+  font-size: clamp(22px, 2.1vw, 30px) !important;
+  font-weight: 760 !important;
+  letter-spacing: -.035em !important;
+  margin: 4px 0 7px;
+}
+#appShell .main :is(.section-intro,.hab-intro) p {
+  color: var(--radar-muted) !important;
+  font-size: 14px !important;
+  line-height: 1.55 !important;
+}
+#appShell :is(#view-alerts,#view-habilitation,#view-documents,#view-admin) .panel.glass-panel {
+  min-width: 0;
+  background: var(--radar-paper) !important;
+  border: 1px solid var(--radar-line) !important;
+  border-radius: 12px !important;
+  box-shadow: none !important;
+  padding: clamp(13px, 1.7vw, 19px) !important;
+}
+#appShell :is(#view-alerts,#view-habilitation,#view-documents,#view-admin) :is(.panel-head h2,.hab-grid h2) {
+  color: var(--radar-text) !important;
+  font-size: 17px !important;
+  font-weight: 740 !important;
+  letter-spacing: -.025em !important;
+}
+#appShell :is(#view-alerts,#view-habilitation,#view-documents,#view-admin) :is(.field > span,.panel-head p,.stack-copy span) {
+  color: var(--radar-muted) !important;
+  font-size: 12px !important;
+  text-transform: none !important;
+  letter-spacing: 0 !important;
+}
+#appShell :is(#view-alerts,#view-habilitation,#view-documents,#view-admin) :is(.field input,.field select,.field textarea) {
+  color: var(--radar-text) !important;
+  background: var(--radar-paper) !important;
+  border: 1px solid var(--radar-line) !important;
+  border-radius: 8px !important;
+}
+#appShell :is(#view-alerts,#view-habilitation,#view-documents,#view-admin) :is(.field input,.field select) { min-height: 42px; }
+#appShell :is(#view-alerts,#view-habilitation,#view-documents,#view-admin) .btn.primary {
+  background: var(--radar-blue) !important;
+  color: #fff !important;
+  border-color: var(--radar-blue) !important;
+  border-radius: 8px !important;
+  box-shadow: none !important;
+}
+#appShell #createAlertBtn { margin-top: 12px; }
+#appShell #view-habilitation :is(.hab-health,.hab-kpis article) {
+  background: var(--radar-paper);
+  border: 1px solid var(--radar-line);
+  border-radius: 12px;
+  box-shadow: none;
+}
+.radar-analysis-actions:empty { display: none; }
+.radar-analysis-actions {
+  display: grid;
+  grid-template-columns: repeat(2,minmax(0,1fr));
+  gap: 7px;
+}
+#appShell .radar-detail-card .radar-analysis-actions > button {
+  margin: 0 !important;
+  padding: 7px 8px !important;
+  width: 100% !important;
+  min-height: 42px !important;
+  color: var(--radar-text) !important;
+  background: var(--radar-paper) !important;
+  border: 1px solid var(--radar-line) !important;
+  border-radius: 8px !important;
+  font-size: 12px !important;
+  font-weight: 650 !important;
+  line-height: 1.25 !important;
+  box-shadow: none !important;
+}
+#appShell .radar-detail-card .radar-analysis-actions > button:hover { background: var(--radar-soft) !important; }
+#appShell .radar-detail-card > .tr-quick-badge {
+  --radar-score-ink: #365175;
+  --radar-score-track: #dbe5f0;
+  --radar-score-bg: #edf3fa;
+  display: grid !important;
+  grid-template-columns: minmax(0,1fr) auto;
+  align-items: center;
+  gap: 6px 11px;
+  width: 100% !important;
+  margin: 0 !important;
+  padding: 11px 12px !important;
+  color: var(--radar-score-ink) !important;
+  background: var(--radar-score-bg) !important;
+  border: 1px solid color-mix(in srgb,var(--radar-score-ink) 18%,transparent) !important;
+  border-radius: 10px !important;
+  box-shadow: none !important;
+  text-align: left;
+}
+#appShell .radar-detail-card > .tr-quick-badge.high { --radar-score-ink: #087746; --radar-score-bg: #e5f7ee; }
+#appShell .radar-detail-card > .tr-quick-badge.attention { --radar-score-ink: #80530d; --radar-score-bg: #fff4db; }
+#appShell .radar-detail-card > .tr-quick-badge.low { --radar-score-ink: #a02b40; --radar-score-bg: #fceef0; }
+#appShell .radar-detail-card > .tr-quick-badge .trq-status-dot { display: none; }
+#appShell .radar-detail-card > .tr-quick-badge .trq-title { color: inherit; font-size: 14px; font-weight: 750; }
+#appShell .radar-detail-card > .tr-quick-badge .trq-detail { color: inherit; font-size: 11px; white-space: normal; }
+#appShell .radar-detail-card > .tr-quick-badge .trq-score {
+  color: inherit;
+  font-size: 22px;
+  font-weight: 780;
+  background: none;
+  border: 0;
+  padding: 0;
+}
+.trq-meter { grid-column: 1/-1; display: block; appearance: none; width: 100%; height: 9px; }
+.trq-meter::-webkit-meter-bar { height: 9px; background: var(--radar-score-track); border: 0; border-radius: 99px; }
+.trq-meter::-webkit-meter-optimum-value { background: var(--radar-score-ink); border-radius: 99px; }
+.trq-meter::-moz-meter-bar { background: var(--radar-score-ink); border-radius: 99px; }
+html[data-theme="dark"] #appShell .radar-detail-card > .tr-quick-badge { --radar-score-ink: #bfd4f1; --radar-score-bg: #1b2f4b; --radar-score-track: #36465f; }
+html[data-theme="dark"] #appShell .radar-detail-card > .tr-quick-badge.high { --radar-score-ink: #76e5ab; --radar-score-bg: #16372c; }
+html[data-theme="dark"] #appShell .radar-detail-card > .tr-quick-badge.attention { --radar-score-ink: #ffd792; --radar-score-bg: #3e321f; }
+html[data-theme="dark"] #appShell .radar-detail-card > .tr-quick-badge.low { --radar-score-ink: #ffb2bf; --radar-score-bg: #452934; }
+@media (max-width: 380px) { .radar-analysis-actions { grid-template-columns: minmax(0,1fr); } }
+html.rlb-corporate-v3 body :is(.tr-dialog,.tai-dialog) {
+  font-family: inherit;
+  border-radius: 14px;
+}
+html.rlb-corporate-v3 body :is(.tr-head h2,.tai-head h2) {
+  font-weight: 760;
+  letter-spacing: -.035em;
+}

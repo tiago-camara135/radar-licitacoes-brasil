@@ -65,7 +65,7 @@ test('source transparency distinguishes PNCP from external platform links',()=>{
   const server=read('production-v17.mjs');
   assert.match(html,/source-transparency-v1\.css\?v=2114/);
   assert.match(html,/source-transparency-v1\.js\?v=2115/);
-  assert.match(html,/app-v2\.js\?v=20261122-radar-document-fidelity-4/);
+  assert.match(html,/app-v2\.js\?v=20261122-radar-visual-consistency-5/);
   assert.match(source,/Fonte oficial: PNCP/);
   assert.match(source,/Ir para plataforma ↗/);
   assert.match(source,/Ver no PNCP ↗/);
@@ -101,7 +101,7 @@ test('readiness controls self-heal after other card modules mutate the DOM',()=>
   const quick=read('tender-readiness-quick-v1.js');
   assert.match(full,/const existing=card\.querySelector\('\.tender-ready-trigger'\)/);
   assert.match(full,/delete card\.dataset\.readinessEnhanced/);
-  assert.match(full,/card\.appendChild\(trigger\)/);
+  assert.match(full,/card\.querySelector\('\.radar-analysis-actions'\)\|\|card\)\.appendChild\(trigger\)/);
   assert.match(quick,/const current=\[\.\.\.card\.querySelectorAll\('\.tr-quick-badge'\)\]/);
   assert.match(quick,/delete card\.dataset\.quickReadinessEnhanced/);
   assert.match(quick,/cache\.has\(key\.key\).*renderBadge/);
