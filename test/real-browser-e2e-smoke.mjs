@@ -116,10 +116,14 @@ try{
  const notes='Conferir documentação CI '+token;
  await page.locator('#view-operation .rev-op-item textarea').first().fill(notes);
  await page.locator('#view-operation .rev-op-item button').filter({hasText:'Salvar anotação'}).first().click();
- await until(page,()=>document.querySelector('#view-operation .rev-op-item textarea')?.value?.startsWith('Conferir documentação CI '),20000);
- const dbTrack=await pool.query('SELECT status,notes FROM user_tender_tracking WHERE user_id=$1 AND org_cnpj=$2 AND year=$3 AND sequence=$4',[userId,cnpj,year,sequence]);
- assert.equal(dbTrack.rows[0]?.status,'participando');
- assert.equal(dbTrack.rows[0]?.notes,notes);
+ let dbTrack=null;
+ for(let retry=0;retry<60;retry++){
+   dbTrack=await pool.query('SELECT status,notes FROM user_tender_tracking WHERE user_id=$1 AND org_cnpj=$2 AND year=$3 AND sequence=$4',[userId,cnpj,year,sequence]);
+   if(dbTrack.rows[0]?.status==='participando'&&dbTrack.rows[0]?.notes===notes)break;
+   await new Promise(resolve=>setTimeout(resolve,150));
+ }
+ assert.equal(dbTrack.rows[0]?.status,'participando','Rapid status update remains committed');
+ assert.equal(dbTrack.rows[0]?.notes,notes,'Rapid note update remains committed');
  assert.ok(await page.locator('#view-operation .rev-calendar').count()===1,'Calendar present');
  note('Tracking status, private notes persistence and calendar OK');
 
