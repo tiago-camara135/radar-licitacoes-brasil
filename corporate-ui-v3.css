@@ -62,7 +62,7 @@ html.rlb-corporate-v3[data-theme="dark"]{
 
 html.rlb-corporate-v3 body{
   background:var(--bg)!important;
-  font-family:Inter,"Segoe UI",Roboto,Arial,sans-serif!important;
+  font-family:"Radar Inter",Inter,"Segoe UI",Roboto,Arial,sans-serif!important;
   font-size:14px;
   color:var(--text);
   letter-spacing:0;

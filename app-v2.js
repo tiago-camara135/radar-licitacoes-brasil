@@ -341,6 +341,7 @@ function renderRadarDetail(panel, item, index = -1) {
       ${item.origin !== item.official ? externalRadarLink(item.origin, 'Portal de origem') : ''}
     </div>
     <dl>${rows.filter(([, value])=>value).map(([label,value])=>`<div><dt>${label}</dt><dd>${esc(value)}</dd></div>`).join('')}</dl>
+    <div class="radar-analysis-actions"></div>
     <h3>${opportunityIcon} Documentos</h3><div class="radar-documents" aria-live="polite"></div>
     ${index >= 0 ? `<nav class="radar-detail-navigation" aria-label="Navegação entre oportunidades">
       <button type="button" class="radar-button" data-radar-step="-1" ${index === 0 ? 'disabled' : ''}>‹ Oportunidade anterior</button>
