@@ -121,6 +121,14 @@
 
       
 
+      <nav id="rlbPageNavBar" class="rlb-page-nav" aria-label="Localização e retorno" hidden>
+        <div class="rlb-page-trail">
+          <button type="button" data-view="home" class="rlb-page-crumb-home">Visão Geral</button>
+          <span class="rlb-page-divider" aria-hidden="true">/</span>
+          <span id="rlbPageNavCurrent" aria-current="page">Buscar Licitações</span>
+        </div>
+        <button type="button" class="rlb-page-back" data-view="home"><span aria-hidden="true">←</span> Voltar à Visão Geral</button>
+      </nav>
       <section id="view-home" class="view active rlb-executive-home" aria-labelledby="rlbHomeTitle">
         <header class="rlb-home-welcome">
           <div>
@@ -156,12 +164,21 @@
             <div class="rlb-home-card-head"><div><span class="rlb-home-card-kicker">SELEÇÃO PERSONALIZADA</span><h2 id="rlbHomeRecsTitle">Recomendações para você</h2><p>Oportunidades relacionadas aos critérios dos seus alertas.</p></div>
               <button type="button" class="rlb-home-link" data-home-action="radar">Explorar licitações <span aria-hidden="true">↗</span></button>
             </div>
+            <div id="rlbHomeRecommendationFilters" class="rlb-home-filter-group" role="group" aria-label="Filtrar recomendações">
+              <button type="button" data-home-rec-filter="all" aria-pressed="true" class="active">Todas</button>
+              <button type="button" data-home-rec-filter="high" aria-pressed="false">Alta aderência</button>
+              <button type="button" data-home-rec-filter="soon" aria-pressed="false">Prazo até 7 dias</button>
+            </div>
             <div id="rlbHomeRecommendations" class="rlb-home-recs-slot" aria-live="polite"><p class="rlb-home-empty">Consultando recomendações da sua conta…</p></div>
             <p class="rlb-home-disclaimer">A aderência é uma estimativa baseada nos seus critérios e documentos; não representa probabilidade de vencer a licitação.</p>
           </section>
           <section class="rlb-home-card rlb-home-deadlines" aria-labelledby="rlbHomeDeadlinesTitle">
             <div class="rlb-home-card-head"><div><span class="rlb-home-card-kicker">AGENDA</span><h2 id="rlbHomeDeadlinesTitle">Próximos prazos</h2></div>
               <button type="button" class="rlb-home-link" data-home-action="calendar">Ver calendário <span aria-hidden="true">↗</span></button>
+            </div>
+            <div id="rlbHomeDeadlineControls" class="rlb-home-filter-group" role="group" aria-label="Período dos próximos prazos">
+              <button type="button" data-home-period="7" aria-pressed="true" class="active">7 dias</button>
+              <button type="button" data-home-period="30" aria-pressed="false">30 dias</button>
             </div>
             <div id="rlbHomeDeadlines" class="rlb-home-deadline-list" role="list" aria-live="polite"><p class="rlb-home-empty">Consultando prazos cadastrados…</p></div>
           </section>
@@ -187,6 +204,13 @@
         <section class="rlb-home-card rlb-home-recent" aria-labelledby="rlbHomeRecentTitle">
           <div class="rlb-home-card-head"><div><span class="rlb-home-card-kicker">RADAR NACIONAL</span><h2 id="rlbHomeRecentTitle">Oportunidades recentes</h2><p>Registros recebidos do monitoramento nacional; confirme sempre a publicação oficial.</p></div>
             <button type="button" class="rlb-home-link" data-home-action="radar">Ver pesquisa completa <span aria-hidden="true">↗</span></button></div>
+          <div class="rlb-home-feed-tools">
+            <div id="rlbHomeRecentFilters" class="rlb-home-filter-group" role="group" aria-label="Filtrar oportunidades recentes">
+              <button type="button" data-home-feed="all" aria-pressed="true" class="active">Recentes</button>
+              <button type="button" data-home-feed="open" aria-pressed="false">Com prazo vigente</button>
+            </div>
+            <span id="rlbHomeFeedStatus" class="rlb-home-feed-status" role="status">Sincronizando monitoramento…</span>
+          </div>
           <div id="rlbHomeRecent" class="rlb-home-recent-list" aria-live="polite"><p class="rlb-home-empty">Sincronizando oportunidades recentes…</p></div>
         </section>
       </section>
