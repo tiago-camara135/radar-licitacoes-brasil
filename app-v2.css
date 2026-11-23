@@ -2601,3 +2601,26 @@ html[data-theme="dark"] .toast:not(.error) {
 @media(prefers-reduced-motion:reduce){
   #appShell #ai-assistant.ai-widget-open .ai-window{transition:none!important}
 }
+
+
+/* QA hotfix: o cabeçalho do Radar é ocultado em mobile; preserve o sino. */
+.rev-n-bell::before{content:"🔔";font-size:15px;line-height:1}
+@media(max-width:760px){
+  #appShell.radar-layout .main:has(#view-radar.active) .topbar{
+    display:flex!important;
+    align-items:center!important;
+    justify-content:flex-end!important;
+    min-height:39px!important;
+    padding:1px 0 5px!important;
+    margin:0 0 5px!important;
+    border:0!important;
+    background:transparent!important;
+  }
+  #appShell.radar-layout .main:has(#view-radar.active) .topbar > div:first-child:not(.rev-n-wrap){
+    display:none!important;
+  }
+  #appShell.radar-layout .main:has(#view-radar.active) .topbar .rev-n-wrap{
+    display:block!important;
+    margin-left:auto!important;
+  }
+}
