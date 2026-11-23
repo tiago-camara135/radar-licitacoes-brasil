@@ -403,3 +403,30 @@ button{color:inherit}
  .calendar-event-row.reminder-event .reminder-pay{grid-column:3;grid-row:2}
  .calendar-event-row.reminder-event .reminder-delete{grid-column:4;grid-row:2}
 }
+
+/* Navegação e botões principais — acabamento TVC Control */
+.nav-link{display:flex;align-items:center;gap:11px;min-height:43px;padding:10px 12px;border:1px solid transparent;border-radius:12px;color:#455671;font-size:11px;font-weight:650;transition:background .18s,border-color .18s,color .18s,transform .18s,box-shadow .18s}
+.nav-link .nav-svg{width:17px;height:17px;flex:0 0 17px;stroke:currentColor;stroke-width:1.7;fill:none;stroke-linecap:round;stroke-linejoin:round;opacity:.88}
+.nav-link:hover{background:#f3f7ff;border-color:#e7effb;color:#1769ed;transform:translateX(2px)}
+.nav-link.active{background:linear-gradient(110deg,#eaf2ff,#f4f8ff);border-color:#dce9fc;color:#145bd7;box-shadow:0 3px 10px rgba(23,105,237,.06)}
+.nav-link.active .nav-svg{opacity:1}
+.side-nav{gap:6px}
+.btn,.icon-button,.table-action,.mobile-link{transition:background .18s,border-color .18s,color .18s,box-shadow .18s,transform .18s}
+.btn{font-weight:750;letter-spacing:.05px;border-radius:11px}
+.btn-primary{box-shadow:0 5px 14px rgba(23,105,237,.18)}
+.btn-primary:hover{transform:translateY(-1px);box-shadow:0 8px 18px rgba(23,105,237,.23)}
+.btn-secondary{border:1px solid #e0e8f3;background:#fff;color:#53647e}
+.btn-secondary:hover,.icon-button:hover{border-color:#c9dcf8;background:#f2f7ff;color:#1769ed}
+.calendar-add-payment{display:inline-flex;align-items:center;gap:7px}
+.calendar-add-payment span{font-size:16px;line-height:1}
+.mobile-nav{box-shadow:0 -7px 24px rgba(28,57,100,.075);backdrop-filter:blur(16px)}
+.mobile-link{border-radius:11px;margin:0 2px;padding:6px 2px;color:#8290a5}
+.mobile-link:hover{background:#f4f7fd;color:#1769ed}
+.mobile-link.active{background:#edf4ff;color:#1769ed}
+.mobile-icon{display:grid;place-items:center;width:29px;height:26px;border-radius:9px}
+.mobile-link.active .mobile-icon{background:#dfeaff}
+.mobile-link .nav-svg{width:17px;height:17px;stroke:currentColor;stroke-width:1.7;fill:none;stroke-linecap:round;stroke-linejoin:round}
+.mobile-label{font-weight:700;letter-spacing:.05px}
+.calendar-event-row .reminder-pay{color:#13834f}
+.calendar-event-row .reminder-delete{color:#d94b52}
+@media(max-width:680px){.mobile-link{min-width:0}.mobile-icon{width:26px;height:25px}.mobile-label{font-size:7px}.calendar-add-payment{padding:9px 10px;font-size:9px}}
