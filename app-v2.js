@@ -264,7 +264,7 @@ function dashboardRows(items, selected) {
 }
 
 const radarCompact = matchMedia('(max-width: 760px)');
-const opportunityIcon = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h8l4 4v14H6zM14 3v5h4M9 12h6M9 16h6"/></svg>';
+const opportunityIcon = '<svg data-rp-icon="document" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h8l4 4v14H6zM14 3v5h4M9 12h6M9 16h6"/></svg>';
 
 function resultRows() {
   const total = dashboard.items.length;
@@ -369,9 +369,9 @@ function externalRadarLink(url, label, className = 'radar-button') {
   return href ? `<a class="${className}" href="${esc(href)}" target="_blank" rel="noopener noreferrer">${esc(label)} <span aria-hidden="true">↗</span></a>` : '';
 }
 
-const radarDownloadIcon = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-4-4 4 4 4-4M5 15v5h14v-5"/></svg>';
-const radarOpenIcon = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 4h7v7m0-7-9 9m7-1v8H4V6h8"/></svg>';
-const radarBookmarkIcon = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4h12v16l-6-4-6 4z"/></svg>';
+const radarDownloadIcon = '<svg data-rp-icon="download" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-4-4 4 4 4-4M5 15v5h14v-5"/></svg>';
+const radarOpenIcon = '<svg data-rp-icon="external" viewBox="0 0 24 24" aria-hidden="true"><path d="M13 4h7v7m0-7-9 9m7-1v8H4V6h8"/></svg>';
+const radarBookmarkIcon = '<svg data-rp-icon="star" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4h12v16l-6-4-6 4z"/></svg>';
 
 function radarSaveLabel(saved) {
   return radarBookmarkIcon + (saved ? 'Remover dos salvos' : 'Salvar');
