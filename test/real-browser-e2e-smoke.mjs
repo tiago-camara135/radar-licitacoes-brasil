@@ -63,6 +63,12 @@ try{
  userId=await register(page,email);
  await until(page,()=>!!document.querySelector('#revSummary .rev-value') && Array.from(document.querySelectorAll('#revSummary .rev-value')).every(e=>e.textContent.trim()!=='—'));
  assert.equal(await page.locator('#revSummary .rev-value').count(),4);
+ await page.locator('#view-home.active').waitFor({state:'visible',timeout});
+ assert.ok(await page.locator('#rlbHomeTitle').isVisible(),'Executive home opens after login');
+ assert.equal(await page.locator('#rlbHomeKpis .rev-stat').count(),4);
+ assert.ok(await page.locator('#rlbHomeSearchForm').isVisible());
+ assert.ok(await page.locator('#rlbHomeRecent').count()===1);
+ note('Executive home layout and real KPI cards OK');
  assert.equal(await page.locator('#adminNav').isVisible(),false,'Non-admin cannot see admin navigation');
  const inTheme=await page.locator('html').getAttribute('data-theme');
  await page.locator('#radarTheme').click();
@@ -108,7 +114,7 @@ try{
  const notificationPayload={object,org:'Prefeitura QA',municipality:'Natal',uf:'RN',pncp_url:'https://pncp.gov.br/app/editais/'+cnpj+'/'+year+'/'+sequence};
  await pool.query("INSERT INTO notification_deliveries(user_id,alert_id,pncp_id,channel,status,payload,created_at,sent_at) VALUES($1,$2,$3,'onsite','sent',$4::jsonb,NOW(),NOW())",[userId,alertId,pncpId,JSON.stringify(notificationPayload)]);
 
- await gotoSection(page,'radar');
+ await gotoSection(page,'home');
  await page.locator('#revSummary .rev-action').first().click();
  await until(page,()=>document.querySelector('#revRecommendations')?.textContent?.includes('Aquisição de combustível para a frota CI'),25000).catch(()=>{throw Error('Recommendations did not render the seeded matching tender')});
  await page.locator('#revRecommendations .rev-rec').first().waitFor({timeout});
@@ -148,8 +154,25 @@ try{
  assert.ok(await page.locator('#view-operation .rev-calendar').count()===1,'Calendar present');
  note('Tracking status, private notes persistence and calendar OK');
 
- await gotoSection(page,'radar');
- await page.locator('#searchKeyword').fill('combustível');
+ await gotoSection(page,'home');
+ await page.locator('#revSummary .rev-action').first().click();
+ await until(page,()=>document.querySelector('#rlbHomePanorama .rlb-home-ring-center strong')?.textContent?.trim()==='1',18000);
+ assert.ok(await page.locator('#rlbHomeDeadlines .rlb-home-deadline').count()>0,'Real deadline agenda present');
+ assert.ok(await page.locator('#rlbHomePanorama .rlb-home-ring').count()===1,'Real tracking chart present');
+ note('Executive home agenda and operation donut chart use persisted account data OK');
+
+ await page.locator('#rlbHomeKeyword').fill('combustível');
+ await page.locator('#rlbHomeUf').selectOption('RN');
+ await page.locator('#rlbHomeModality').selectOption('6');
+ await page.locator('#rlbHomeClosingDays').selectOption('7');
+ await page.locator('#rlbHomeSearchForm [type="submit"]').click();
+ await page.locator('#view-radar.active').waitFor({timeout});
+ assert.equal(await page.locator('#searchKeyword').inputValue(),'combustível');
+ assert.equal(await page.locator('#searchModality').inputValue(),'6');
+ assert.equal(await page.locator('#radarClosingDays').inputValue(),'7');
+ assert.equal(await page.locator('#radarStates input[value="RN"]').isChecked(),true);
+ note('Executive search transfers keyword, UF, modality and deadline filters to full Radar OK');
+
  await page.locator('#radarSaveSearch').click();
  await page.locator('#radarSaveDialog').waitFor({state:'visible'});
  await page.locator('#radarSearchName').fill('Busca QA '+token);
@@ -179,12 +202,14 @@ try{
  note('AI-RLB launcher, composer and close button OK (no paid API request)');
 
  await page.setViewportSize({width:390,height:844});
- await gotoSection(page,'radar');
+ await gotoSection(page,'home');
  const widths=await page.evaluate(()=>{
   const get=(selector)=>{const e=document.querySelector(selector);if(!e)return null;const r=e.getBoundingClientRect();return{x:r.x,right:r.right,width:r.width}};
-  return {screen:innerWidth,summary:get('#revSummary'),notification:get('.rev-n-bell')};
+  return {screen:innerWidth,summary:get('#revSummary'),search:get('#rlbHomeSearchForm'),content:get('#view-home'),notification:get('.rev-n-bell')};
  });
  assert.ok(widths.summary&&widths.summary.x>=-4&&widths.summary.right<=widths.screen+5,'Mobile summary should not overflow viewport: '+JSON.stringify(widths));
+ assert.ok(widths.search&&widths.search.x>=-4&&widths.search.right<=widths.screen+5,'Mobile search fits viewport: '+JSON.stringify(widths));
+ assert.ok(widths.content&&widths.content.right<=widths.screen+5,'Mobile executive home fits viewport: '+JSON.stringify(widths));
  await page.locator('.rev-n-bell').click();
  const box=await page.locator('.rev-n-panel').boundingBox();
  assert.ok(box&&box.x>=-3&&box.x+box.width<=390+5,'Mobile notification panel fits screen');
