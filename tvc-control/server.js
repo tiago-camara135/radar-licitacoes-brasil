@@ -5,7 +5,7 @@ const cookieParser = require("cookie-parser");
 const rateLimit = require("express-rate-limit");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
-const { Pool } = require("pg");
+const { Pool, types } = require("pg");
 const crypto = require("crypto");
 
 for (const key of ["DATABASE_URL","JWT_SECRET"]) {
@@ -15,7 +15,16 @@ const app = express();
 const PORT = Number(process.env.PORT || 3000);
 const COOKIE = "tvc_session";
 const SESSION_SECONDS = 60 * 60 * 24 * 7;
-const pool = new Pool({connectionString:process.env.DATABASE_URL,ssl:{rejectUnauthorized:false},max:8,idleTimeoutMillis:30000,connectionTimeoutMillis:12000});
+// PostgreSQL DATE is a calendar day. Keep it as YYYY-MM-DD without timezone conversion.
+const dateOnlyType = types.builtins.DATE;
+const queryTypes = {
+  getTypeParser(oid, format) {
+    return oid === dateOnlyType && (!format || format === "text")
+      ? value => value
+      : types.getTypeParser(oid, format);
+  }
+};
+const pool = new Pool({types:queryTypes,connectionString:process.env.DATABASE_URL,ssl:{rejectUnauthorized:false},max:8,idleTimeoutMillis:30000,connectionTimeoutMillis:12000});
 pool.on("error",err=>console.error("PostgreSQL pool error",err));
 app.disable("x-powered-by");
 app.set("trust proxy",1);
