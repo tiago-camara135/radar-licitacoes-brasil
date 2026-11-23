@@ -7,7 +7,7 @@
 <meta name="description" content="TVC Control — controle financeiro pessoal com clareza e inteligência.">
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="icon" href="/icon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/styles.css?v=16">
+<link rel="stylesheet" href="/styles.css?v=17">
 <title>TVC Control | Gestão financeira</title>
 </head>
 <body>
@@ -91,6 +91,23 @@
         <article class="stat-card"><div class="stat-top"><span>Despesas do mês</span><span class="stat-icon red">↗</span></div><div class="stat-value negative" id="stat-expense">R$ 0,00</div><div class="stat-foot" id="stat-expense-trend">Pagas, pendentes e lembretes do mês</div></article>
         <article class="stat-card stat-projected"><div class="stat-top"><span>Saldo projetado</span><span class="stat-icon amber">◎</span></div><div class="stat-value" id="stat-pending">R$ 0,00</div><div class="stat-foot" id="stat-pending-note">Após compromissos e despesas previstas</div></article>
       </div>
+
+      <article class="panel forecast-panel" aria-labelledby="forecast-title">
+        <div class="panel-heading forecast-head"><div><h3 id="forecast-title">Previsão financeira inteligente</h3><p>Acompanhe como seu saldo pode evoluir com pagamentos e receitas agendados.</p></div><span class="panel-tag">PROJEÇÃO BASEADA NOS SEUS DADOS</span></div>
+        <div class="forecast-layout">
+          <div class="forecast-chart-zone">
+            <div class="forecast-periods" role="group" aria-label="Período da previsão"><button class="forecast-period" data-forecast-horizon="30" type="button" aria-pressed="false">30 dias</button><button class="forecast-period" data-forecast-horizon="60" type="button" aria-pressed="false">60 dias</button><button class="forecast-period active" data-forecast-horizon="90" type="button" aria-pressed="true">90 dias</button></div>
+            <div class="forecast-chart" id="forecast-chart"><div class="empty-state">Carregando projeção financeira...</div></div>
+            <div class="forecast-milestones"><div><span>Em 30 dias</span><strong id="forecast-30">—</strong></div><div><span>Em 60 dias</span><strong id="forecast-60">—</strong></div><div><span>Em 90 dias</span><strong id="forecast-90">—</strong></div></div>
+          </div>
+          <div class="forecast-advisor">
+            <div class="financial-health"><div><span>ÍNDICE DE SAÚDE FINANCEIRA</span><b id="forecast-health">—</b><small id="forecast-health-label">Baseado em regras transparentes</small></div><span class="financial-health-icon">◉</span></div>
+            <div id="forecast-insights" class="forecast-insights"><p class="empty-state">Os alertas aparecerão aqui.</p></div>
+            <form id="forecast-scenario-form" class="forecast-scenario"><b>Simular uma movimentação</b><p>Simulação visual; nenhum lançamento será salvo.</p><div class="forecast-scenario-fields"><select id="scenario-kind" aria-label="Tipo da movimentação"><option value="expense">Despesa extra</option><option value="income">Receita extra</option></select><input id="scenario-amount" type="number" min="0.01" step="0.01" max="999999999" placeholder="Valor (R$)" aria-label="Valor da simulação" required><button type="submit" class="btn btn-primary">Simular</button></div><output id="forecast-scenario-result" aria-live="polite"></output></form>
+          </div>
+        </div>
+        <p class="forecast-disclaimer">Projeção baseada somente nos registros atuais, não constitui previsão garantida.</p>
+      </article>
 
       <div class="dashboard-grid dashboard-primary-grid">
         <article class="panel commitment-panel">
@@ -205,5 +222,5 @@
 
 <div id="modal" class="modal" hidden><div class="modal-backdrop" data-close-modal></div><section class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modal-title"><div class="modal-head"><div><div class="eyebrow">TVC CONTROL</div><h2 id="modal-title">Novo lançamento</h2></div><button class="icon-button" data-close-modal aria-label="Fechar">×</button></div><form id="modal-form" class="form-stack"><div id="modal-fields" class="modal-fields"></div><div class="modal-actions"><button class="btn btn-secondary" type="button" data-close-modal>Cancelar</button><button class="btn btn-primary" id="modal-submit" type="submit">Salvar</button></div></form></section></div>
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
-<script src="/app.js?v=16" defer></script>
+<script src="/app.js?v=17" defer></script>
 </body></html>

@@ -8,6 +8,7 @@ const jwt = require("jsonwebtoken");
 const { Pool, types } = require("pg");
 const crypto = require("crypto");
 const {advanceRecurringDate,recurrenceDatesInRange,buildRecurringForecast,allocateInstallments} = require("./lib/financial-core");
+const {addDays,projectDailyCashflow,evaluateHealth} = require("./lib/forecast-core");
 
 for (const key of ["DATABASE_URL","JWT_SECRET"]) {
   if (!process.env[key]) { console.error("Missing environment variable:",key); process.exit(1); }
@@ -465,6 +466,35 @@ app.get("/api/calendar",requireAuth,asyncRoute(async(req,res)=>{
  events.sort((a,b)=>String(a.event_date).localeCompare(String(b.event_date))||String(a.description).localeCompare(String(b.description)));
  res.json({month,events});
 }));
+
+app.get("/api/forecast",requireAuth,asyncRoute(async(req,res)=>{
+ const uid=req.user.id,start=saoPauloToday(),horizon=90,endExclusive=addDays(start,horizon+1);
+ const [accountRows,pendingRows,reminders,rules,generatedRows]=await Promise.all([
+  pool.query("SELECT a.id,a.opening_balance+COALESCE(SUM(CASE WHEN t.status='paid' AND t.kind='income' AND t.account_id=a.id THEN t.amount WHEN t.status='paid' AND t.kind='expense' AND t.account_id=a.id THEN -t.amount WHEN t.status='paid' AND t.kind='transfer' AND t.account_id=a.id THEN -t.amount WHEN t.status='paid' AND t.kind='transfer' AND t.transfer_to_account_id=a.id THEN t.amount ELSE 0 END),0) AS current_balance FROM public.accounts a LEFT JOIN public.transactions t ON (t.account_id=a.id OR t.transfer_to_account_id=a.id) AND t.user_id=a.user_id WHERE a.user_id=$1 AND a.is_active=true GROUP BY a.id",[uid]),
+  pool.query("SELECT kind,amount,COALESCE(due_on,occurred_on) AS due_on,description FROM public.transactions WHERE user_id=$1 AND status IN ('pending','overdue') AND kind IN ('income','expense') AND COALESCE(due_on,occurred_on) < $2::date",[uid,endExclusive]),
+  pool.query("SELECT amount,due_on,description FROM public.calendar_reminders WHERE user_id=$1 AND status='pending' AND due_on < $2::date",[uid,endExclusive]),
+  pool.query("SELECT id,kind,description,amount,next_due,frequency FROM public.recurring_rules WHERE user_id=$1 AND is_active=true AND kind IN ('income','expense')",[uid]),
+  pool.query("SELECT recurring_rule_id,recurring_due_on FROM public.transactions WHERE user_id=$1 AND recurring_rule_id IS NOT NULL AND recurring_due_on < $2::date",[uid,endExclusive])
+ ]);
+ const balance=Math.round(accountRows.rows.reduce((sum,r)=>sum+asNumber(r.current_balance),0)*100)/100,events=[];
+ for(const row of pendingRows.rows)events.push({kind:row.kind,amount:asNumber(row.amount),date:String(row.due_on).slice(0,10),description:row.description,source:"transaction"});
+ for(const row of reminders.rows)events.push({kind:"expense",amount:asNumber(row.amount),date:String(row.due_on).slice(0,10),description:row.description,source:"reminder"});
+ const recorded=new Set(generatedRows.rows.map(r=>String(r.recurring_rule_id)+":"+String(r.recurring_due_on).slice(0,10)));
+ for(const rule of rules.rows)for(const due of recurrenceDatesInRange(rule,start,endExclusive)){
+   if(!recorded.has(String(rule.id)+":"+due))events.push({kind:rule.kind,amount:asNumber(rule.amount),date:due,description:rule.description,source:"recurring"});
+ }
+ const forecast=projectDailyCashflow(start,balance,horizon,events),income=events.reduce((sum,e)=>sum+(e.kind==="income"?e.amount:0),0),expenses=events.reduce((sum,e)=>sum+(e.kind==="expense"?e.amount:0),0);
+ const health=evaluateHealth({balance,forecast,income,expenses,hasAccounts:accountRows.rows.length>0,hasMovements:events.length>0});
+ const next7=events.filter(e=>e.kind==="expense"&&e.date<=addDays(start,7)),next7Total=next7.reduce((sum,e)=>sum+e.amount,0),insights=[];
+ if(balance<0)insights.push({type:"critical",title:"Saldo atual negativo",detail:"Registre recebimentos ou revise os pagamentos realizados."});
+ if(forecast.firstNegativeDate)insights.push({type:"critical",title:"Risco de saldo negativo",detail:"Pelos registros atuais, o saldo pode ficar negativo em "+new Date(forecast.firstNegativeDate+"T12:00:00Z").toLocaleDateString("pt-BR",{timeZone:"UTC"})+"."});
+ if(next7.length)insights.push({type:"warning",title:"Pagamentos nos próximos 7 dias",detail:next7.length+" compromisso(s), totalizando "+new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"}).format(next7Total)+"."});
+ if(!events.length)insights.push({type:"info",title:"Sem compromissos futuros registrados",detail:"Cadastre pagamentos, receitas e despesas recorrentes para obter uma projeção mais completa."});
+ if(!insights.length)insights.push({type:"success",title:"Previsão sem saldo negativo",detail:"Com os compromissos registrados hoje, não foi identificado saldo negativo nos próximos 90 dias."});
+ res.setHeader("Cache-Control","no-store");
+ res.json({forecast:{startDate:start,days:horizon,currentBalance:balance,daily:forecast.daily,snapshots:forecast.snapshots,firstNegativeDate:forecast.firstNegativeDate,minBalance:forecast.minBalance,incomeForecast:Math.round(income*100)/100,expenseForecast:Math.round(expenses*100)/100,health,insights,recordedMovements:events.length,method:"Projeção determinística a partir de saldos reais e movimentos pendentes; não é uma garantia de valores futuros."}});
+}));
+
 app.get("/api/dashboard",requireAuth,asyncRoute(async(req,res)=>{
   const month=/^\d{4}-\d{2}$/.test(req.query.month||"")?req.query.month:saoPauloMonth(),bounds=monthBounds(month),uid=req.user.id;
   const q=[

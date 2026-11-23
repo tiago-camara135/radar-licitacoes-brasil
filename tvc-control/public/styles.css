@@ -480,3 +480,46 @@ button{color:inherit}
 @media(max-width:1250px){.quick-actions{flex-wrap:wrap}.quick-label{display:none}.quick-action{flex:1 1 calc(50% - 8px)}}
 @media(max-width:680px){.topbar{position:relative;z-index:2;background:transparent;backdrop-filter:none;padding:0;margin:0 0 12px}.quick-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-bottom:12px}.quick-action{gap:7px;padding:9px;border-radius:11px}.quick-action-icon{height:30px;width:30px;border-radius:9px;font-size:15px}.quick-action b{font-size:9px}.quick-action small{font-size:7px}.chart-controls{width:100%;justify-content:flex-start!important}.chart-mode-button{font-size:8px}.chart-interaction-note{font-size:8px}}
 @media(prefers-reduced-motion:reduce){.quick-action,.chart-month,.chart-bar-stack,.cashflow-segment,.btn,.nav-link{transition:none!important}.quick-action:hover,.chart-month:hover,.btn-primary:hover{transform:none}}
+
+/* Análise preditiva baseada em compromissos registrados */
+.forecast-panel{margin:0 0 16px;padding:18px 20px;border:1px solid #d9e8f9;background:linear-gradient(110deg,#fff 0%,#f9fcff 100%)}
+.forecast-head{margin-bottom:13px}.forecast-head h3{font-size:15px}
+.forecast-layout{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(255px,.85fr);gap:18px;min-width:0}
+.forecast-chart-zone{min-width:0;padding:13px 15px 10px;border:1px solid #e6edf7;border-radius:13px;background:linear-gradient(180deg,#fff,#f9fcff)}
+.forecast-periods{display:flex;gap:4px;margin-bottom:8px}
+.forecast-period{border:1px solid transparent;padding:7px 12px;border-radius:9px;background:transparent;color:#72829b;font-size:10px;font-weight:800;cursor:pointer}
+.forecast-period.active{background:#e9f2ff;color:#1865d7;border-color:#d4e6ff}
+.forecast-period:hover{background:#f0f6ff}
+.forecast-chart{min-height:185px}
+.forecast-chart svg{display:block;width:100%;height:150px;overflow:visible}
+.forecast-chart-scale{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0 4px;color:#8391a7;font-size:9px}
+.forecast-chart-scale strong{font-size:11px}
+.forecast-milestones{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:13px}
+.forecast-milestones>div{padding:11px 10px;border:1px solid #e7eef8;border-radius:10px;background:#fff}
+.forecast-milestones span{display:block;color:#77869b;font-size:9px}
+.forecast-milestones strong{display:block;margin-top:5px;color:#22324a;font-size:15px;overflow-wrap:anywhere}
+.forecast-milestones strong.negative{color:#d94b52}
+.forecast-advisor{min-width:0;display:flex;flex-direction:column;gap:10px}
+.financial-health{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:13px 15px;border:1px solid #dcebf9;border-radius:13px;background:linear-gradient(110deg,#eff7ff,#edf9f5)}
+.financial-health span:not(.financial-health-icon){display:block;color:#6682a2;font-size:9px;font-weight:800;letter-spacing:.5px}
+.financial-health b{display:block;margin-top:3px;color:#1664bd;font-size:25px;letter-spacing:-.6px}
+.financial-health b.negative{color:#d94b52}
+.financial-health small{display:block;color:#7b8ca3;font-size:9px}
+.financial-health-icon{font-size:25px;color:#52ac97}
+.forecast-insights{display:flex;flex-direction:column;gap:6px}
+.forecast-insight{display:flex;align-items:flex-start;gap:8px;padding:8px 10px;border:1px solid #edf1f8;border-radius:10px;background:#fff}
+.forecast-insight-dot{flex:none;width:8px;height:8px;border-radius:50%;background:#5395e9;margin-top:4px}
+.forecast-insight.critical .forecast-insight-dot{background:#dc5662}.forecast-insight.warning .forecast-insight-dot{background:#e3ad46}.forecast-insight.success .forecast-insight-dot{background:#40ad7c}
+.forecast-insight b{font-size:10px;color:#293952}
+.forecast-insight p{margin-top:3px;font-size:9px;color:#7a899f;line-height:1.4}
+.forecast-scenario{margin-top:auto;padding:11px 12px;border:1px solid #e0e9f7;border-radius:12px;background:#f8fbff}
+.forecast-scenario>b{font-size:10px;color:#22324a}
+.forecast-scenario>p{margin:3px 0 9px;color:#7d8ca3;font-size:9px}
+.forecast-scenario-fields{display:grid;grid-template-columns:minmax(0,1fr) minmax(90px,.8fr) auto;gap:5px;align-items:center}
+.forecast-scenario input,.forecast-scenario select{min-width:0;max-width:100%;height:34px;padding:7px;border:1px solid #dfe8f4;border-radius:8px;background:#fff;color:#293952;font-size:9px}
+.forecast-scenario button{padding:8px;font-size:9px}
+#forecast-scenario-result{display:block;margin-top:8px;color:#375675;font-size:10px;line-height:1.4}
+.forecast-disclaimer{margin-top:12px;color:#8190a6;font-size:9px}
+@media(max-width:1100px){.forecast-layout{grid-template-columns:1fr}.forecast-advisor{display:grid;grid-template-columns:1fr 1fr}.forecast-scenario{grid-column:1/-1}}
+@media(max-width:680px){.forecast-panel{padding:13px}.forecast-layout{grid-template-columns:1fr;gap:10px}.forecast-advisor{display:flex}.forecast-milestones{gap:5px}.forecast-milestones>div{padding:8px}.forecast-milestones strong{font-size:12px}.forecast-chart-zone{padding:9px}.forecast-period{font-size:9px;padding:7px 9px}.forecast-scenario-fields{grid-template-columns:1fr 1fr}.forecast-scenario button{grid-column:1/-1;min-height:40px}.forecast-chart{min-height:165px}}
+@media(prefers-reduced-motion:reduce){.forecast-chart svg,.forecast-period{transition:none!important}}
