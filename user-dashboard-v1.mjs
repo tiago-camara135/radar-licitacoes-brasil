@@ -167,7 +167,7 @@ async function saveTracking(uid,b){
   const procurement=(await qMaybe(`SELECT pncp_id FROM monitored_procurements WHERE org_cnpj=$1 AND year=$2 AND sequence=$3 ORDER BY last_seen_at DESC LIMIT 1`,[cnpj,year,sequence]))[0];
   if(!procurement)throw Object.assign(new Error('Licitação não localizada na base do Radar.'),{status:404});
   const key=`${cnpj}-${year}-${sequence}`;
-  const r=await pool.query(`INSERT INTO user_tender_tracking(user_id,pncp_key,org_cnpj,year,sequence,status,notes) VALUES($1,$2,$3,$4,$5,$6,$7) ON CONFLICT(user_id,pncp_key) DO UPDATE SET status=EXCLUDED.status,notes=COALESCE(EXCLUDED.notes,user_tender_tracking.notes),updated_at=NOW() RETURNING *`,[uid,key,cnpj,year,sequence,status,clean(b.notes,1500)||null]);return r.rows[0];
+  const r=await pool.query(`INSERT INTO user_tender_tracking(user_id,pncp_key,org_cnpj,year,sequence,status,notes) VALUES($1,$2,$3,$4,$5,$6,$7) ON CONFLICT(user_id,pncp_key) DO UPDATE SET status=EXCLUDED.status,notes=COALESCE(EXCLUDED.notes,user_tender_tracking.notes),updated_at=NOW() RETURNING *`,[uid,key,cnpj,year,sequence,status,b.notes===undefined?null:clean(b.notes,1500)]);return r.rows[0];
 }
 async function savePreferences(uid,b){
   const current=await preferences(uid);
