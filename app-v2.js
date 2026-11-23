@@ -937,6 +937,14 @@ function renderRecommendationItems(){
       return Number.isFinite(detected)&&dayOf(detected)===dayOf(now);
     }
     return true;
+  }).sort((a,b)=>{
+    const priority=x=>{
+      const remaining=new Date(x.closes_at).getTime()-now;
+      return Number.isFinite(remaining)&&remaining>=0&&remaining<=48*3600000?2:
+        Number(x.fit?.score)>=85?1:0;
+    };
+    return priority(b)-priority(a)||
+      (Number(b.fit?.score)||0)-(Number(a.fit?.score)||0);
   }).slice(0,3);
   const group=$('#rlbHomeRecommendationFilters');
   if(group){
@@ -974,6 +982,15 @@ function renderRecommendationItems(){
       card.dataset.pulseState=pulse;
     }
     info.append(el('strong','',x.object_text||'Oportunidade sem descrição'),el('small','',[x.modality_name,x.municipality,x.uf].filter(Boolean).join(' • ')));
+    const untilClose=new Date(x.closes_at).getTime()-now;
+    const dueSoon=Number.isFinite(untilClose)&&untilClose>=0&&untilClose<=48*3600000;
+    const fitScore=Number(x.fit?.score);
+    const highFit=Number.isFinite(fitScore)&&fitScore>=85;
+    card.dataset.priority=dueSoon?'urgent':highFit?'high-fit':'standard';
+    if(dueSoon){
+      info.append(el('span','rlb-priority-chip rlb-priority-urgent',
+        untilClose<=86400000?'Prazo em até 24h':'Prazo em até 48h'));
+    }else if(highFit)info.append(el('span','rlb-priority-chip rlb-priority-high','Alta aderência'));
     if(pulse){
       const badge=el('span','rlb-pulse-chip',pulse==='new'?'Nova oportunidade':'Atualizada');
       info.append(badge);
@@ -984,6 +1001,12 @@ function renderRecommendationItems(){
     const side=el('div','rev-rec-side');
     const score=Number(x.fit?.score);
     side.append(el('b','',Number.isFinite(score)?Math.round(Math.min(100,Math.max(0,score)))+'%':'—'),el('small','','aderência'));
+    if(Number.isFinite(score)){
+      const meter=el('progress','rlb-fit-meter');
+      meter.max=100;meter.value=Math.round(Math.min(100,Math.max(0,score)));
+      meter.setAttribute('aria-label','Aderência estimada pelos critérios dos alertas');
+      side.append(meter);
+    }
     const url=safeUrl(x.pncp_url);
     if(url){const a=el('a','','Abrir PNCP');a.href=url;a.target='_blank';a.rel='noopener noreferrer';side.append(a)}
     card.append(info,side);list.append(card);
@@ -1401,6 +1424,7 @@ function renderDeadlines(data){
     const right=element('span','rlb-home-deadline-status');
     const eventDay=isoFmt.format(event.parsed);
     const diff=Math.round((Date.parse(eventDay+'T12:00:00Z')-Date.parse(today+'T12:00:00Z'))/86400000);
+    row.dataset.urgency=diff<=1?'critical':diff<=3?'soon':'normal';
     right.textContent=diff===0?'Hoje':diff===1?'Amanhã':diff<=7?'Em '+diff+' dias':dateTimeFmt.format(event.parsed);
     if(diff<=1)right.dataset.urgent='true';
     row.append(stamp,body,right);list.append(row);
