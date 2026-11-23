@@ -1216,17 +1216,13 @@ const dateOf=(v,type)=>{if(!v)return null;const raw=String(v);const parsed=new D
 const safeUrl=raw=>{try{const u=new URL(raw);return u.protocol==='https:'&&!u.username&&!u.password?u.href:''}catch{return''}};
 const clean=(v,max=500)=>String(v??'').trim().slice(0,max);
 const totalFormat=v=>Number(v||0).toLocaleString('pt-BR');
-let generation=0,overview=null;
+let generation=0,overview=null,deadlinePeriod=7,feedFilter='all',liveCache=[];
 function openSection(name){
   const target=$('#mainNav [data-view="'+name+'"]');
   if(!logged()||!target)return;
   target.click();
   if(name==='radar')$('#searchKeyword')?.focus({preventScroll:true});
   if(name==='alerts')$('#alertName')?.focus({preventScroll:true});
-  if(name==='calendar'){
-    const calendar=$('#view-operation .rev-calendar');
-    if(calendar)calendar.scrollIntoView({block:'start',behavior:'smooth'});
-  }
 }
 function greeting(){
   if(!logged())return;
@@ -1274,23 +1270,25 @@ function setupSearch(){
     const button=event.target.closest('[data-home-action]');
     if(!button)return;
     const action=button.dataset.homeAction;
-    openSection(action==='calendar'?'operation':action);
-    if(action==='calendar'){
-      const page=$('#view-operation');
-      if(page){
-        const observer=new MutationObserver(()=>{
-          const calendar=$('#view-operation .rev-calendar');
-          if(!calendar)return;
-          observer.disconnect();
-          calendar.scrollIntoView({block:'start'});
-        });
-        if($('#view-operation .rev-calendar'))$('#view-operation .rev-calendar').scrollIntoView({block:'start'});
-        else {
-          observer.observe(page,{childList:true,subtree:true});
-          setTimeout(()=>observer.disconnect(),6000);
-        }
-      }
+    if(['today','high'].includes(action)){
+      document.dispatchEvent(new CustomEvent('radar:home-rec-filter',{detail:{filter:action}}));
+      const target=$('#rlbHomeRecsTitle');
+      target?.scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'start'});
+      return;
     }
+    if(action==='stage'){
+      openSection('operation');
+      document.dispatchEvent(new CustomEvent('radar:operation-focus',{detail:{focus:'tracking'}}));
+      document.dispatchEvent(new CustomEvent('radar:operation-filter',{detail:{status:button.dataset.homeStage||'all'}}));
+      return;
+    }
+    if(action==='calendar'){
+      openSection('operation');
+      document.dispatchEvent(new CustomEvent('radar:operation-focus',{detail:{focus:'calendar'}}));
+      return;
+    }
+    openSection(action);
+    if(action==='operation')document.dispatchEvent(new CustomEvent('radar:operation-focus',{detail:{focus:'tracking'}}));
   });
 }
 function cardEmpty(message){
@@ -1300,10 +1298,14 @@ function renderDeadlines(data){
   const list=$('#rlbHomeDeadlines');if(!list)return;
   list.replaceChildren();
   const start=new Date(),today=isoFmt.format(start);
+  const endDate=new Date(start.getTime()+(deadlinePeriod+1)*86400000);
+  const lastDay=isoFmt.format(endDate);
   const events=(Array.isArray(data?.agenda)?data.agenda:[]).map(e=>({...e,parsed:dateOf(e.date,e.type)}))
-    .filter(e=>e.parsed&&((e.type==='document'&&isoFmt.format(e.parsed)>=today)||(e.type!=='document'&&e.parsed>=start)))
+    .filter(e=>e.parsed&&(e.type==='document'?
+      (isoFmt.format(e.parsed)>=today&&isoFmt.format(e.parsed)<=lastDay):
+      (e.parsed>=start&&e.parsed.getTime()-start.getTime()<=deadlinePeriod*86400000)))
     .sort((a,b)=>a.parsed-b.parsed).slice(0,4);
-  if(!events.length){list.append(cardEmpty('Nenhum prazo futuro registrado na agenda da sua conta.'));return}
+  if(!events.length){list.append(cardEmpty('Nenhum prazo registrado nos próximos '+deadlinePeriod+' dias.'));return}
   for(const event of events){
     const row=element('article','rlb-home-deadline');row.setAttribute('role','listitem');
     const stamp=element('div','rlb-home-date'),parts=dateFmt.formatToParts(event.parsed);
@@ -1325,10 +1327,10 @@ function renderPanorama(data){
   root.replaceChildren();
   const funnel=data?.funnel||{};
   const groups=[
-    {label:'Em análise',count:Number(funnel.analisar||0),color:'var(--rlb-home-chart-blue)'},
-    {label:'Preparando proposta',count:Number(funnel.preparando_documentacao||0)+Number(funnel.proposta_pronta||0),color:'var(--rlb-home-chart-violet)'},
-    {label:'Participando',count:Number(funnel.participando||0)+Number(funnel.recurso||0),color:'var(--rlb-home-chart-green)'},
-    {label:'Encerradas',count:Number(funnel.vencida||0)+Number(funnel.perdida||0)+Number(funnel.arquivada||0),color:'var(--rlb-home-chart-muted)'}
+    {label:'Em análise',status:'analisar',count:Number(funnel.analisar||0),color:'var(--rlb-home-chart-blue)'},
+    {label:'Preparando proposta',status:'preparing',count:Number(funnel.preparando_documentacao||0)+Number(funnel.proposta_pronta||0),color:'var(--rlb-home-chart-violet)'},
+    {label:'Participando',status:'participating',count:Number(funnel.participando||0)+Number(funnel.recurso||0),color:'var(--rlb-home-chart-green)'},
+    {label:'Encerradas',status:'closed',count:Number(funnel.vencida||0)+Number(funnel.perdida||0)+Number(funnel.arquivada||0),color:'var(--rlb-home-chart-muted)'}
   ];
   const sum=groups.reduce((n,g)=>n+g.count,0);
   if(!sum){
@@ -1345,17 +1347,28 @@ function renderPanorama(data){
   inner.append(element('strong','',totalFormat(sum)),element('span','','acompanhadas'));ring.append(inner);
   const legend=element('div','rlb-home-legend');
   for(const g of groups){
-    const item=element('div','rlb-home-legend-item'),label=element('span','',g.label);
+    const item=element('button','rlb-home-legend-item'),label=element('span','',g.label);
+    item.type='button';item.dataset.homeAction='stage';item.dataset.homeStage=g.status;
+    item.setAttribute('aria-label',g.label+': '+totalFormat(g.count)+' licitação(ões). Ver acompanhamento');
     const mark=element('i','');mark.style.background=g.color;label.prepend(mark);
-    item.append(label,element('strong','',totalFormat(g.count)));legend.append(item);
+    item.append(label,element('strong','',totalFormat(g.count)),element('span','rlb-home-legend-arrow','↗'));
+    legend.append(item);
   }
   root.append(ring,legend);
 }
 function renderRecent(rows){
   const root=$('#rlbHomeRecent');if(!root)return;
   root.replaceChildren();
-  const items=(Array.isArray(rows)?rows:[]).slice(0,4);
-  if(!items.length){root.append(cardEmpty('Nenhum registro recente disponível no monitoramento neste momento.'));return}
+  if(Array.isArray(rows))liveCache=rows;
+  const now=Date.now();
+  const items=liveCache.filter(item=>{
+    if(feedFilter!=='open')return true;
+    const closing=dateOf(item.dataEncerramentoProposta||item.dataFimRecebimentoProposta);
+    return closing&&closing.getTime()>=now;
+  }).slice(0,4);
+  if(!items.length){root.append(cardEmpty(feedFilter==='open'?
+    'Nenhum registro com prazo vigente na amostra recente. Consulte a pesquisa completa.':
+    'Nenhum registro recente disponível no monitoramento neste momento.'));return}
   const list=element('div','rlb-home-table');
   const heading=element('div','rlb-home-table-header');
   for(const h of ['Objeto / contratação','Localização','Modalidade','Prazo','Publicação'])heading.append(element('span','',h));
@@ -1387,11 +1400,35 @@ function clearPrivateData(){
   if($('#rlbHomeName'))$('#rlbHomeName').textContent='bem-vindo';
   $('#rlbHomeDeadlines')?.replaceChildren(cardEmpty('Entre na conta para consultar seus prazos.'));
   $('#rlbHomePanorama')?.replaceChildren(cardEmpty('Entre na conta para consultar seu acompanhamento.'));
+  liveCache=[];
   $('#rlbHomeRecent')?.replaceChildren(cardEmpty('Entre na conta para consultar o monitoramento.'));
 }
 function boot(){
   if(!$('#view-home'))return;
   setupSearch();
+  const setActive=(attr,value)=>{
+    document.querySelectorAll('#view-home ['+attr+']').forEach(button=>{
+      const selected=button.getAttribute(attr)===String(value);
+      button.classList.toggle('active',selected);
+      button.setAttribute('aria-pressed',String(selected));
+    });
+  };
+  $('#rlbHomeDeadlineControls')?.addEventListener('click',event=>{
+    const button=event.target.closest('[data-home-period]');
+    if(!button)return;
+    const next=Number(button.dataset.homePeriod);
+    if(![7,30].includes(next))return;
+    deadlinePeriod=next;setActive('data-home-period',next);
+    if(overview)renderDeadlines(overview);
+  });
+  $('#rlbHomeRecentFilters')?.addEventListener('click',event=>{
+    const button=event.target.closest('[data-home-feed]');
+    if(!button)return;
+    const next=button.dataset.homeFeed;
+    if(!['all','open'].includes(next))return;
+    feedFilter=next;setActive('data-home-feed',next);
+    renderRecent(null);
+  });
   const shell=$('#appShell');
   if(shell)new MutationObserver(()=>{if(logged())greeting();else clearPrivateData()}).observe(shell,{attributes:true,attributeFilter:['class']});
   document.addEventListener('radar:overview',event=>{
@@ -1409,6 +1446,10 @@ function boot(){
   document.addEventListener('radar:live-feed',event=>{
     if(!logged())return;
     renderRecent(event.detail?.items);
+    const last=event.detail?.status?.last_success_at;
+    const date=dateOf(last);
+    if($('#rlbHomeFeedStatus'))$('#rlbHomeFeedStatus').textContent=date?
+      'Última sincronização: '+dateTimeFmt.format(date):'Dados do monitoramento nacional';
   });
   if(logged())greeting();
 }
