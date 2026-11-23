@@ -80,7 +80,7 @@ test('auditoria: Minha Operação sincroniza indicadores no dashboard',()=>{
 test('navegação abre áreas no topo e inclui retorno contextual sem rotas duplicadas',()=>{
  assert.match(html,/id="rlbPageNavBar"/);
  assert.match(html,/id="rlbPageNavCurrent"/);
- assert.match(html,/data-view="home" class="rlb-page-back"/);
+ assert.match(html,/class="rlb-page-back" data-view="home"/);
  assert.match(js,/const previous=state\.view,changed=previous!==v/);
  assert.match(js,/const breadcrumb=\$\('#rlbPageNavBar'\)/);
  assert.match(js,/window\.scrollTo\(0,0\)/);
