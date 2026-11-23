@@ -80,7 +80,7 @@ try{
 
  // O navegador valida duas contas efêmeras, sem alterar papéis de uma
  // sessão já ativa. O usuário comum continua autenticado na aba principal.
- const adminCtx=await browser.newContext({viewport:{width:1366,height:850},locale:'pt-BR',timezoneId:'America/Fortaleza'});
+ const adminCtx=await browser.newContext({viewport:{width:1366,height:850},locale:'pt-BR',timezoneId:'America/Fortaleza',extraHTTPHeaders:{'X-Forwarded-For':'198.51.100.27'}});
  const adminPage=await adminCtx.newPage();
  adminPage.on('pageerror',e=>problems.push('admin: '+e.message));
  adminId=await register(adminPage,adminEmail);
