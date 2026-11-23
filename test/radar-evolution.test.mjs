@@ -69,3 +69,10 @@ test('IA-RLB widget opens visibly without depending on the URL hash',()=>{
  assert.match(css,/#appShell #ai-assistant\.ai-widget-open/);
  assert.match(css,/#appShell \.ai-fab\.ai-widget-fab-hidden/);
 });
+
+
+test('sino de notificações continua acessível em telas pequenas',()=>{
+ assert.match(css, /max-width:760px/);
+ assert.match(css, /topbar\.rev-n-wrap|topbar \.rev-n-wrap/);
+ assert.match(css, /\.rev-n-bell::before/);
+});
