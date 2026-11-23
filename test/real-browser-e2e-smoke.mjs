@@ -143,6 +143,13 @@ try{
  note('Personal documents upload and list OK');
 
  await page.locator('.ai-fab').click();
+ const diag=await page.evaluate(()=>{
+  const e=document.querySelector('#ai-assistant'),w=e?.querySelector('.ai-window');
+  const describe=x=>{if(!x)return null;const a=getComputedStyle(x),r=x.getBoundingClientRect();
+   return {tag:x.tagName,class:x.className,display:a.display,visibility:a.visibility,opacity:a.opacity,pointerEvents:a.pointerEvents,position:a.position,zIndex:a.zIndex,rect:[r.x,r.y,r.width,r.height],inline:x.getAttribute('style')}};
+  return {assistant:describe(e),window:describe(w),shell:describe(document.querySelector('#appShell')),prompt:describe(document.querySelector('#aiPrompt')),stylesheetCount:document.styleSheets.length,hasOverride:[...document.styleSheets].some(sh=>{try{return [...sh.cssRules].some(rule=>String(rule.cssText).includes('#appShell #ai-assistant.ai-widget-open'))}catch{return false}})};
+ });
+ console.log('[browser-qa] AI computed styles: '+JSON.stringify(diag));
  await page.locator('#ai-assistant.ai-widget-open').waitFor({state:'visible',timeout});
  assert.ok(await page.locator('#aiPrompt').isVisible(),'AI floating composer must open');
  await page.locator('#ai-assistant .ai-close').click();
