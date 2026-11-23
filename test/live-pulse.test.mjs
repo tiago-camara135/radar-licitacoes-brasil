@@ -64,3 +64,13 @@ test('etapa 4: urgência usa datas reais e aderência usa score existente',()=>{
  assert.match(css,/#view-home \.rlb-fit-meter::-webkit-progress-value/);
  assert.match(css,/#view-home \.rlb-home-deadline\[data-urgency="critical"\]/);
 });
+
+
+test('estabilidade: urgência muda ao atravessar 48h/24h e não mistura contas',()=>{
+ assert.match(js,/const urgencyTier=x=>\{/);
+ assert.match(js,/remaining<=86400000\?'24h':remaining<=48\*3600000\?'48h':'normal'/);
+ assert.match(js,/JSON\.stringify\(\[deadlinePeriod,today,events\.map/);
+ assert.match(js,/agendaInitialized=false;agendaSeen\.clear\(\);agendaPulse\.clear\(\)/);
+ assert.match(js,/recentInitialized=false;recentSeen\.clear\(\);recentPulse\.clear\(\)/);
+ assert.match(js,/if\(noticeTimer\)clearTimeout\(noticeTimer\)/);
+});
