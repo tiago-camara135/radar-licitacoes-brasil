@@ -3930,7 +3930,7 @@ html[data-theme="dark"] #view-home {
 
 /* The home view keeps navigation in an icon rail on wide displays. */
 @media (min-width: 1160px) {
-  #appShell.radar-layout:has(#view-home.active) #mainNav {
+  #appShell.radar-layout:has(.view.active) #mainNav {
     position: fixed !important;
     top: 78px;
     left: max(10px, calc((100vw - 1480px) / 2));
@@ -3945,7 +3945,7 @@ html[data-theme="dark"] #view-home {
     background: var(--radar-paper);
     z-index: 3;
   }
-  #appShell.radar-layout:has(#view-home.active) #mainNav button:not(.hidden) {
+  #appShell.radar-layout:has(.view.active) #mainNav button:not(.hidden) {
     justify-content: center !important;
     min-height: 36px;
     width: 100%;
@@ -3953,30 +3953,30 @@ html[data-theme="dark"] #view-home {
     padding: 4px !important;
     font-size: 0 !important;
   }
-  #appShell.radar-layout:has(#view-home.active) #mainNav button > span:not(.nav-icon) {
+  #appShell.radar-layout:has(.view.active) #mainNav button > span:not(.nav-icon) {
     position: absolute;
     width: 1px;
     height: 1px;
     overflow: hidden;
     clip-path: inset(50%);
   }
-  #appShell.radar-layout:has(#view-home.active) #mainNav button:not(:has(.nav-icon))::before {
+  #appShell.radar-layout:has(.view.active) #mainNav button:not(:has(.nav-icon))::before {
     content: '▤';
     font-size: 17px;
   }
-  #appShell.radar-layout:has(#view-home.active) #mainNav button[data-view="habilitation"]::before { content: '✓'; }
-  #appShell.radar-layout:has(#view-home.active) #radar-home {
+  #appShell.radar-layout:has(.view.active) #mainNav button[data-view="habilitation"]::before { content: '✓'; }
+  #appShell.radar-layout:has(.view.active) #radar-home {
     padding-left: 48px !important;
     box-sizing: border-box;
   }
 }
 
 @media (min-width: 1160px) {
-  #appShell.radar-layout:not(.hidden):has(#view-home.active) {
+  #appShell.radar-layout:not(.hidden):has(.view.active) {
     grid-template-columns: 64px minmax(0,1fr);
     grid-template-rows: 64px minmax(0,1fr);
   }
-  #appShell.radar-layout:has(#view-home.active) .sidebar {
+  #appShell.radar-layout:has(.view.active) .sidebar {
     grid-area: 1 / 1 / 2 / -1;
     height: 64px !important;
     overflow: visible !important;
@@ -3984,11 +3984,11 @@ html[data-theme="dark"] #view-home {
     background: #f1f6fd !important;
     border-bottom: 1px solid #cad9ec !important;
   }
-  html[data-theme="dark"] #appShell.radar-layout:has(#view-home.active) .sidebar {
+  html[data-theme="dark"] #appShell.radar-layout:has(.view.active) .sidebar {
     background: #101e34 !important;
     border-color: #364b68 !important;
   }
-  #appShell.radar-layout:has(#view-home.active) .sidebar-inner {
+  #appShell.radar-layout:has(.view.active) .sidebar-inner {
     width: min(100%,1480px) !important;
     height: 64px !important;
     min-height: 0 !important;
@@ -3999,51 +3999,116 @@ html[data-theme="dark"] #view-home {
     justify-content: space-between !important;
     align-items: center !important;
   }
-  #appShell.radar-layout:has(#view-home.active) .sidebar-brand strong {
+  #appShell.radar-layout:has(.view.active) .sidebar-brand strong {
     color: var(--radar-text) !important;
     font-size: 17px !important;
     white-space: nowrap !important;
   }
-  #appShell.radar-layout:has(#view-home.active) .sidebar-brand::after {
-    content: 'Visão Geral';
+  #appShell.radar-layout:has(.view.active) .sidebar-brand::after {
+    content: attr(data-page-label);
     border-left: 1px solid var(--radar-line);
     margin-left: 8px;
     padding-left: 15px;
     color: var(--radar-text);
     white-space: nowrap;
   }
-  #appShell.radar-layout:has(#view-home.active) #radarAccountControls {
+  #appShell.radar-layout:has(.view.active) #radarAccountControls {
     display: flex !important;
     margin: 0 !important;
     padding: 0 !important;
     border: 0 !important;
     align-items: center;
   }
-  #appShell.radar-layout:has(#view-home.active) :is(#radarTheme,#logoutBtn,#radarAccount summary) {
+  #appShell.radar-layout:has(.view.active) :is(#radarTheme,#logoutBtn,#radarAccount summary) {
     color: var(--radar-text) !important;
     background: var(--radar-paper) !important;
     border-color: var(--radar-line) !important;
     width: auto;
   }
-  #appShell.radar-layout:has(#view-home.active) #radarTheme { width: 38px; }
-  #appShell.radar-layout:has(#view-home.active) #mainNav {
+  #appShell.radar-layout:has(.view.active) #radarTheme { width: 38px; }
+  #appShell.radar-layout:has(.view.active) #mainNav {
     flex-wrap: nowrap !important;
     overflow-x: hidden !important;
     scrollbar-width: thin;
   }
-  #appShell.radar-layout:has(#view-home.active) #mainNav button:not(.active) {
+  #appShell.radar-layout:has(.view.active) #mainNav button:not(.active) {
     color: var(--radar-text) !important;
   }
-  #appShell.radar-layout:has(#view-home.active) #mainNav button:not(.active):hover {
+  #appShell.radar-layout:has(.view.active) #mainNav button:not(.active):hover {
     background: var(--radar-soft) !important;
   }
-  #appShell.radar-layout:has(#view-home.active) #radar-home {
+  #appShell.radar-layout:has(.view.active) #radar-home {
     grid-area: 2 / 2;
     width: min(1360px,calc(100% - 22px)) !important;
     padding-left: 0 !important;
   }
-  #appShell.radar-layout .main:has(#view-home.active) .topbar {
+  #appShell.radar-layout .main:has(.view.active) .topbar {
     min-height: 32px !important;
     padding: 0 !important;
   }
 }
+
+/* Shared Radar Pulse surfaces, including the public site and specialized modules. */
+html[data-theme] {
+ --pulse-page:#edf3fc; --pulse-paper:#f8fafe; --pulse-edge:#c9d6e9; --pulse-ink:#102540; --pulse-secondary:#405775;
+ --pulse-brand:#0068ae; --pulse-selected:#006dc2; --pulse-inset:#e6effa;
+}
+html[data-theme="dark"] {
+ --pulse-page:#091426; --pulse-paper:#0f1b32; --pulse-edge:#344861; --pulse-ink:#f2f7ff; --pulse-secondary:#b9cbe3;
+ --pulse-brand:#43dcef; --pulse-selected:#106794; --pulse-inset:#172a43;
+}
+html[data-theme] :is(#appShell,#authScreen) {
+ --bg:var(--pulse-page); --surface:var(--pulse-paper); --surface2:var(--pulse-inset); --text:var(--pulse-ink); --muted:var(--pulse-secondary);
+ --line:var(--pulse-edge); --line2:var(--pulse-edge); --brand:var(--pulse-brand); --brand-soft:var(--pulse-inset);
+ --radar-canvas:var(--pulse-page); --radar-paper:var(--pulse-paper); --radar-text:var(--pulse-ink); --radar-muted:var(--pulse-secondary); --radar-line:var(--pulse-edge);
+ background:var(--pulse-page)!important; color:var(--pulse-ink);
+}
+html[data-theme] #authScreen :is(.auth-grid,.auth-form,.feature-card,.auth-shell details),
+html[data-theme] #appShell :is(.glass-panel,.radar-panel,.rev-op-card,.channel-card,.section-intro,.ai-window,.rev-n-panel,.panel,[class$="-card"]) {
+ background-color:var(--pulse-paper)!important; border-color:var(--pulse-edge)!important; color:var(--pulse-ink);
+}
+html[data-theme] :is(#authScreen,#appShell) :is(input:not([type="checkbox"]):not([type="radio"]),select,textarea) {
+ background-color:var(--pulse-paper); color:var(--pulse-ink); border-color:var(--pulse-edge);
+}
+#appShell #view-home .rev-stat:nth-child(1){--tile:#dcf1fe;--signal:#008ed8}
+#appShell #view-home .rev-stat:nth-child(2){--tile:#ddf8ed;--signal:#00996c}
+#appShell #view-home .rev-stat:nth-child(3){--tile:#eee6ff;--signal:#8143d4}
+#appShell #view-home .rev-stat:nth-child(4){--tile:#fff3df;--signal:#b66500}
+html[data-theme="dark"] #appShell #view-home .rev-stat:nth-child(1){--tile:#04243e;--signal:#00f0fc}
+html[data-theme="dark"] #appShell #view-home .rev-stat:nth-child(2){--tile:#013734;--signal:#27dfa7}
+html[data-theme="dark"] #appShell #view-home .rev-stat:nth-child(3){--tile:#241f4d;--signal:#c68dff}
+html[data-theme="dark"] #appShell #view-home .rev-stat:nth-child(4){--tile:#382b24;--signal:#ffbc30}
+#appShell #radarUserRole {color:var(--pulse-secondary)!important;font-size:12px}
+#appShell #radarAccount summary {border:1px solid var(--pulse-edge)!important;border-radius:8px}
+#appShell #view-home #revSummary .rev-stat {padding-left:52px!important;min-height:94px}
+#appShell #view-home #revSummary .rev-label {font-size:13px}
+#appShell #view-home #revSummary .rev-sub {font-size:11px}
+#appShell #view-home #revSummary .rev-kpi-arrow {position:absolute;left:13px;top:18px;width:26px;height:26px;font-size:0;border:0;background:var(--signal);border-radius:0;mask:var(--pulse-icon) center/contain no-repeat}
+#appShell #view-home #rlbHomeRecommendations .rev-rec {border-left:0!important;background:var(--pulse-paper)!important}
+#appShell #view-home #rlbHomeRecommendations .rev-rec-main strong{font-size:14px;line-height:1.4}
+#appShell #view-home #rlbHomeRecommendations .rev-rec-main small,#appShell #view-home .rlb-home-deadline-copy small{font-size:12px;line-height:1.4}
+#appShell #view-home :is(.rlb-home-link,.rlb-live-last,.rlb-live-next,.rlb-home-filter-group button,.rlb-home-feed-status){font-size:12px}
+#appShell #view-home .rlb-home-deadline-copy strong{font-size:13px}
+#appShell #view-home .rlb-home-deadline[data-urgency]{background:var(--pulse-paper);border-color:var(--pulse-edge)}
+#appShell .pulse-rec-icon{font-size:0}
+#appShell .pulse-rec-icon::before,#appShell .rev-n-bell::before{content:'';display:inline-block;width:20px;height:20px;background:currentColor;mask:var(--pulse-icon) center/contain no-repeat}
+@media(min-width:1160px){
+ #appShell #mainNav button{position:relative}
+ #appShell #mainNav #habNavBadge {position:absolute!important;right:1px!important;top:1px!important;left:auto!important;min-width:12px!important;height:13px!important;padding:0 2px!important;font-size:9px!important;line-height:13px!important}
+ #appShell #mainNav #habNavBadge[hidden]{display:none!important}
+ #appShell.radar-layout:has(.view.active) #mainNav button.active {background:var(--pulse-selected)!important;color:white!important}
+}
+
+#appShell #revSummary .rev-stat:nth-child(1){--pulse-icon:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.7%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M6%203h8l4%204v14H6z%20M14%203v5h5%20M9%2012h6%20M9%2016h5%22/%3E%3C/svg%3E")}
+
+#appShell #revSummary .rev-stat:nth-child(2){--pulse-icon:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.7%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M12%202l8%204v6c0%204-4%208-8%2010-4-2-8-6-8-10V6z%20M8%2012l3%203%205-6%22/%3E%3C/svg%3E")}
+
+#appShell #revSummary .rev-stat:nth-child(3){--pulse-icon:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.7%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M2%208l10-5%2010%205-10%205z%20M3%2012l9%205%209-5%20M3%2016l9%205%209-5%22/%3E%3C/svg%3E")}
+
+#appShell #revSummary .rev-stat:nth-child(4){--pulse-icon:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.7%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M4%205h16v16H4z%20M8%202v6%20M16%202v6%20M4%2010h16%20M8%2014h3%22/%3E%3C/svg%3E")}
+
+#appShell .pulse-rec-icon{--pulse-icon:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.7%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M6%203h8l4%204v14H6z%20M14%203v5h5%20M9%2012h6%20M9%2016h5%22/%3E%3C/svg%3E")}
+
+#appShell .pulse-rec-icon[data-icon="tools"]{--pulse-icon:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.7%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M15%203a5%205%200%2000-6%206l-6%206a2%202%200%20003%203l6-6a5%205%200%20006-6l-3%203-3-3z%22/%3E%3C/svg%3E")}
+
+#appShell .rev-n-bell{--pulse-icon:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.7%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M4%2017c2-2%202-4%202-7a6%206%200%200112%200c0%203%200%205%202%207z%20M10%2020q2%202%204%200%22/%3E%3C/svg%3E")}
