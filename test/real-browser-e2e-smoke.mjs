@@ -456,11 +456,11 @@ try{
      const home=document.querySelector('#view-home');
      const first=home.querySelector('.rev-stat');
      const styles=getComputedStyle(first);
-     return {color:styles.color,background:styles.backgroundImage,
+     return {color:styles.color,background:styles.backgroundColor,
        surface:getComputedStyle(home).getPropertyValue('--rlb-home-surface').trim()};
    }));
  }
- assert.notEqual(themePalettes[0].background,themePalettes[1].background,'KPI gradient must react to theme');
+ assert.notEqual(themePalettes[0].background,themePalettes[1].background,'KPI surface color must react to theme');
  assert.notEqual(themePalettes[0].color,themePalettes[1].color,'KPI text must react to theme');
  assert.notEqual(themePalettes[0].surface,themePalettes[1].surface,'Card surfaces must react to theme');
  // Toggle real preserva interação e preferência, não apenas atributo via JS.
