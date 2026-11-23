@@ -12,3 +12,15 @@ test('dashboard acompanha tokens do tema e telas pequenas',()=>{
  assert.match(css,/var\(--radar-paper/);
  assert.match(css,/@media\(max-width:760px\)/);
 });
+
+
+test('central usa entregas existentes e permite reconhecer alertas lidos',()=>{
+ for(const term of ['/api/notifications/profile','/api/notifications/deliveries?limit=100','/api/notifications/read-all',"x.channel==='onsite'",'payload.pncp_url','read_at','safeUrl'])assert.ok(js.includes(term),term);
+ assert.match(css,/\.rev-n-panel/);
+});
+test('pontuações vêm do backend, com justificativas e ressalvas',()=>{
+ assert.match(js,/radar:overview/);
+ assert.match(js,/x\.fit\?\.score/);
+ assert.match(js,/x\.fit\?\.reasons/);
+ assert.match(js,/não representa chance de vencer/);
+});
