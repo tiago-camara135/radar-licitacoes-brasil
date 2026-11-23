@@ -47,5 +47,5 @@ test('brand palette is unified across light and dark themes and key accents',()=
   assert.match(palette,/\.btn\.primary\{/);
   assert.match(palette,/\.ai-fab\{/);
   assert.doesNotMatch(palette,/#00f5a0|#00d9f5|#a855f7/);
-  assert.match(html,/app-v2\.css\?v=20261122-radar-reference-detail-6/);
+  assert.match(html,/app-v2\.css\?v=20261122-radar-responsive-palette-7/);
 });
