@@ -720,3 +720,59 @@ function observeLogin(){const shell=document.getElementById('appShell');if(!shel
 function boot(){schedule();observeLogin();addEventListener('resize',reposition,{passive:true});document.addEventListener('visibilitychange',()=>{if(!document.hidden&&Date.now()-lastCheck>=CHECK_MS)check()})}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 })();
+
+/* Radar Evolution — Etapa 1: resumo personalizado */
+;(()=>{
+'use strict';
+if(window.__radarEvolutionSummary)return;window.__radarEvolutionSummary=true;
+const $=(s,r=document)=>r.querySelector(s);
+const el=(tag,cls,text)=>{const a=document.createElement(tag);if(cls)a.className=cls;if(text!==undefined)a.textContent=String(text);return a};
+const number=v=>Number.isFinite(Number(v))&&v!==undefined&&v!==null?Number(v).toLocaleString('pt-BR'):'—';
+let busy=false,lastLoad=0,lastIdentity='';
+const ui={};
+function logged(){return !!$('#appShell')&&!$('#appShell').classList.contains('hidden')}
+function identity(){return String($('#radarUserName')?.textContent||'').trim()}
+function install(){
+ const view=$('#view-radar');if(!view||$('#revSummary'))return;
+ const panel=el('section','rev-summary');panel.id='revSummary';panel.setAttribute('aria-label','Resumo estratégico da conta');
+ const head=el('div','rev-summary-head'),heading=el('div','rev-heading');
+ heading.append(el('span','rev-eyebrow','SEU RADAR HOJE'),el('h2','','Resumo de oportunidades'));
+ ui.status=el('p','rev-status','Dados personalizados da sua conta.');ui.status.setAttribute('role','status');heading.append(ui.status);
+ ui.refresh=el('button','rev-action','Atualizar');ui.refresh.type='button';ui.refresh.addEventListener('click',()=>load(true));head.append(heading,ui.refresh);
+ const grid=el('div','rev-grid');ui.values=[];
+ for(const [label,subtitle] of [['Novas compatíveis','Detectadas hoje'],['Alta aderência','Recomendações'],['Em acompanhamento','Na operação'],['Prazos próximos','Nos próximos 7 dias']]){
+   const m=el('div','rev-stat'),value=el('strong','rev-value','—');m.append(el('span','rev-label',label),value,el('small','rev-sub',subtitle));grid.append(m);ui.values.push(value);
+ }
+ const footer=el('div','rev-summary-footer');
+ ui.next=el('span','','Acompanhe seus alertas para receber recomendações.');
+ const go=el('button','rev-action','Gerenciar alertas');go.type='button';go.addEventListener('click',()=>$('#mainNav [data-view="alerts"]')?.click());
+ footer.append(ui.next,go);panel.append(head,grid,footer);view.insertBefore(panel,$('#radarSearchForm')||view.firstChild);
+ const shell=$('#appShell');
+ if(shell)new MutationObserver(()=>{if(!logged()){lastLoad=0;lastIdentity='';ui.values.forEach(x=>x.textContent='—');ui.status.textContent='Entre na conta para consultar os indicadores.'}else load(false)}).observe(shell,{attributes:true,attributeFilter:['class']});
+ document.addEventListener('click',e=>{if(e.target.closest('#mainNav [data-view="radar"]'))load(false)});
+ document.addEventListener('visibilitychange',()=>{if(!document.hidden&&Date.now()-lastLoad>180000)load(false)});
+ if(logged())load(false);
+}
+async function load(force){
+ if(!logged()||busy)return;
+ const who=identity();if(!force&&lastIdentity===who&&Date.now()-lastLoad<180000)return;
+ busy=true;ui.refresh.disabled=true;ui.refresh.textContent='Atualizando…';ui.status.textContent='Consultando indicadores…';
+ const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),12000);
+ try{
+   const r=await fetch('/api/dashboard/overview',{credentials:'same-origin',cache:'no-store',signal:controller.signal,headers:{accept:'application/json'}});
+   if(!r.ok)throw Error(r.status===401?'Sessão expirada. Entre novamente.':'Não foi possível consultar os indicadores.');
+   const d=await r.json(),m=d.metrics||{};
+   ['new_matches_today','recommended_high','tracked_active','upcoming_7d'].forEach((k,i)=>ui.values[i].textContent=number(m[k]));
+   const priorities=Array.isArray(d.priorities)?d.priorities:[];
+   const critical=priorities.filter(x=>x&&['high','critical'].includes(x.tone)).length;
+   ui.next.textContent=critical?critical+' prioridade(s) para revisar.':'Nenhuma prioridade crítica identificada nos dados cadastrados.';
+   ui.status.textContent='Atualizado às '+new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})+' • Dados da sua conta';
+   lastIdentity=who;lastLoad=Date.now();
+   document.dispatchEvent(new CustomEvent('radar:overview',{detail:d}));
+ }catch(e){
+   ui.status.textContent=e.name==='AbortError'?'A consulta demorou. Tente novamente.':e.message;
+   ui.next.textContent='As demais funcionalidades do Radar continuam disponíveis.';
+ }finally{clearTimeout(timeout);busy=false;ui.refresh.disabled=false;ui.refresh.textContent='Atualizar'}
+}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});else install();
+})();
