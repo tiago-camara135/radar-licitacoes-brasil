@@ -666,61 +666,6 @@ async function boot(){try{bind();const m=$('#runtimeMessage');if(m){m.textConten
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 })();
 
-(()=>{
-'use strict';
-const CHECK_MS=5*60*1000;
-const FIRST_CHECK_MS=5000;
-const DISPLAY_MS=7000;
-const MAX_SEEN=180;
-let checking=false;
-let interval=null;
-let lastCheck=0;
-const getText=(x)=>String(x??'').trim();
-const modality=x=>getText(x?.modalidadeNome||x?._modalidadeConsultada||'Licitação pública');
-const municipality=x=>getText(x?.unidadeOrgao?.municipioNome||x?.unidadeOrgao?.nomeMunicipio||x?.municipioNome||'Brasil');
-const uf=x=>getText(x?.unidadeOrgao?.ufSigla||x?.ufSigla||'');
-const organization=x=>getText(x?.orgaoEntidade?.razaoSocial||'Órgão público');
-const objectText=x=>getText(x?.objetoCompra||'Nova oportunidade disponível no Radar de Licitações.');
-function itemId(x){return getText(x?.numeroControlePNCP||x?._pncpId||[x?.orgaoEntidade?.cnpj,x?.anoCompra,x?.sequencialCompra,x?._modalidadeConsultada||x?.modalidadeId].filter(Boolean).join('-'))}
-function pncpUrl(x){if(x?._pncpUrl)return x._pncpUrl;const c=String(x?.orgaoEntidade?.cnpj||'').replace(/\D/g,''),y=Number(x?.anoCompra),s=Number(x?.sequencialCompra);return c.length===14&&Number.isInteger(y)&&Number.isInteger(s)?`https://pncp.gov.br/app/editais/${c}/${y}/${s}`:''}
-function isAvailable(x){const raw=x?.dataEncerramentoProposta||x?.dataFimRecebimentoProposta||x?._closesAt;if(!raw)return true;const d=new Date(raw);return Number.isNaN(d.getTime())||d.getTime()>=Date.now()}
-function storageKey(userId){return `rlb-national-notifications-seen-v1:${userId}`}
-function readSeen(userId){try{const a=JSON.parse(localStorage.getItem(storageKey(userId))||'[]');return new Set(Array.isArray(a)?a:[])}catch{return new Set()}}
-function saveSeen(userId,seen){try{localStorage.setItem(storageKey(userId),JSON.stringify([...seen].slice(-MAX_SEEN)))}catch{}}
-function host(){let h=document.getElementById('rlbNationalNoticeHost');if(h)return h;h=document.createElement('div');h.id='rlbNationalNoticeHost';h.setAttribute('aria-live','polite');Object.assign(h.style,{position:'fixed',right:innerWidth<600?'10px':'20px',bottom:innerWidth<600?'68px':'82px',zIndex:'145',width:innerWidth<600?'min(296px, calc(100vw - 20px))':'min(306px, calc(100vw - 28px))',display:'grid',gap:'8px',pointerEvents:'none'});document.body.appendChild(h);return h}
-function reposition(){const h=document.getElementById('rlbNationalNoticeHost');if(!h)return;h.style.right=innerWidth<600?'10px':'20px';h.style.bottom=innerWidth<600?'68px':'82px';h.style.width=innerWidth<600?'min(296px, calc(100vw - 20px))':'min(306px, calc(100vw - 28px))'}
-function closeCard(card){if(!card||card.dataset.closing==='1')return;card.dataset.closing='1';try{card.__cancelNotice?.()}catch{}try{const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;if(reduced){card.remove();return}const a=card.animate([{opacity:1,transform:'translateX(0) scale(1)'},{opacity:0,transform:'translateX(115%) scale(.97)'}],{duration:230,easing:'cubic-bezier(.4,0,1,1)',fill:'forwards'});a.onfinish=()=>card.remove()}catch{card.remove()}}
-function showNotification(x){const url=pncpUrl(x);if(!url)return;const h=host();while(h.children.length>=1)h.firstElementChild?.remove();const card=document.createElement('article');card.setAttribute('role','status');Object.assign(card.style,{pointerEvents:'auto',position:'relative',padding:'9px 10px 10px',border:'1px solid var(--line)',borderRadius:'11px',background:'color-mix(in srgb, var(--surface) 96%, transparent)',color:'var(--text)',boxShadow:'0 10px 28px rgba(0,0,0,.19)',backdropFilter:'blur(16px)',WebkitBackdropFilter:'blur(16px)',cursor:'pointer',overflow:'hidden',transition:'box-shadow .18s ease,border-color .18s ease'});
-const accent=document.createElement('span');Object.assign(accent.style,{position:'absolute',left:'0',top:'9px',bottom:'11px',width:'3px',borderRadius:'0 4px 4px 0',background:'linear-gradient(180deg,var(--emerald),var(--cyan))',boxShadow:'0 0 14px color-mix(in srgb,var(--emerald) 45%,transparent)'});card.appendChild(accent);
-const top=document.createElement('div');Object.assign(top.style,{display:'flex',alignItems:'center',justifyContent:'space-between',gap:'8px',marginBottom:'4px'});
-const label=document.createElement('div');label.textContent='● NOVA OPORTUNIDADE • RADAR';Object.assign(label.style,{fontSize:'9px',fontWeight:'950',letterSpacing:'.065em',color:'var(--emerald)'});
-const close=document.createElement('button');close.type='button';close.setAttribute('aria-label','Fechar notificação');close.textContent='×';Object.assign(close.style,{width:'26px',height:'26px',borderRadius:'7px',border:'1px solid var(--line)',background:'var(--surface2)',color:'var(--muted)',fontSize:'15px',lineHeight:'1',padding:'0',cursor:'pointer',flex:'0 0 auto'});top.append(label,close);
-const title=document.createElement('div');title.textContent=objectText(x);Object.assign(title.style,{fontSize:'12px',fontWeight:'850',lineHeight:'1.35',display:'-webkit-box',WebkitLineClamp:'2',WebkitBoxOrient:'vertical',overflow:'hidden',paddingLeft:'2px'});
-const meta=document.createElement('div');meta.textContent=`${modality(x)} • ${municipality(x)}${uf(x)?' / '+uf(x):''}`;Object.assign(meta.style,{fontSize:'10px',color:'var(--muted)',marginTop:'5px',paddingLeft:'2px',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'});
-const org=document.createElement('div');org.textContent=organization(x);Object.assign(org.style,{fontSize:'9.5px',color:'var(--muted)',marginTop:'2px',paddingLeft:'2px',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'});
-const foot=document.createElement('div');Object.assign(foot.style,{display:'flex',justifyContent:'space-between',alignItems:'center',gap:'8px',marginTop:'7px',paddingTop:'6px',paddingLeft:'2px',borderTop:'1px solid var(--line)'});
-const source=document.createElement('span');source.textContent='PNCP • fonte oficial';Object.assign(source.style,{fontSize:'9px',color:'var(--muted)'});
-const open=document.createElement('a');open.href=url;open.target='_blank';open.rel='noopener';open.textContent='Ver oportunidade ↗';Object.assign(open.style,{fontSize:'10.5px',fontWeight:'900',color:'var(--emerald)',textDecoration:'none'});foot.append(source,open);
-const progressTrack=document.createElement('div');Object.assign(progressTrack.style,{position:'absolute',left:'0',right:'0',bottom:'0',height:'2px',background:'color-mix(in srgb,var(--muted) 14%,transparent)',overflow:'hidden'});
-const progress=document.createElement('div');Object.assign(progress.style,{width:'100%',height:'100%',transform:'scaleX(1)',transformOrigin:'left center',background:'linear-gradient(90deg,var(--emerald),var(--cyan),var(--purple))',boxShadow:'0 0 10px color-mix(in srgb,var(--emerald) 35%,transparent)',willChange:'transform'});progressTrack.appendChild(progress);card.append(top,title,meta,org,foot,progressTrack);h.appendChild(card);
-let remaining=DISPLAY_MS,paused=false,lastFrame=performance.now(),raf=0,stopped=false;
-function stopClock(){stopped=true;if(raf)cancelAnimationFrame(raf)}
-function frame(now){if(stopped||!card.isConnected)return;if(!paused){remaining-=Math.max(0,now-lastFrame);const ratio=Math.max(0,remaining/DISPLAY_MS);progress.style.transform=`scaleX(${ratio})`;if(remaining<=0){stopClock();closeCard(card);return}}lastFrame=now;raf=requestAnimationFrame(frame)}
-card.__cancelNotice=stopClock;
-close.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();closeCard(card)});open.addEventListener('click',e=>e.stopPropagation());card.addEventListener('click',()=>window.open(url,'_blank','noopener'));
-card.addEventListener('mouseenter',()=>{paused=true;lastFrame=performance.now();card.style.boxShadow='0 13px 34px color-mix(in srgb,var(--emerald) 14%,rgba(0,0,0,.25)),0 0 0 1px color-mix(in srgb,var(--emerald) 30%,transparent)';card.style.borderColor='color-mix(in srgb,var(--emerald) 45%,var(--line))'});
-card.addEventListener('mouseleave',()=>{paused=false;lastFrame=performance.now();card.style.boxShadow='0 16px 38px rgba(0,0,0,.20)';card.style.borderColor='var(--line)'});
-try{if(!matchMedia('(prefers-reduced-motion: reduce)').matches){card.animate([{opacity:0,transform:'translateX(115%) scale(.98)'},{offset:.78,opacity:1,transform:'translateX(-7px) scale(1.01)'},{opacity:1,transform:'translateX(0) scale(1)'}],{duration:480,easing:'cubic-bezier(.16,1,.3,1)'});accent.animate([{opacity:.35},{opacity:1}],{duration:520,easing:'ease-out'})}}catch{}
-raf=requestAnimationFrame(frame)
-}
-async function getUser(){const r=await fetch('/api/me',{credentials:'same-origin',cache:'no-store',headers:{accept:'application/json'}});if(!r.ok)return null;const d=await r.json().catch(()=>({}));return d.user||null}
-async function check(){if(checking||document.hidden)return;checking=true;lastCheck=Date.now();try{const user=await getUser();if(!user)return;const r=await fetch('/api/live-feed?limit=100',{credentials:'same-origin',cache:'no-store',headers:{accept:'application/json'}});if(!r.ok)return;const d=await r.json().catch(()=>({}));const items=(d.items||[]).filter(x=>itemId(x)&&pncpUrl(x)&&isAvailable(x));if(!items.length)return;const seen=readSeen(user.id);const next=items.find(x=>!seen.has(itemId(x)));if(!next)return;seen.add(itemId(next));saveSeen(user.id,seen);showNotification(next)}catch(e){console.warn('RLB onsite notification check:',e?.message||e)}finally{checking=false}}
-function schedule(){if(interval)clearInterval(interval);setTimeout(check,FIRST_CHECK_MS);interval=setInterval(check,CHECK_MS)}
-function observeLogin(){const shell=document.getElementById('appShell');if(!shell)return;if(!shell.classList.contains('hidden'))setTimeout(check,1800);new MutationObserver(()=>{if(!shell.classList.contains('hidden'))setTimeout(check,1800)}).observe(shell,{attributes:true,attributeFilter:['class']})}
-function boot(){schedule();observeLogin();addEventListener('resize',reposition,{passive:true});document.addEventListener('visibilitychange',()=>{if(!document.hidden&&Date.now()-lastCheck>=CHECK_MS)check()})}
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
-})();
-
 /* Radar Evolution — Etapa 1: resumo personalizado */
 ;(()=>{
 'use strict';
@@ -1082,3 +1027,62 @@ function boot(){
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 })();
+
+
+
+
+(()=>{
+'use strict';
+const CHECK_MS=5*60*1000;
+const FIRST_CHECK_MS=5000;
+const DISPLAY_MS=7000;
+const MAX_SEEN=180;
+let checking=false;
+let interval=null;
+let lastCheck=0;
+const getText=(x)=>String(x??'').trim();
+const modality=x=>getText(x?.modalidadeNome||x?._modalidadeConsultada||'Licitação pública');
+const municipality=x=>getText(x?.unidadeOrgao?.municipioNome||x?.unidadeOrgao?.nomeMunicipio||x?.municipioNome||'Brasil');
+const uf=x=>getText(x?.unidadeOrgao?.ufSigla||x?.ufSigla||'');
+const organization=x=>getText(x?.orgaoEntidade?.razaoSocial||'Órgão público');
+const objectText=x=>getText(x?.objetoCompra||'Nova oportunidade disponível no Radar de Licitações.');
+function itemId(x){return getText(x?.numeroControlePNCP||x?._pncpId||[x?.orgaoEntidade?.cnpj,x?.anoCompra,x?.sequencialCompra,x?._modalidadeConsultada||x?.modalidadeId].filter(Boolean).join('-'))}
+function pncpUrl(x){if(x?._pncpUrl)return x._pncpUrl;const c=String(x?.orgaoEntidade?.cnpj||'').replace(/\D/g,''),y=Number(x?.anoCompra),s=Number(x?.sequencialCompra);return c.length===14&&Number.isInteger(y)&&Number.isInteger(s)?`https://pncp.gov.br/app/editais/${c}/${y}/${s}`:''}
+function isAvailable(x){const raw=x?.dataEncerramentoProposta||x?.dataFimRecebimentoProposta||x?._closesAt;if(!raw)return true;const d=new Date(raw);return Number.isNaN(d.getTime())||d.getTime()>=Date.now()}
+function storageKey(userId){return `rlb-national-notifications-seen-v1:${userId}`}
+function readSeen(userId){try{const a=JSON.parse(localStorage.getItem(storageKey(userId))||'[]');return new Set(Array.isArray(a)?a:[])}catch{return new Set()}}
+function saveSeen(userId,seen){try{localStorage.setItem(storageKey(userId),JSON.stringify([...seen].slice(-MAX_SEEN)))}catch{}}
+function host(){let h=document.getElementById('rlbNationalNoticeHost');if(h)return h;h=document.createElement('div');h.id='rlbNationalNoticeHost';h.setAttribute('aria-live','polite');Object.assign(h.style,{position:'fixed',right:innerWidth<600?'10px':'20px',bottom:innerWidth<600?'68px':'82px',zIndex:'145',width:innerWidth<600?'min(296px, calc(100vw - 20px))':'min(306px, calc(100vw - 28px))',display:'grid',gap:'8px',pointerEvents:'none'});document.body.appendChild(h);return h}
+function reposition(){const h=document.getElementById('rlbNationalNoticeHost');if(!h)return;h.style.right=innerWidth<600?'10px':'20px';h.style.bottom=innerWidth<600?'68px':'82px';h.style.width=innerWidth<600?'min(296px, calc(100vw - 20px))':'min(306px, calc(100vw - 28px))'}
+function closeCard(card){if(!card||card.dataset.closing==='1')return;card.dataset.closing='1';try{card.__cancelNotice?.()}catch{}try{const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;if(reduced){card.remove();return}const a=card.animate([{opacity:1,transform:'translateX(0) scale(1)'},{opacity:0,transform:'translateX(115%) scale(.97)'}],{duration:230,easing:'cubic-bezier(.4,0,1,1)',fill:'forwards'});a.onfinish=()=>card.remove()}catch{card.remove()}}
+function showNotification(x){const url=pncpUrl(x);if(!url)return;const h=host();while(h.children.length>=1)h.firstElementChild?.remove();const card=document.createElement('article');card.setAttribute('role','status');Object.assign(card.style,{pointerEvents:'auto',position:'relative',padding:'9px 10px 10px',border:'1px solid var(--line)',borderRadius:'11px',background:'color-mix(in srgb, var(--surface) 96%, transparent)',color:'var(--text)',boxShadow:'0 10px 28px rgba(0,0,0,.19)',backdropFilter:'blur(16px)',WebkitBackdropFilter:'blur(16px)',cursor:'pointer',overflow:'hidden',transition:'box-shadow .18s ease,border-color .18s ease'});
+const accent=document.createElement('span');Object.assign(accent.style,{position:'absolute',left:'0',top:'9px',bottom:'11px',width:'3px',borderRadius:'0 4px 4px 0',background:'linear-gradient(180deg,var(--emerald),var(--cyan))',boxShadow:'0 0 14px color-mix(in srgb,var(--emerald) 45%,transparent)'});card.appendChild(accent);
+const top=document.createElement('div');Object.assign(top.style,{display:'flex',alignItems:'center',justifyContent:'space-between',gap:'8px',marginBottom:'4px'});
+const label=document.createElement('div');label.textContent='● NOVA OPORTUNIDADE • RADAR';Object.assign(label.style,{fontSize:'9px',fontWeight:'950',letterSpacing:'.065em',color:'var(--emerald)'});
+const close=document.createElement('button');close.type='button';close.setAttribute('aria-label','Fechar notificação');close.textContent='×';Object.assign(close.style,{width:'26px',height:'26px',borderRadius:'7px',border:'1px solid var(--line)',background:'var(--surface2)',color:'var(--muted)',fontSize:'15px',lineHeight:'1',padding:'0',cursor:'pointer',flex:'0 0 auto'});top.append(label,close);
+const title=document.createElement('div');title.textContent=objectText(x);Object.assign(title.style,{fontSize:'12px',fontWeight:'850',lineHeight:'1.35',display:'-webkit-box',WebkitLineClamp:'2',WebkitBoxOrient:'vertical',overflow:'hidden',paddingLeft:'2px'});
+const meta=document.createElement('div');meta.textContent=`${modality(x)} • ${municipality(x)}${uf(x)?' / '+uf(x):''}`;Object.assign(meta.style,{fontSize:'10px',color:'var(--muted)',marginTop:'5px',paddingLeft:'2px',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'});
+const org=document.createElement('div');org.textContent=organization(x);Object.assign(org.style,{fontSize:'9.5px',color:'var(--muted)',marginTop:'2px',paddingLeft:'2px',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'});
+const foot=document.createElement('div');Object.assign(foot.style,{display:'flex',justifyContent:'space-between',alignItems:'center',gap:'8px',marginTop:'7px',paddingTop:'6px',paddingLeft:'2px',borderTop:'1px solid var(--line)'});
+const source=document.createElement('span');source.textContent='PNCP • fonte oficial';Object.assign(source.style,{fontSize:'9px',color:'var(--muted)'});
+const open=document.createElement('a');open.href=url;open.target='_blank';open.rel='noopener';open.textContent='Ver oportunidade ↗';Object.assign(open.style,{fontSize:'10.5px',fontWeight:'900',color:'var(--emerald)',textDecoration:'none'});foot.append(source,open);
+const progressTrack=document.createElement('div');Object.assign(progressTrack.style,{position:'absolute',left:'0',right:'0',bottom:'0',height:'2px',background:'color-mix(in srgb,var(--muted) 14%,transparent)',overflow:'hidden'});
+const progress=document.createElement('div');Object.assign(progress.style,{width:'100%',height:'100%',transform:'scaleX(1)',transformOrigin:'left center',background:'linear-gradient(90deg,var(--emerald),var(--cyan),var(--purple))',boxShadow:'0 0 10px color-mix(in srgb,var(--emerald) 35%,transparent)',willChange:'transform'});progressTrack.appendChild(progress);card.append(top,title,meta,org,foot,progressTrack);h.appendChild(card);
+let remaining=DISPLAY_MS,paused=false,lastFrame=performance.now(),raf=0,stopped=false;
+function stopClock(){stopped=true;if(raf)cancelAnimationFrame(raf)}
+function frame(now){if(stopped||!card.isConnected)return;if(!paused){remaining-=Math.max(0,now-lastFrame);const ratio=Math.max(0,remaining/DISPLAY_MS);progress.style.transform=`scaleX(${ratio})`;if(remaining<=0){stopClock();closeCard(card);return}}lastFrame=now;raf=requestAnimationFrame(frame)}
+card.__cancelNotice=stopClock;
+close.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();closeCard(card)});open.addEventListener('click',e=>e.stopPropagation());card.addEventListener('click',()=>window.open(url,'_blank','noopener'));
+card.addEventListener('mouseenter',()=>{paused=true;lastFrame=performance.now();card.style.boxShadow='0 13px 34px color-mix(in srgb,var(--emerald) 14%,rgba(0,0,0,.25)),0 0 0 1px color-mix(in srgb,var(--emerald) 30%,transparent)';card.style.borderColor='color-mix(in srgb,var(--emerald) 45%,var(--line))'});
+card.addEventListener('mouseleave',()=>{paused=false;lastFrame=performance.now();card.style.boxShadow='0 16px 38px rgba(0,0,0,.20)';card.style.borderColor='var(--line)'});
+try{if(!matchMedia('(prefers-reduced-motion: reduce)').matches){card.animate([{opacity:0,transform:'translateX(115%) scale(.98)'},{offset:.78,opacity:1,transform:'translateX(-7px) scale(1.01)'},{opacity:1,transform:'translateX(0) scale(1)'}],{duration:480,easing:'cubic-bezier(.16,1,.3,1)'});accent.animate([{opacity:.35},{opacity:1}],{duration:520,easing:'ease-out'})}}catch{}
+raf=requestAnimationFrame(frame)
+}
+async function getUser(){const r=await fetch('/api/me',{credentials:'same-origin',cache:'no-store',headers:{accept:'application/json'}});if(!r.ok)return null;const d=await r.json().catch(()=>({}));return d.user||null}
+async function check(){if(checking||document.hidden)return;checking=true;lastCheck=Date.now();try{const user=await getUser();if(!user)return;const r=await fetch('/api/live-feed?limit=100',{credentials:'same-origin',cache:'no-store',headers:{accept:'application/json'}});if(!r.ok)return;const d=await r.json().catch(()=>({}));const items=(d.items||[]).filter(x=>itemId(x)&&pncpUrl(x)&&isAvailable(x));if(!items.length)return;const seen=readSeen(user.id);const next=items.find(x=>!seen.has(itemId(x)));if(!next)return;seen.add(itemId(next));saveSeen(user.id,seen);showNotification(next)}catch(e){console.warn('RLB onsite notification check:',e?.message||e)}finally{checking=false}}
+function schedule(){if(interval)clearInterval(interval);setTimeout(check,FIRST_CHECK_MS);interval=setInterval(check,CHECK_MS)}
+function observeLogin(){const shell=document.getElementById('appShell');if(!shell)return;if(!shell.classList.contains('hidden'))setTimeout(check,1800);new MutationObserver(()=>{if(!shell.classList.contains('hidden'))setTimeout(check,1800)}).observe(shell,{attributes:true,attributeFilter:['class']})}
+function boot(){schedule();observeLogin();addEventListener('resize',reposition,{passive:true});document.addEventListener('visibilitychange',()=>{if(!document.hidden&&Date.now()-lastCheck>=CHECK_MS)check()})}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
+})();
+
