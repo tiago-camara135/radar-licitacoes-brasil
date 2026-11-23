@@ -3,23 +3,24 @@
 
 /* O cabeçalho usa as mesmas cores de superfície e ação do Radar. */
 .app-shell{
+  --hdr-muted:color-mix(in srgb,var(--muted) 80%,var(--text));
   --hdr-strip-bg:linear-gradient(90deg,var(--surface2),var(--surface3));
-  --hdr-strip-text:var(--muted);
+  --hdr-strip-text:var(--hdr-muted);
   --hdr-strip-strong:var(--text);
   --hdr-strip-line:var(--line);
   --hdr-bg:linear-gradient(106deg,var(--surface),var(--surface2) 46%,var(--surface3) 82%,var(--surface2));
   --hdr-line:var(--line2);
   --hdr-shadow:var(--shadow);
   --hdr-brand:var(--text);
-  --hdr-brand-sub:var(--muted);
+  --hdr-brand-sub:var(--hdr-muted);
   --hdr-nav-title:var(--text);
-  --hdr-nav-sub:var(--muted);
+  --hdr-nav-sub:var(--hdr-muted);
   --hdr-nav-divider:var(--line);
   --hdr-nav-hover:color-mix(in srgb,var(--emerald) 8%,transparent);
   --hdr-nav-active:color-mix(in srgb,var(--emerald) 16%,var(--surface));
   --hdr-control-bg:var(--surface2);
   --hdr-control-line:var(--line2);
-  --hdr-control-text:var(--muted);
+  --hdr-control-text:var(--hdr-muted);
   --hdr-user:var(--text);
   --hdr-map:var(--cyan);
   --hdr-map2:var(--emerald);
