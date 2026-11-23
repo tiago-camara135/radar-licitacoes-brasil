@@ -125,3 +125,15 @@ test('troca de telas não chama forEach em querySelector de elemento único',()=
  assert.match(js,/document\.querySelectorAll\('\.view'\)\.forEach/);
  assert.match(js,/document\.querySelectorAll\('#mainNav \[data-view\]'\)\.forEach/);
 });
+
+
+test('refinamento visual evita contornos azuis automáticos e preserva foco por teclado',()=>{
+ assert.doesNotMatch(js,/if\(name==='radar'\)\$\('#searchKeyword'\)\?\.focus\(/);
+ assert.doesNotMatch(js,/if\(name==='alerts'\)\$\('#alertName'\)\?\.focus\(/);
+ assert.match(html,/id="rlbPageNavCurrent" aria-current="page" aria-live="polite"/);
+ assert.match(css,/Radar UX refinado · navegação limpa/);
+ assert.match(css,/#appShell :is\(#rlbPageNavCurrent,#pageTitle,#rlbHomeTitle,#radarResultsTitle\)\[tabindex="-1"\]:focus/);
+ assert.match(css,/#appShell\.radar-layout :is\(button,a,select,summary\):focus-visible/);
+ assert.match(css,/#appShell #view-home \.rlb-home-search :is\(\.rlb-home-search-field,\.rlb-home-search-keyword\):focus-within/);
+ assert.match(css,/#appShell #view-radar \.radar-search-bar #searchKeyword:focus-visible/);
+});
