@@ -2076,21 +2076,6 @@ html.rlb-corporate-v3 body :is(.tr-head h2,.tai-head h2) {
 .radar-detail-card .radar-file { min-height: 38px; padding-block: 2px; }
 .radar-detail-card .radar-file-download { min-height: 36px; }
 .radar-detail-card .radar-file-copy > a { font-size: 13px; font-weight: 580; }
-.radar-analysis-menu { order: 2; }
-.radar-analysis-menu:not(:has(.radar-analysis-actions > button)) { display: none; }
-.radar-analysis-menu summary {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 5px 2px;
-  min-height: 34px;
-  color: var(--radar-muted);
-  cursor: pointer;
-  font-size: 12px;
-  font-weight: 650;
-}
-.radar-analysis-menu summary::after { content: "⌄"; }
-.radar-analysis-menu[open] summary::after { content: "⌃"; }
 .radar-detail-navigation { order: 3; }
 html[data-theme="dark"] #appShell .radar-detail-card > .tr-quick-badge.high {
   --radar-score-bg: #16372c;
@@ -2119,4 +2104,79 @@ html[data-theme="dark"] #appShell .radar-detail-card > .tr-quick-badge.high {
   stroke-width: 1.7;
   stroke-linecap: round;
   stroke-linejoin: round;
+}
+
+/* Filtros compactos e paleta de acesso e da IA */
+#radarFilters:not([hidden]) {
+  display: grid;
+  grid-template-columns: repeat(3,minmax(0,1fr));
+  align-items: end;
+  padding: 9px;
+  gap: 7px 9px;
+}
+#radarFilters :is(.radar-quick-filters,.radar-filters) { display: contents; }
+#radarFilters label { font-size: 12px; gap: 3px; }
+#radarFilters :is(select,input:not([type="checkbox"]),#radarStatePicker summary) {
+  min-height: 38px;
+  padding-block: 5px;
+}
+@media (min-width: 1470px) {
+  #radarFilters:not([hidden]) { grid-template-columns: repeat(6,minmax(0,1fr)); }
+}
+@media (max-width: 620px) {
+  #radarFilters:not([hidden]) { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  #radarStates { max-height: min(172px, 32dvh); }
+}
+#appShell .radar-detail-card .radar-analysis-actions > button {
+  color: #103c91 !important;
+  border-color: #9ebcf9 !important;
+}
+html[data-theme="dark"] #appShell .radar-detail-card .radar-analysis-actions > button { color: #b5ceff !important; }
+
+#authScreen, #appShell #ai-assistant {
+  --radar-access-blue: #064bea;
+  --radar-access-navy: #071638;
+  --emerald: #245fce;
+  --cyan: #3879ef;
+  --purple: #537de7;
+  --electric: #245fce;
+  --brand: #245fce;
+  --brand-strong: #071638;
+  --brand-soft: #e1edff;
+}
+html[data-theme="dark"] :is(#authScreen,#appShell #ai-assistant) {
+  --emerald: #8eb8ff;
+  --cyan: #92b8ff;
+  --purple: #a8c3ff;
+  --electric: #a8c3ff;
+  --brand: #a8c3ff;
+  --brand-soft: #1c365d;
+}
+#authScreen.auth-screen { background: #f5f7fb !important; }
+html[data-theme="dark"] #authScreen.auth-screen { background: #0a1428 !important; }
+#authScreen .auth-copy { background: #071638 !important; color: #fff !important; }
+#authScreen .auth-copy :is(.eyebrow,.auth-home-kicker) { color: #aecaff !important; }
+#authScreen .auth-grid { border-color: #a1b9e0 !important; }
+#authScreen .auth-card { background: var(--surface) !important; }
+#authScreen :is(#authSubmit,.auth-home-primary) {
+  background: var(--radar-access-blue) !important;
+  color: #fff !important;
+  border-color: var(--radar-access-blue) !important;
+  box-shadow: none !important;
+}
+#authScreen .auth-tabs button.active { background: var(--brand-soft) !important; color: var(--brand) !important; }
+#appShell.radar-layout .ai-fab {
+  background: var(--radar-blue) !important;
+  border-color: var(--radar-blue) !important;
+  color: #fff !important;
+  box-shadow: 0 5px 16px #064bea40 !important;
+}
+#appShell.radar-layout .ai-fab-icon { background: #ffffff29 !important; color: #fff !important; }
+#appShell #ai-assistant .ai-window { background: var(--radar-paper) !important; border-color: var(--radar-line) !important; }
+#appShell #ai-assistant .ai-window-head { background: var(--radar-navy) !important; color: #fff !important; }
+#appShell #ai-assistant :is(#aiStatusText,.ai-window-head b) { color: #e5eeff !important; }
+#appShell #ai-assistant :is(.ai-avatar,.ai-advisor-avatar,.ai-welcome-icon,#aiSend) {
+  background: var(--radar-blue) !important;
+  color: #fff !important;
+  border-color: var(--radar-blue) !important;
 }

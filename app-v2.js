@@ -349,11 +349,8 @@ function renderRadarDetail(panel, item, index = -1) {
       ${item.origin !== item.official ? externalRadarLink(item.origin, 'Portal de origem') : ''}
     </div>
     <dl>${rows.filter(([, value])=>value).map(([label,value,icon])=>`<div><svg viewBox="0 0 24 24" aria-hidden="true"><path d="${icon}"/></svg><dt>${label}</dt><dd>${esc(value)}</dd></div>`).join('')}</dl>
+    <div class="radar-analysis-actions" role="group" aria-label="Análises da oportunidade"></div>
     <h3>${opportunityIcon} Documentos</h3><div class="radar-documents" aria-live="polite"></div>
-    <details class="radar-analysis-menu">
-      <summary>Análises</summary>
-      <div class="radar-analysis-actions"></div>
-    </details>
     ${index >= 0 ? `<nav class="radar-detail-navigation" aria-label="Navegação entre oportunidades">
       <button type="button" class="radar-button" data-radar-step="-1" ${index === 0 ? 'disabled' : ''}>‹ Oportunidade anterior</button>
       <button type="button" class="radar-button" data-radar-step="1" ${index + 1 === dashboard.items.length ? 'disabled' : ''}>Próxima oportunidade ›</button>
