@@ -65,5 +65,34 @@ test('Radar Nacional functionality and existing selectors remain intact',()=>{
   assert.match(app,/async function refreshLive\(\)/);
   assert.match(app,/\$\('#refreshLive'\)\?\.addEventListener\('click',refreshLive\)/);
   assert.match(app,/\$\('#liveScope'\)\?\.addEventListener\('change',renderLive\)/);
-  assert.match(html,/app-v2\.css\?v=20261122-radar-premium-1/);
+  assert.match(html,/app-v2\.css\?v=20261122-radar-premium-2/);
+});
+
+test('final readability pass raises secondary information to a more legible size',()=>{
+  const finish=css.slice(css.lastIndexOf('/* RADAR NATIONAL PREMIUM FINISH 1.1'));
+  assert.match(finish,/\.live-terminal \.terminal-meta\{[\s\S]*?font-size:10\.5px/);
+  assert.match(finish,/\.live-terminal \.item-title\{[\s\S]*?font-size:14px/);
+  assert.match(finish,/\.live-terminal \.item-meta\{[\s\S]*?font-size:10px/);
+  assert.match(finish,/\.live-terminal \.trq-detail\{[\s\S]*?font-size:10px/);
+});
+test('compatibility colors have explicit high, attention and critical semantic states',()=>{
+  const finish=css.slice(css.lastIndexOf('/* RADAR NATIONAL PREMIUM FINISH 1.1'));
+  assert.match(finish,/\.tr-quick-badge\.high\{--trq-accent:#58cba7!important\}/);
+  assert.match(finish,/\.tr-quick-badge\.attention\{--trq-accent:#e8b85d!important\}/);
+  assert.match(finish,/\.tr-quick-badge\.low\{--trq-accent:#e87983!important\}/);
+});
+test('interactive controls include keyboard focus and pressed states',()=>{
+  const finish=css.slice(css.lastIndexOf('/* RADAR NATIONAL PREMIUM FINISH 1.1'));
+  assert.match(finish,/\.tr-quick-badge:focus-visible/);
+  assert.match(finish,/\.rlb-live-source-actions \.rlb-source-btn:focus-visible/);
+  assert.match(finish,/\.live-item>\.tender-ready-trigger:focus-visible/);
+  assert.match(finish,/\.live-item>\.tender-ai-trigger:focus-visible/);
+  assert.match(finish,/:active/);
+});
+test('mobile controls use larger touch targets and readable card text',()=>{
+  const finish=css.slice(css.lastIndexOf('/* RADAR NATIONAL PREMIUM FINISH 1.1'));
+  assert.match(finish,/@media\(max-width:700px\)/);
+  assert.match(finish,/min-height:42px/);
+  assert.match(finish,/flex:1 1 115px/);
+  assert.match(finish,/@media\(max-width:420px\)/);
 });

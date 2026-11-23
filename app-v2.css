@@ -1111,3 +1111,115 @@ body{
   .live-terminal .tender-ready-trigger,
   .live-terminal .tender-ai-trigger{transition:none!important}
 }
+
+
+/* RADAR NATIONAL PREMIUM FINISH 1.1 — final readability, interaction and accessibility pass.
+   CSS-only: no changes to application logic, requests, data, or analysis workflows. */
+.live-terminal .terminal-meta{
+  color:#c9d9df;
+  font-size:10.5px;
+  line-height:1.65;
+}
+.live-terminal .item-title{
+  color:#f7fafb;
+  font-size:14px;
+  line-height:1.5;
+  letter-spacing:-.012em;
+}
+.live-terminal .item-meta{
+  color:#c9d7de;
+  font-size:10px;
+  line-height:1.65;
+}
+.live-terminal .tag{
+  font-size:9.5px;
+  letter-spacing:.005em;
+}
+.live-terminal .rlb-live-source-chip{
+  color:#d0dce1;
+  font-size:9.5px;
+}
+.live-terminal .rlb-live-source-actions .rlb-source-btn{
+  min-height:32px;
+  padding:7px 10px!important;
+  font-size:9.5px!important;
+}
+.live-terminal #refreshLive{
+  min-height:38px;
+  font-size:10.5px;
+}
+.live-terminal .tr-quick-badge.high{--trq-accent:#58cba7!important}
+.live-terminal .tr-quick-badge.attention{--trq-accent:#e8b85d!important}
+.live-terminal .tr-quick-badge.low{--trq-accent:#e87983!important}
+.live-terminal .tr-quick-badge:focus-visible{
+  outline:3px solid #9be8d8!important;
+  outline-offset:3px!important;
+  border-color:#9be8d8!important;
+}
+.live-terminal .trq-title{
+  font-size:10.5px;
+  line-height:1.4;
+}
+.live-terminal .trq-detail{
+  color:#d0dce1!important;
+  font-size:10px;
+  line-height:1.5;
+}
+.live-terminal .trq-score{
+  font-size:13px;
+  padding:7px 9px;
+}
+.live-terminal .live-item>.tender-ready-trigger{
+  min-height:40px;
+  padding:10px 14px;
+  font-size:10.5px;
+}
+.live-terminal .live-item>.tender-ai-trigger{
+  min-height:46px;
+  font-size:11.5px;
+}
+.live-terminal .rlb-live-source-actions .rlb-source-btn:active,
+.live-terminal .live-item>.tender-ready-trigger:active,
+.live-terminal .live-item>.tender-ai-trigger:active,
+.live-terminal #refreshLive:active{
+  transform:translateY(1px);
+  filter:brightness(.96);
+}
+.live-terminal .rlb-live-source-actions .rlb-source-btn:focus-visible{
+  outline:3px solid #9be8d8!important;
+  outline-offset:3px!important;
+}
+.live-terminal .live-item>.tender-ready-trigger:focus-visible,
+.live-terminal .live-item>.tender-ai-trigger:focus-visible{
+  outline:3px solid #9be8d8!important;
+  outline-offset:3px!important;
+}
+@media(max-width:700px){
+  .live-terminal .terminal-head{gap:10px;align-items:flex-start}
+  .live-terminal .terminal-title b{font-size:14px}
+  .live-terminal .terminal-meta{font-size:10px}
+  .live-terminal #liveScope,
+  .live-terminal #refreshLive{min-height:42px}
+  .live-terminal .item-title{font-size:13.5px;line-height:1.5}
+  .live-terminal .item-meta{font-size:10px}
+  .live-terminal .rlb-live-source-actions .rlb-source-btn{
+    min-height:40px;
+    flex:1 1 115px;
+    font-size:10px!important;
+  }
+  .live-terminal .tr-quick-badge{min-height:54px}
+  .live-terminal .trq-title{font-size:10.5px}
+  .live-terminal .trq-detail{font-size:10px}
+  .live-terminal .live-item>.tender-ready-trigger{min-height:42px;font-size:10.5px}
+  .live-terminal .live-item>.tender-ai-trigger{min-height:48px;font-size:11.5px}
+}
+@media(max-width:420px){
+  .live-terminal{padding:13px}
+  .live-terminal .terminal-toolbar{gap:7px}
+  .live-terminal #liveScope{font-size:11px;padding-left:10px}
+  .live-terminal #refreshLive{padding-inline:10px;font-size:10px}
+  .live-terminal .item-title{font-size:13px}
+  .live-terminal .item-meta{font-size:9.75px}
+  .live-terminal .rlb-live-source-chip{font-size:10px}
+  .live-terminal .trq-score{font-size:12.5px}
+}
