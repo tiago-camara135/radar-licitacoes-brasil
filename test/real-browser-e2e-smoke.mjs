@@ -174,6 +174,7 @@ try{
 
  // Filtros avançados antigos não devem contaminar uma busca nova.
  await gotoSection(page,'radar');
+ if(await page.locator('#radarFilters').evaluate(e=>e.hidden))await page.locator('#radarFiltersToggle').click();
  await page.locator('#radarMunicipality').fill('Cidade anterior');
  await page.locator('#radarOrganization').fill('Órgão anterior');
  await page.locator('#searchDays').selectOption('90');
