@@ -196,6 +196,56 @@ try{
  await page.locator('#rlbHomeRecommendationFilters [data-home-rec-filter="all"]').click();
  await until(page,()=>document.querySelector('#revRecommendations')?.textContent?.includes('Aquisição de combustível para a frota CI'),timeout);
  note('Interactive KPI drilldown, fit filters and exact tender tracking identity OK');
+ // Refresh manual usa os mesmos endpoints de dados reais do ciclo de 5 minutos.
+ const overviewRequest=page.waitForRequest(request=>request.url().includes('/api/dashboard/overview'),{timeout:15000});
+ const liveRequest=page.waitForRequest(request=>request.url().includes('/api/live-feed?'),{timeout:15000});
+ await page.locator('#rlbHomeRefresh').click();
+ await Promise.all([overviewRequest,liveRequest]);
+ await until(page,()=>document.querySelector('#rlbHomeLiveBar')?.dataset.state==='ready',16000);
+ assert.match(await page.locator('#rlbHomeLastUpdate').textContent(),/Dados consultados às/);
+ assert.match(await page.locator('#rlbHomeNextUpdate').textContent(),/Próxima consulta em/);
+ assert.equal(await page.locator('#rlbHomeRefresh').isEnabled(),true);
+ note('Dashboard refresh queries real overview + national feed and updates live clock OK');
+ // Eventos de teste isolados simulam uma nova publicação baseada num snapshot real.
+ // O teste não grava dados sintéticos no site público.
+ const originalOverview=await page.evaluate(async()=>{
+   const r=await fetch('/api/dashboard/overview',{credentials:'same-origin',cache:'no-store'});
+   if(!r.ok)throw Error('QA snapshot not available: '+r.status);
+   return r.json();
+ });
+ await page.evaluate(data=>{
+   const first=data.recommendations?.[0];
+   if(!first)throw Error('Need real seeded recommendation for pulse test');
+   const urgentDate=new Date(Date.now()+12*3600000).toISOString();
+   const newcomer={...first,sequence:Number(first.sequence)+1,
+     closes_at:urgentDate,object_text:'Recomendação nova QA temporária'};
+   const urgentAgenda={type:'opportunity',date:urgentDate,
+     title:'Prazo novo QA temporário',subtitle:'Teste de urgência',pncp_key:'qa-urgent-temp'};
+   const fake={...data,recommendations:[newcomer,...data.recommendations],
+     agenda:[urgentAgenda,...(data.agenda||[])]};
+   window.__rlbPulseSyntheticOverview=fake;
+   document.dispatchEvent(new CustomEvent('radar:overview',{detail:fake}));
+ },originalOverview);
+ await until(page,()=>document.querySelector('#revRecommendations .rev-rec[data-pulse-state="new"]')?.textContent?.includes('Recomendação nova QA temporária'),8000);
+ assert.ok((await page.locator('#rlbHomeNewUpdates').textContent()).includes('nova(s) recomendação'));
+ const highlighted=page.locator('#revRecommendations .rev-rec[data-pulse-state="new"]').first();
+ assert.equal(await highlighted.getAttribute('data-priority'),'urgent','Real closing date within 12h sets critical priority');
+ assert.ok((await highlighted.textContent()).includes('Prazo em até 24h'),'Urgent tender has explicit deadline context');
+ const meter=highlighted.locator('progress.rlb-fit-meter');
+ assert.equal(await meter.count(),1,'Aderência has an accessible progress meter');
+ assert.equal(await meter.getAttribute('aria-label'),'Aderência estimada pelos critérios dos alertas');
+ assert.ok(Number(await meter.evaluate(el=>el.value))>=0,'Meter must represent a real score, not a placeholder');
+ await until(page,()=>document.querySelector('#rlbHomeDeadlines .rlb-home-deadline[data-urgency="critical"]')?.textContent?.includes('Prazo novo QA temporário'),8000);
+ assert.ok((await page.locator('#rlbHomeNewUpdates').textContent()).includes('prazo(s) incluído(s)'));
+ note('Real deadline urgency, fit meter and new agenda highlight use data from the temporary test event OK');
+ await page.evaluate(()=>{
+   window.__rlbPulseUnchangedCard=document.querySelector('#revRecommendations .rev-rec');
+   document.dispatchEvent(new CustomEvent('radar:overview',{detail:window.__rlbPulseSyntheticOverview}));
+ });
+ assert.equal(await page.evaluate(()=>window.__rlbPulseUnchangedCard===document.querySelector('#revRecommendations .rev-rec')),true,
+   'Identical refreshed recommendations preserve DOM and do not blink');
+ await page.evaluate(data=>document.dispatchEvent(new CustomEvent('radar:overview',{detail:data})),originalOverview);
+ note('Real-snapshot diff highlights only newly introduced recommendations; unchanged cards do not blink OK');
 
  await page.locator('.rev-n-bell').click();
  await page.locator('#revNotifPanel:not([hidden])').waitFor({state:'visible',timeout});
@@ -375,6 +425,24 @@ try{
    }
  }
  note('Executive home and Radar search responsive 320/390/768/1024/1440px, both themes OK');
+
+ // Avança apenas o relógio da aba isolada de QA: comprova o disparo real
+ // do agendamento de cinco minutos sem esperar cinco minutos no CI.
+ await gotoSection(page,'home');
+ const scheduledOverview=page.waitForRequest(r=>r.url().includes('/api/dashboard/overview'),{timeout:11000});
+ const scheduledFeed=page.waitForRequest(r=>r.url().includes('/api/live-feed?'),{timeout:11000});
+ await page.evaluate(()=>{
+   window.__qaOriginalDateNow=Date.now;
+   Date.now=()=>window.__qaOriginalDateNow()+6*60*1000;
+ });
+ try{
+   await Promise.all([scheduledOverview,scheduledFeed]);
+ }finally{
+   await page.evaluate(()=>{Date.now=window.__qaOriginalDateNow;delete window.__qaOriginalDateNow});
+ }
+ await until(page,()=>document.querySelector('#rlbHomeLiveBar')?.dataset.state==='ready',15000);
+ assert.equal(await page.locator('#rlbHomeRefresh').isEnabled(),true);
+ note('Five-minute scheduled refresh actually fires both real backend requests in Chrome OK');
 
  const fatal=problems.filter(x=>!(/ERR_CONNECTION|Failed to fetch|network error/i.test(x)));
  assert.deepEqual(fatal,[],'Unexpected browser JavaScript errors');

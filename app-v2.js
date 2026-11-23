@@ -151,6 +151,10 @@ function renderLive() {
   }).join('') || '<div class="empty-state">Nenhuma oportunidade neste filtro.</div>';
 }
 async function refreshLive(){if(state.livePromise)return state.livePromise;const task=(async()=>{try{const d=await api('/api/live-feed?limit=40',{timeoutMs:12000});state.live=d.items||[];renderLive();const s=d.status||{};document.dispatchEvent(new CustomEvent('radar:live-feed',{detail:{items:state.live,status:s}}));if($('#metricStored'))$('#metricStored').textContent=Number(s.total_stored||0).toLocaleString('pt-BR');if($('#metricNew'))$('#metricNew').textContent=Number(s.last_new_count||0).toLocaleString('pt-BR');if($('#metricLast'))$('#metricLast').textContent=time(s.last_success_at);$('#statusDot')?.classList.toggle('ok',!s.consecutive_failures);if($('#monitorStatusText'))$('#monitorStatusText').textContent=s.running?'Varredura em andamento':`PNCP • ${s.live?.modalities_per_cycle||14} modalidades • ${s.interval_seconds||90}s`;if($('#liveMeta'))$('#liveMeta').textContent=`Atualização por eventos • varredura ${time(s.last_success_at)} • tela ${time(d.fetched_at)} • ${Number(s.total_stored||0).toLocaleString('pt-BR')} registros`}catch(e){if($('#liveMeta'))$('#liveMeta').textContent=e.code==='request_timeout'?'A atualização demorou mais que o esperado. Tentaremos novamente.':'Falha temporária ao sincronizar o feed.'}})();state.livePromise=task;try{return await task}finally{if(state.livePromise===task)state.livePromise=null}}
+document.addEventListener('radar:live-refresh-request',()=>{
+  if($('#appShell')?.classList.contains('hidden')||document.hidden)return;
+  refreshLive(); // Consulta dados monitorados; não faz scraping nem cria licitações.
+});
 function startLive(){clearInterval(state.timer);state.timer=null;try{state.sse?.close()}catch{}state.sse=null;refreshLive();try{state.sse=new EventSource('/api/live-events');const sync=()=>{if(state.view==='radar'||state.view==='home')refreshLive()};state.sse.addEventListener('procurement',sync);state.sse.addEventListener('status',sync);state.timer=setInterval(()=>{if(!state.sse||state.sse.readyState!==EventSource.OPEN)refreshLive()},90000)}catch{state.sse=null;state.timer=setInterval(refreshLive,90000)}}
 const dashboard = {
   search: null, items: [], page: 0, listScroll: 0, selected: '', savedSelected: '',
@@ -756,6 +760,7 @@ function install(){
  if(shell)new MutationObserver(()=>{if(!logged()){epoch++;lastLoad=0;lastIdentity='';ui.values.forEach(x=>x.textContent='—');ui.status.textContent='Entre na conta para consultar os indicadores.'}else load(false)}).observe(shell,{attributes:true,attributeFilter:['class']});
  document.addEventListener('click',e=>{if(e.target.closest('#mainNav [data-view="radar"], #mainNav [data-view="home"]'))load(false)});
  document.addEventListener('visibilitychange',()=>{if(!document.hidden&&Date.now()-lastLoad>180000)load(false)});
+  document.addEventListener('radar:overview-refresh-request',()=>{if(logged())load(true)});
  // Reconciliar indicadores após acompanhamento salvo em Minha Operação.
  document.addEventListener('radar:overview',event=>{
    if(!logged()||!event.detail)return;
@@ -806,7 +811,9 @@ const logged=()=>!!$('#appShell')&&!$('#appShell').classList.contains('hidden');
 const safeUrl=raw=>{try{const u=new URL(raw);return ['http:','https:'].includes(u.protocol)&&!u.username&&!u.password?u.href:''}catch{return''}};
 const formatted=x=>{const d=new Date(x);return Number.isNaN(d.getTime())?'Data não informada':d.toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'})};
 let rows=[],filter='all',open=false,loading=false,lastProfile=0,epoch=0;
-let recFilter='all',recCache=[];
+let recFilter='all',recCache=[],recInitialized=false,renderedRecSignature='',recPulse=new Map();
+const recKey=x=>[x?.org_cnpj,x?.year,x?.sequence].map(String).join('-');
+const recVersion=x=>JSON.stringify([x?.object_text,x?.closes_at,Number(x?.fit?.score),x?.modality_name]);
 const ui={};
 function install(){
   const bar=$('#appShell .topbar');if(!bar)return;
@@ -840,7 +847,7 @@ function install(){
   });
   document.addEventListener('radar:home-rec-filter',event=>setRecommendationFilter(event.detail?.filter));
   const shell=$('#appShell');
-  new MutationObserver(()=>{if(!logged()){epoch++;setOpen(false);rows=[];lastProfile=0;recCache=[];recFilter='all';ui.count.textContent='—';$('#revRecommendations')?.remove()}else profile()}).observe(shell,{attributes:true,attributeFilter:['class']});
+  new MutationObserver(()=>{if(!logged()){epoch++;setOpen(false);rows=[];lastProfile=0;recCache=[];recFilter='all';recInitialized=false;renderedRecSignature='';recPulse.clear();ui.count.textContent='—';$('#revRecommendations')?.remove()}else profile()}).observe(shell,{attributes:true,attributeFilter:['class']});
   document.addEventListener('visibilitychange',()=>{if(!document.hidden&&logged()&&Date.now()-lastProfile>90000)profile()});
   if(logged())profile();
 }
@@ -897,7 +904,22 @@ function setRecommendationFilter(value){
   renderRecommendationItems();
 }
 function recommendations(d){
-  recCache=Array.isArray(d?.recommendations)?d.recommendations:[];
+  const incoming=Array.isArray(d?.recommendations)?d.recommendations:[];
+  const before=new Map(recCache.map(x=>[recKey(x),recVersion(x)]));
+  let added=0,changed=0;
+  recPulse.clear();
+  if(recInitialized){
+    for(const item of incoming){
+      const key=recKey(item),version=recVersion(item);
+      if(!before.has(key)){recPulse.set(key,'new');added++}
+      else if(before.get(key)!==version){recPulse.set(key,'changed');changed++}
+    }
+  }
+  recInitialized=true;
+  recCache=incoming;
+  if(added||changed)document.dispatchEvent(new CustomEvent('radar:pulse-updates',{
+    detail:{source:'recommendations',added,changed}
+  }));
   renderRecommendationItems();
 }
 function renderRecommendationItems(){
@@ -915,6 +937,14 @@ function renderRecommendationItems(){
       return Number.isFinite(detected)&&dayOf(detected)===dayOf(now);
     }
     return true;
+  }).sort((a,b)=>{
+    const priority=x=>{
+      const remaining=new Date(x.closes_at).getTime()-now;
+      return Number.isFinite(remaining)&&remaining>=0&&remaining<=48*3600000?2:
+        Number(x.fit?.score)>=85?1:0;
+    };
+    return priority(b)-priority(a)||
+      (Number(b.fit?.score)||0)-(Number(a.fit?.score)||0);
   }).slice(0,3);
   const group=$('#rlbHomeRecommendationFilters');
   if(group){
@@ -928,6 +958,14 @@ function renderRecommendationItems(){
       button.setAttribute('aria-pressed',String(selected));
     });
   }
+  const urgencyTier=x=>{
+    const remaining=new Date(x.closes_at).getTime()-now;
+    return Number.isFinite(remaining)&&remaining>=0?
+      remaining<=86400000?'24h':remaining<=48*3600000?'48h':'normal':'past';
+  };
+  const signature=JSON.stringify([recFilter,recs.map(x=>[recKey(x),recVersion(x),urgencyTier(x)])]);
+  if(renderedRecSignature===signature&&target.querySelector('.rev-recs-list'))return;
+  renderedRecSignature=signature;
   target.replaceChildren();
   const head=el('div','rev-recs-head'),title=el('strong','','Recomendadas para seus alertas'),note=el('small','','Aderência estimada aos critérios; não representa chance de vencer.');
   head.append(title,note);target.append(head);
@@ -943,12 +981,37 @@ function renderRecommendationItems(){
     card.dataset.cnpj=String(x.org_cnpj||'');
     card.dataset.year=String(x.year||'');
     card.dataset.seq=String(x.sequence||'');
+    const pulse=recPulse.get(recKey(x));
+    if(pulse){
+      card.classList.add('rlb-pulse-item');
+      card.dataset.pulseState=pulse;
+    }
     info.append(el('strong','',x.object_text||'Oportunidade sem descrição'),el('small','',[x.modality_name,x.municipality,x.uf].filter(Boolean).join(' • ')));
+    const untilClose=new Date(x.closes_at).getTime()-now;
+    const dueSoon=Number.isFinite(untilClose)&&untilClose>=0&&untilClose<=48*3600000;
+    const fitScore=Number(x.fit?.score);
+    const highFit=Number.isFinite(fitScore)&&fitScore>=85;
+    card.dataset.priority=dueSoon?'urgent':highFit?'high-fit':'standard';
+    if(dueSoon){
+      info.append(el('span','rlb-priority-chip rlb-priority-urgent',
+        untilClose<=86400000?'Prazo em até 24h':'Prazo em até 48h'));
+    }else if(highFit)info.append(el('span','rlb-priority-chip rlb-priority-high','Alta aderência'));
+    if(pulse){
+      const badge=el('span','rlb-pulse-chip',pulse==='new'?'Nova oportunidade':'Atualizada');
+      info.append(badge);
+      setTimeout(()=>{card.classList.remove('rlb-pulse-item');card.removeAttribute('data-pulse-state');badge.remove()},10000);
+    }
     const why=Array.isArray(x.fit?.reasons)?x.fit.reasons.slice(0,2):[];
     if(why.length)info.append(el('small','rev-rec-why',why.join(' · ')));
     const side=el('div','rev-rec-side');
     const score=Number(x.fit?.score);
     side.append(el('b','',Number.isFinite(score)?Math.round(Math.min(100,Math.max(0,score)))+'%':'—'),el('small','','aderência'));
+    if(Number.isFinite(score)){
+      const meter=el('progress','rlb-fit-meter');
+      meter.max=100;meter.value=Math.round(Math.min(100,Math.max(0,score)));
+      meter.setAttribute('aria-label','Aderência estimada pelos critérios dos alertas');
+      side.append(meter);
+    }
     const url=safeUrl(x.pncp_url);
     if(url){const a=el('a','','Abrir PNCP');a.href=url;a.target='_blank';a.rel='noopener noreferrer';side.append(a)}
     card.append(info,side);list.append(card);
@@ -1231,6 +1294,58 @@ const safeUrl=raw=>{try{const u=new URL(raw);return u.protocol==='https:'&&!u.us
 const clean=(v,max=500)=>String(v??'').trim().slice(0,max);
 const totalFormat=v=>Number(v||0).toLocaleString('pt-BR');
 let generation=0,overview=null,deadlinePeriod=7,feedFilter='all',liveCache=[];
+const DASHBOARD_REFRESH_MS=5*60*1000;
+let nextDashboardRefresh=0,lastDashboardRefreshAttempt=0,refreshRequestPending=false,hasAuthenticatedSnapshot=false;
+let agendaInitialized=false,agendaSeen=new Map(),agendaPulse=new Map(),renderedAgendaSignature='';
+let recentInitialized=false,recentSeen=new Map(),recentPulse=new Map(),renderedRecentSignature='';
+const agendaKey=x=>String(x?.pncp_key||[x?.type,x?.date,x?.title].join('|'));
+const agendaVersion=x=>JSON.stringify([x?.date,x?.title,x?.subtitle,x?.status]);
+const tenderKey=x=>String(x?.numeroControlePNCP||x?._pncpId||
+  [x?.orgaoEntidade?.cnpj,x?.anoCompra,x?.sequencialCompra].filter(Boolean).join('-'));
+const tenderVersion=x=>JSON.stringify([x?.objetoCompra,x?.dataEncerramentoProposta,x?.dataFimRecebimentoProposta,x?.modalidadeNome]);
+function liveLabel(text,state){
+  const label=$('#rlbHomeLiveLabel'),bar=$('#rlbHomeLiveBar');
+  if(label)label.textContent=text;
+  if(bar)bar.dataset.state=state||'ready';
+}
+function liveTime(value){
+  const date=dateOf(value);
+  return date?new Intl.DateTimeFormat('pt-BR',{hour:'2-digit',minute:'2-digit',timeZone:tz}).format(date):'—';
+}
+function updateLiveClock(){
+  const remaining=$('#rlbHomeNextUpdate');
+  if(!remaining)return;
+  if(!logged()){remaining.textContent='Entre na conta para sincronizar';return}
+  if(document.hidden){remaining.textContent='Pausado enquanto a aba está oculta';return}
+  const seconds=Math.max(0,Math.ceil((nextDashboardRefresh-Date.now())/1000));
+  const m=String(Math.floor(seconds/60)),sec=String(seconds%60).padStart(2,'0');
+  remaining.textContent='Próxima consulta em '+m+':'+sec;
+}
+function requestDashboardRefresh(){
+  if(!logged()||document.hidden||refreshRequestPending)return;
+  refreshRequestPending=true;
+  lastDashboardRefreshAttempt=Date.now();
+  nextDashboardRefresh=lastDashboardRefreshAttempt+DASHBOARD_REFRESH_MS;
+  const button=$('#rlbHomeRefresh');
+  if(button){button.disabled=true;button.setAttribute('aria-busy','true')}
+  liveLabel('Consultando recomendações e prazos…','loading');
+  document.dispatchEvent(new CustomEvent('radar:overview-refresh-request'));
+  document.dispatchEvent(new CustomEvent('radar:live-refresh-request'));
+  updateLiveClock();
+  // Um endpoint lento nunca deve bloquear indefinidamente a próxima consulta.
+  setTimeout(()=>{
+    if(!refreshRequestPending||!logged())return;
+    refreshRequestPending=false;
+    if(button){button.disabled=false;button.removeAttribute('aria-busy')}
+  },15000);
+}
+function syncDashboardRefreshClock(){
+  if(!logged()||document.hidden)return;
+  if(!nextDashboardRefresh){nextDashboardRefresh=Date.now()+DASHBOARD_REFRESH_MS;updateLiveClock();return}
+  if(Date.now()>=nextDashboardRefresh)requestDashboardRefresh();
+  updateLiveClock();
+}
+
 function openSection(name){
   const target=$('#mainNav [data-view="'+name+'"]');
   if(!logged()||!target)return;
@@ -1274,18 +1389,38 @@ function cardEmpty(message){
 }
 function renderDeadlines(data){
   const list=$('#rlbHomeDeadlines');if(!list)return;
-  list.replaceChildren();
+  const allEvents=Array.isArray(data?.agenda)?data.agenda:[];
+  const previous=agendaSeen;const incoming=new Map(allEvents.map(x=>[agendaKey(x),agendaVersion(x)]));
+  let added=0,changed=0;agendaPulse.clear();
+  if(agendaInitialized){
+    for(const event of allEvents){
+      const key=agendaKey(event),version=agendaVersion(event);
+      if(!previous.has(key)){agendaPulse.set(key,'new');added++}
+      else if(previous.get(key)!==version){agendaPulse.set(key,'changed');changed++}
+    }
+  }
+  agendaInitialized=true;agendaSeen=incoming;
+  if(added||changed)document.dispatchEvent(new CustomEvent('radar:pulse-updates',{
+    detail:{source:'deadlines',added,changed}
+  }));
   const start=new Date(),today=isoFmt.format(start);
   const endDate=new Date(start.getTime()+(deadlinePeriod+1)*86400000);
   const lastDay=isoFmt.format(endDate);
-  const events=(Array.isArray(data?.agenda)?data.agenda:[]).map(e=>({...e,parsed:dateOf(e.date,e.type)}))
+  const events=allEvents.map(e=>({...e,parsed:dateOf(e.date,e.type)}))
     .filter(e=>e.parsed&&(e.type==='document'?
       (isoFmt.format(e.parsed)>=today&&isoFmt.format(e.parsed)<=lastDay):
       (e.parsed>=start&&e.parsed.getTime()-start.getTime()<=deadlinePeriod*86400000)))
     .sort((a,b)=>a.parsed-b.parsed).slice(0,4);
+  const signature=JSON.stringify([deadlinePeriod,today,events.map(x=>[agendaKey(x),agendaVersion(x)])]);
+  if(signature===renderedAgendaSignature&&list.querySelector('.rlb-home-deadline'))return;
+  renderedAgendaSignature=signature;list.replaceChildren();
   if(!events.length){list.append(cardEmpty('Nenhum prazo registrado nos próximos '+deadlinePeriod+' dias.'));return}
   for(const event of events){
     const row=element('article','rlb-home-deadline');row.setAttribute('role','listitem');
+    const pulse=agendaPulse.get(agendaKey(event));
+    if(pulse){row.classList.add('rlb-pulse-item');row.dataset.pulseState=pulse;
+      setTimeout(()=>{row.classList.remove('rlb-pulse-item');row.removeAttribute('data-pulse-state')},10000);
+    }
     const stamp=element('div','rlb-home-date'),parts=dateFmt.formatToParts(event.parsed);
     const day=parts.find(part=>part.type==='day')?.value||'—',month=parts.find(part=>part.type==='month')?.value||'';
     stamp.append(element('strong','',day),element('span','',month.toUpperCase().replace('.','')));
@@ -1294,6 +1429,7 @@ function renderDeadlines(data){
     const right=element('span','rlb-home-deadline-status');
     const eventDay=isoFmt.format(event.parsed);
     const diff=Math.round((Date.parse(eventDay+'T12:00:00Z')-Date.parse(today+'T12:00:00Z'))/86400000);
+    row.dataset.urgency=diff<=1?'critical':diff<=3?'soon':'normal';
     right.textContent=diff===0?'Hoje':diff===1?'Amanhã':diff<=7?'Em '+diff+' dias':dateTimeFmt.format(event.parsed);
     if(diff<=1)right.dataset.urgent='true';
     row.append(stamp,body,right);list.append(row);
@@ -1336,14 +1472,30 @@ function renderPanorama(data){
 }
 function renderRecent(rows){
   const root=$('#rlbHomeRecent');if(!root)return;
-  root.replaceChildren();
-  if(Array.isArray(rows))liveCache=rows;
+  if(Array.isArray(rows)){
+    const incoming=new Map(rows.map(x=>[tenderKey(x),tenderVersion(x)]));
+    let added=0,changed=0;recentPulse.clear();
+    if(recentInitialized){
+      for(const tender of rows){
+        const key=tenderKey(tender),version=tenderVersion(tender);
+        if(!recentSeen.has(key)){recentPulse.set(key,'new');added++}
+        else if(recentSeen.get(key)!==version){recentPulse.set(key,'changed');changed++}
+      }
+    }
+    recentInitialized=true;recentSeen=incoming;liveCache=rows;
+    if(added||changed)document.dispatchEvent(new CustomEvent('radar:pulse-updates',{
+      detail:{source:'recent',added,changed}
+    }));
+  }
   const now=Date.now();
   const items=liveCache.filter(item=>{
     if(feedFilter!=='open')return true;
     const closing=dateOf(item.dataEncerramentoProposta||item.dataFimRecebimentoProposta);
     return closing&&closing.getTime()>=now;
   }).slice(0,4);
+  const signature=JSON.stringify([feedFilter,items.map(x=>[tenderKey(x),tenderVersion(x)])]);
+  if(signature===renderedRecentSignature&&root.querySelector('.rlb-home-table'))return;
+  renderedRecentSignature=signature;root.replaceChildren();
   if(!items.length){root.append(cardEmpty(feedFilter==='open'?
     'Nenhum registro com prazo vigente na amostra recente. Consulte a pesquisa completa.':
     'Nenhum registro recente disponível no monitoramento neste momento.'));return}
@@ -1353,7 +1505,14 @@ function renderRecent(rows){
   list.append(heading);
   for(const tender of items){
     const row=element('article','rlb-home-table-row'),obj=element('div','rlb-home-object');
+    const pulse=recentPulse.get(tenderKey(tender));
+    if(pulse){
+      row.classList.add('rlb-pulse-item');row.dataset.pulseState=pulse;
+      setTimeout(()=>{row.classList.remove('rlb-pulse-item');row.removeAttribute('data-pulse-state')},10000);
+    }
     obj.append(element('strong','',clean(tender.objetoCompra||'Objeto não informado',340)),element('small','',clean(tender.orgaoEntidade?.razaoSocial||'Órgão não informado',170)));
+    if(pulse){const label=element('span','rlb-pulse-chip',pulse==='new'?'Novo registro':'Atualizado');
+      obj.append(label);setTimeout(()=>label.remove(),10000)}
     const location=element('div','',clean([tender.unidadeOrgao?.municipioNome||tender.unidadeOrgao?.nomeMunicipio,tender.unidadeOrgao?.ufSigla].filter(Boolean).join('/')||'Não informado',100));
     const modality=element('div','rlb-home-table-modality',clean(tender.modalidadeNome||'Não informada',100));
     const closing=dateOf(tender.dataEncerramentoProposta||tender.dataFimRecebimentoProposta);
@@ -1374,7 +1533,14 @@ function renderRecent(rows){
   root.append(list);
 }
 function clearPrivateData(){
-  generation++;overview=null;
+  generation++;overview=null;hasAuthenticatedSnapshot=false;refreshRequestPending=false;nextDashboardRefresh=0;lastDashboardRefreshAttempt=0;
+  agendaInitialized=false;agendaSeen.clear();agendaPulse.clear();renderedAgendaSignature='';
+  recentInitialized=false;recentSeen.clear();recentPulse.clear();renderedRecentSignature='';
+  const announcement=$('#rlbHomeNewUpdates');
+  if(announcement){announcement.hidden=true;announcement.textContent='';}
+  liveLabel('Entre na conta para consultar o painel','ready');
+  if($('#rlbHomeRefresh'))$('#rlbHomeRefresh').disabled=true;
+  if($('#rlbHomeLastUpdate'))$('#rlbHomeLastUpdate').textContent='Aguardando sincronização';
   if($('#rlbHomeName'))$('#rlbHomeName').textContent='bem-vindo';
   $('#rlbHomeDeadlines')?.replaceChildren(cardEmpty('Entre na conta para consultar seus prazos.'));
   $('#rlbHomePanorama')?.replaceChildren(cardEmpty('Entre na conta para consultar seu acompanhamento.'));
@@ -1384,6 +1550,13 @@ function clearPrivateData(){
 function boot(){
   if(!$('#view-home'))return;
   setupHomeActions();
+  $('#rlbHomeRefresh')?.addEventListener('click',()=>requestDashboardRefresh());
+  // Um único relógio da Visão Geral; não cria múltiplos polls por navegação.
+  setInterval(syncDashboardRefreshClock,1000);
+  document.addEventListener('visibilitychange',()=>{
+    if(!document.hidden)syncDashboardRefreshClock();
+    else updateLiveClock();
+  });
   const setActive=(attr,value)=>{
     document.querySelectorAll('#view-home ['+attr+']').forEach(button=>{
       const selected=button.getAttribute(attr)===String(value);
@@ -1407,19 +1580,60 @@ function boot(){
     feedFilter=next;setActive('data-home-feed',next);
     renderRecent(null);
   });
+  let noticeTimer=0;
+  const detected={recommendations:0,deadlines:0,recent:0,changed:0};
   const shell=$('#appShell');
-  if(shell)new MutationObserver(()=>{if(logged())greeting();else clearPrivateData()}).observe(shell,{attributes:true,attributeFilter:['class']});
+  if(shell)new MutationObserver(()=>{
+    if(logged())greeting();
+    else{
+      clearPrivateData();
+      if(noticeTimer)clearTimeout(noticeTimer);
+      noticeTimer=0;
+      for(const key of Object.keys(detected))detected[key]=0;
+    }
+  }).observe(shell,{attributes:true,attributeFilter:['class']});
   document.addEventListener('radar:overview',event=>{
     if(!logged())return;
     overview=event.detail;greeting();
+    if(!hasAuthenticatedSnapshot){hasAuthenticatedSnapshot=true;nextDashboardRefresh=Date.now()+DASHBOARD_REFRESH_MS}
+    refreshRequestPending=false;
+    if($('#rlbHomeRefresh')){$('#rlbHomeRefresh').disabled=false;$('#rlbHomeRefresh').removeAttribute('aria-busy')}
+    if($('#rlbHomeLastUpdate'))$('#rlbHomeLastUpdate').textContent='Dados consultados às '+liveTime(Date.now());
+    liveLabel('Recomendações e prazos verificados','ready');
+    updateLiveClock();
     renderDeadlines(overview);
     renderPanorama(overview);
   });
   document.addEventListener('radar:overview-error',event=>{
-    if(!logged()||overview)return;
+    if(!logged())return;
+    refreshRequestPending=false;
+    if($('#rlbHomeRefresh')){$('#rlbHomeRefresh').disabled=false;$('#rlbHomeRefresh').removeAttribute('aria-busy')}
+    liveLabel('Falha ao consultar recomendações. Tente atualizar.','error');
+    if(overview)return;
     const msg='Não foi possível consultar a agenda. Use Atualizar para tentar novamente.';
     $('#rlbHomeDeadlines')?.replaceChildren(cardEmpty(msg));
     $('#rlbHomePanorama')?.replaceChildren(cardEmpty('Não foi possível consultar os indicadores da sua operação.'));
+  });
+  document.addEventListener('radar:pulse-updates',event=>{
+    if(!logged())return;
+    const payload=event.detail||{},source=payload.source;
+    if(!['recommendations','deadlines','recent'].includes(source))return;
+    const added=Math.max(0,Number(payload.added)||0),updated=Math.max(0,Number(payload.changed)||0);
+    if(!added&&!updated)return;
+    detected[source]+=added;detected.changed+=updated;
+    const parts=[];
+    if(detected.recommendations)parts.push(detected.recommendations+' nova(s) recomendação(ões)');
+    if(detected.deadlines)parts.push(detected.deadlines+' prazo(s) incluído(s)');
+    if(detected.recent)parts.push(detected.recent+' nova(s) publicação(ões) monitorada(s)');
+    if(detected.changed)parts.push(detected.changed+' registro(s) alterado(s)');
+    const bar=$('#rlbHomeNewUpdates');
+    if(bar){bar.hidden=false;bar.textContent='Atualizações detectadas: '+parts.join(' • ')}
+    if(noticeTimer)clearTimeout(noticeTimer);
+    noticeTimer=setTimeout(()=>{
+      if(bar){bar.hidden=true;bar.textContent=''}
+      for(const key of Object.keys(detected))detected[key]=0;
+      noticeTimer=0;
+    },11000);
   });
   document.addEventListener('radar:live-feed',event=>{
     if(!logged())return;
@@ -1429,7 +1643,8 @@ function boot(){
     if($('#rlbHomeFeedStatus'))$('#rlbHomeFeedStatus').textContent=date?
       'Última sincronização: '+dateTimeFmt.format(date):'Dados do monitoramento nacional';
   });
-  if(logged())greeting();
+  if(logged()){greeting();nextDashboardRefresh=Date.now()+DASHBOARD_REFRESH_MS;updateLiveClock()}
+  else updateLiveClock();
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 })();
