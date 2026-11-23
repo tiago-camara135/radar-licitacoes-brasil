@@ -426,6 +426,24 @@ try{
  }
  note('Executive home and Radar search responsive 320/390/768/1024/1440px, both themes OK');
 
+ // Avança apenas o relógio da aba isolada de QA: comprova o disparo real
+ // do agendamento de cinco minutos sem esperar cinco minutos no CI.
+ await gotoSection(page,'home');
+ const scheduledOverview=page.waitForRequest(r=>r.url().includes('/api/dashboard/overview'),{timeout:11000});
+ const scheduledFeed=page.waitForRequest(r=>r.url().includes('/api/live-feed?'),{timeout:11000});
+ await page.evaluate(()=>{
+   window.__qaOriginalDateNow=Date.now;
+   Date.now=()=>window.__qaOriginalDateNow()+6*60*1000;
+ });
+ try{
+   await Promise.all([scheduledOverview,scheduledFeed]);
+ }finally{
+   await page.evaluate(()=>{Date.now=window.__qaOriginalDateNow;delete window.__qaOriginalDateNow});
+ }
+ await until(page,()=>document.querySelector('#rlbHomeLiveBar')?.dataset.state==='ready',15000);
+ assert.equal(await page.locator('#rlbHomeRefresh').isEnabled(),true);
+ note('Five-minute scheduled refresh actually fires both real backend requests in Chrome OK');
+
  const fatal=problems.filter(x=>!(/ERR_CONNECTION|Failed to fetch|network error/i.test(x)));
  assert.deepEqual(fatal,[],'Unexpected browser JavaScript errors');
  note('Real Chromium end-to-end UI smoke PASSED');
