@@ -1,18 +1,32 @@
 {
   "name": "TVC Control",
   "short_name": "TVC Control",
-  "description": "Gestão financeira pessoal",
+  "description": "Controle financeiro, contas, calendário e previsões",
+  "id": "/",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#f2f6fc",
   "theme_color": "#1769ed",
   "lang": "pt-BR",
   "icons": [
     {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
       "src": "/icon.svg",
       "sizes": "any",
       "type": "image/svg+xml",
-      "purpose": "any maskable"
+      "purpose": "any"
     }
   ]
 }

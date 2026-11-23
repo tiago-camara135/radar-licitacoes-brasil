@@ -3,11 +3,16 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#f2f6fc">
+<meta name="theme-color" content="#1769ed">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="TVC Control">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="apple-touch-icon" sizes="180x180" href="/icon-180.png">
 <meta name="description" content="TVC Control — controle financeiro pessoal com clareza e inteligência.">
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="icon" href="/icon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/styles.css?v=17">
+<link rel="stylesheet" href="/styles.css?v=18">
 <title>TVC Control | Gestão financeira</title>
 </head>
 <body>
@@ -77,6 +82,7 @@
         <button class="btn btn-primary" id="new-transaction"><span class="plus">＋</span><span class="new-label">Novo lançamento</span></button>
       </div>
     </header>
+    <div id="offline-banner" class="offline-banner" role="status" hidden><span aria-hidden="true">◉</span> Sem conexão. Os dados financeiros não são consultados ou salvos offline. Reconecte-se para continuar.</div>
     <div id="data-error-banner" class="data-error-banner" role="alert" hidden><span class="error-dot">!</span><span id="data-error-detail">Não foi possível carregar os dados financeiros.</span><button id="retry-dashboard" type="button" class="btn btn-secondary">Tentar novamente</button></div>
 
     <section class="page active" id="page-dashboard">
@@ -205,22 +211,22 @@
         <article class="panel"><div class="panel-heading"><div><h3>Seu perfil</h3><p>Informações da sua conta</p></div></div><form id="profile-form" class="form-stack"><label class="field"><span>Nome completo</span><input name="fullName" required minlength="2" maxlength="100"></label><label class="field"><span>E-mail</span><input id="profile-email" disabled></label><button class="btn btn-primary" type="submit">Salvar alterações</button></form></article>
         <article class="panel"><div class="panel-heading"><div><h3>Aparência</h3><p>Escolha como prefere visualizar o aplicativo</p></div></div><div class="theme-options"><button class="theme-choice" data-theme-choice="light"><span class="theme-preview light-preview"></span><b>Claro</b><small>Leve e clean</small></button><button class="theme-choice" data-theme-choice="dark"><span class="theme-preview dark-preview"></span><b>Escuro</b><small>Confortável à noite</small></button><button class="theme-choice" data-theme-choice="system"><span class="theme-preview system-preview"></span><b>Automático</b><small>Segue o dispositivo</small></button></div><div class="settings-divider"></div><button class="btn btn-secondary" id="logout-button">Sair da minha conta</button></article>
       </div>
+      <article class="panel notification-settings"><div class="panel-heading"><div><h3>Aplicativo e notificações</h3><p>Ative avisos de pagamentos e instale o TVC Control no seu celular.</p></div></div><div class="notification-settings-actions"><button id="enable-payment-notifications" class="btn btn-secondary" type="button">Ativar avisos</button><button id="install-app-button" class="btn btn-primary" type="button" hidden>Instalar aplicativo</button></div><p id="notification-status" class="notification-help" role="status">Os alertas internos estão disponíveis no calendário.</p><p class="notification-help">Avisos do dispositivo são opcionais e dependem de permissão; nesta versão eles são verificados quando o aplicativo está aberto ou atualizado, não são notificações push agendadas.</p><p class="notification-help">Android: abra pelo Chrome e escolha Instalar aplicativo. iPhone: abra pelo Safari, toque em Compartilhar e Adicionar à Tela de Início.</p></article>
       <div class="privacy-note"><span>◈</span><div><b>Seus dados são privados</b><p>Suas informações financeiras são associadas à sua conta e protegidas no banco de dados. Nunca compartilhe sua senha.</p></div></div>
     </section>
     <footer class="app-footer"><span>© <span id="year"></span> TVC Control</span><span>Seu dinheiro, sob controle.</span></footer>
   </main>
-  <nav class="mobile-nav">
-    <button class="mobile-link active" data-page="dashboard"><span class="mobile-icon"><svg class="nav-svg" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="5" rx="1.5"/><rect x="13" y="10" width="8" height="11" rx="1.5"/><rect x="3" y="13" width="8" height="8" rx="1.5"/></svg></span><span class="mobile-label">Início</span></button>
-    <button class="mobile-link" data-page="calendar"><span class="mobile-icon"><svg class="nav-svg" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 10h18M8 14h3M8 17h2"/></svg></span><span class="mobile-label">Agenda</span></button>
-    <button class="mobile-link" data-page="transactions"><span class="mobile-icon"><svg class="nav-svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4v16m0 0-3-3m3 3 3-3M17 20V4m0 0-3 3m3-3 3 3"/></svg></span><span class="mobile-label">Mov.</span></button>
-    <button class="mobile-link" data-page="accounts"><span class="mobile-icon"><svg class="nav-svg" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 9h18m-5 5h.01"/></svg></span><span class="mobile-label">Contas</span></button>
-    <button class="mobile-link" data-page="cards"><span class="mobile-icon"><svg class="nav-svg" viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="4.5" width="19" height="15" rx="2"/><path d="M3 9h18M7 15h4"/></svg></span><span class="mobile-label">Cartões</span></button>
-    <button class="mobile-link" data-page="recurring"><span class="mobile-icon"><svg class="nav-svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 7v5h-5M4 17v-5h5"/><path d="M5.6 9A7 7 0 0 1 18 6l2 6M4 12l2 6a7 7 0 0 0 12.4-3"/></svg></span><span class="mobile-label">Fixas</span></button>
-    <button class="mobile-link" data-page="settings"><span class="mobile-icon"><svg class="nav-svg" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="m19.4 15 .1.1a1.7 1.7 0 0 1-2.4 2.4l-.1-.1a1.7 1.7 0 0 0-2.9 1.2v.2a1.7 1.7 0 0 1-3.4 0v-.2a1.7 1.7 0 0 0-2.9-1.2l-.1.1a1.7 1.7 0 0 1-2.4-2.4l.1-.1a1.7 1.7 0 0 0-1.2-2.9H4a1.7 1.7 0 0 1 0-3.4h.2a1.7 1.7 0 0 0 1.2-2.9l-.1-.1a1.7 1.7 0 0 1 2.4-2.4l.1.1a1.7 1.7 0 0 0 2.9-1.2V2a1.7 1.7 0 0 1 3.4 0v.2a1.7 1.7 0 0 0 2.9 1.2l.1-.1a1.7 1.7 0 0 1 2.4 2.4l-.1.1a1.7 1.7 0 0 0 1.2 2.9h.2a1.7 1.7 0 0 1 0 3.4h-.2a1.7 1.7 0 0 0-1.2 2.9Z"/></svg></span><span class="mobile-label">Mais</span></button>
+  <nav class="mobile-nav" aria-label="Navegação do aplicativo">
+<button class="mobile-link active" data-page="dashboard"><span class="mobile-icon"><svg class="nav-svg" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="5" rx="1.5"/><rect x="13" y="10" width="8" height="11" rx="1.5"/><rect x="3" y="13" width="8" height="8" rx="1.5"/></svg></span><span class="mobile-label">Início</span></button>
+<button class="mobile-link" data-page="calendar"><span class="mobile-icon"><svg class="nav-svg" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 10h18M8 14h3M8 17h2"/></svg></span><span class="mobile-label">Agenda</span></button>
+<button class="mobile-link" data-page="transactions"><span class="mobile-icon"><svg class="nav-svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4v16m0 0-3-3m3 3 3-3M17 20V4m0 0-3 3m3-3 3 3"/></svg></span><span class="mobile-label">Mov.</span></button>
+<button class="mobile-link" data-page="accounts"><span class="mobile-icon"><svg class="nav-svg" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 9h18m-5 5h.01"/></svg></span><span class="mobile-label">Contas</span></button>
+<button class="mobile-link mobile-more-trigger" type="button" data-mobile-more aria-expanded="false" aria-controls="mobile-more-menu"><span class="mobile-icon"><svg class="nav-svg" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="m19.4 15 .1.1a1.7 1.7 0 0 1-2.4 2.4l-.1-.1a1.7 1.7 0 0 0-2.9 1.2v.2a1.7 1.7 0 0 1-3.4 0v-.2a1.7 1.7 0 0 0-2.9-1.2l-.1.1a1.7 1.7 0 0 1-2.4-2.4l.1-.1a1.7 1.7 0 0 0-1.2-2.9H4a1.7 1.7 0 0 1 0-3.4h.2a1.7 1.7 0 0 0 1.2-2.9l-.1-.1a1.7 1.7 0 0 1 2.4-2.4l.1.1a1.7 1.7 0 0 0 2.9-1.2V2a1.7 1.7 0 0 1 3.4 0v.2a1.7 1.7 0 0 0 2.9 1.2l.1-.1a1.7 1.7 0 0 1 2.4 2.4l-.1.1a1.7 1.7 0 0 0 1.2 2.9h.2a1.7 1.7 0 0 1 0 3.4h-.2a1.7 1.7 0 0 0-1.2 2.9Z"/></svg></span><span class="mobile-label">Mais</span></button>
   </nav>
+  <section id="mobile-more-menu" class="mobile-more-menu" aria-label="Mais opções" hidden><div class="mobile-more-heading"><strong>Outras funcionalidades</strong><button class="icon-button" data-close-more type="button" aria-label="Fechar opções">×</button></div><div class="mobile-more-grid"><button data-go="cards" type="button">▤ <span>Cartões</span></button><button data-go="recurring" type="button">⟳ <span>Despesas fixas</span></button><button data-go="budgets" type="button">◷ <span>Orçamentos</span></button><button data-go="goals" type="button">◎ <span>Metas</span></button><button data-go="reports" type="button">▥ <span>Relatórios</span></button><button data-go="settings" type="button">⚙ <span>Configurações</span></button></div></section>
 </div>
 
 <div id="modal" class="modal" hidden><div class="modal-backdrop" data-close-modal></div><section class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modal-title"><div class="modal-head"><div><div class="eyebrow">TVC CONTROL</div><h2 id="modal-title">Novo lançamento</h2></div><button class="icon-button" data-close-modal aria-label="Fechar">×</button></div><form id="modal-form" class="form-stack"><div id="modal-fields" class="modal-fields"></div><div class="modal-actions"><button class="btn btn-secondary" type="button" data-close-modal>Cancelar</button><button class="btn btn-primary" id="modal-submit" type="submit">Salvar</button></div></form></section></div>
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
-<script src="/app.js?v=17" defer></script>
+<script src="/app.js?v=18" defer></script>
 </body></html>

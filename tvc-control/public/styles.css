@@ -523,3 +523,33 @@ button{color:inherit}
 @media(max-width:1100px){.forecast-layout{grid-template-columns:1fr}.forecast-advisor{display:grid;grid-template-columns:1fr 1fr}.forecast-scenario{grid-column:1/-1}}
 @media(max-width:680px){.forecast-panel{padding:13px}.forecast-layout{grid-template-columns:1fr;gap:10px}.forecast-advisor{display:flex}.forecast-milestones{gap:5px}.forecast-milestones>div{padding:8px}.forecast-milestones strong{font-size:12px}.forecast-chart-zone{padding:9px}.forecast-period{font-size:9px;padding:7px 9px}.forecast-scenario-fields{grid-template-columns:1fr 1fr}.forecast-scenario button{grid-column:1/-1;min-height:40px}.forecast-chart{min-height:165px}}
 @media(prefers-reduced-motion:reduce){.forecast-chart svg,.forecast-period{transition:none!important}}
+
+/* Aplicativo mobile e experiência PWA */
+.offline-banner{display:flex;align-items:center;gap:8px;padding:11px 13px;margin-bottom:12px;border:1px solid #f0d8a6;border-radius:11px;background:#fff5e5;color:#885e20;font-size:11px}
+.offline-banner[hidden]{display:none!important}
+.notification-settings{margin-top:14px}
+.notification-settings-actions{display:flex;gap:10px;flex-wrap:wrap}
+.notification-help{font-size:10px;color:#76869d;line-height:1.55;margin:9px 0 0}
+.mobile-more-menu{display:none}
+html[data-theme=dark] .forecast-panel,html[data-theme=dark] .forecast-chart-zone,html[data-theme=dark] .forecast-milestones>div,html[data-theme=dark] .quick-action,html[data-theme=dark] .financial-health,html[data-theme=dark] .forecast-scenario,html[data-theme=dark] .forecast-insight{background:var(--surface);color:var(--text);border-color:var(--line)}
+html[data-theme=dark] .forecast-scenario input,html[data-theme=dark] .forecast-scenario select{background:var(--surface-2);border-color:var(--line);color:var(--text)}
+html[data-theme=dark] .quick-action b,html[data-theme=dark] .financial-health b,html[data-theme=dark] .forecast-insight b,html[data-theme=dark] .forecast-milestones strong{color:var(--text)}
+html[data-theme=dark] .data-error-banner,html[data-theme=dark] .offline-banner{background:#443522;color:#f4cf9d;border-color:#6e5336}
+@media(max-width:680px){
+ .main-area{padding-bottom:calc(94px + env(safe-area-inset-bottom))}
+ .mobile-nav{align-items:center;padding:7px 6px calc(8px + env(safe-area-inset-bottom));gap:3px}
+ .mobile-link{flex:1;min-width:0;min-height:55px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:6px 2px;font-size:9px}
+ .mobile-label{font-size:10px!important;line-height:1.2}
+ .mobile-icon{height:28px;width:31px}
+ .mobile-link .nav-svg{width:19px;height:19px}
+ .mobile-more-menu{display:block;position:fixed;left:10px;right:10px;bottom:calc(74px + env(safe-area-inset-bottom));z-index:16;padding:17px;border:1px solid #dce8f7;border-radius:18px;background:var(--surface);box-shadow:0 14px 45px rgba(22,50,99,.18);color:var(--text)}
+ .mobile-more-menu[hidden]{display:none!important}
+ .mobile-more-heading{display:flex;align-items:center;justify-content:space-between;margin-bottom:13px}
+ .mobile-more-heading strong{font-size:14px}
+ .mobile-more-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+ .mobile-more-grid button{display:flex;align-items:center;gap:11px;min-height:49px;padding:12px;border:1px solid var(--line);border-radius:11px;background:var(--surface-2);color:var(--text);font-size:17px;text-align:left}
+ .mobile-more-grid button span{font-size:11px;font-weight:700}
+ .mobile-more-grid button:hover{border-color:#a8c6ef}
+ .mobile-more-grid button:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+ .notification-settings-actions .btn{min-height:43px}
+}
