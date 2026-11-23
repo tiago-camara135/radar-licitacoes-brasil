@@ -34,3 +34,20 @@ test('etapa 2: polling real do dashboard a cada cinco minutos, sem inventar lici
  assert.match(html,/id="rlbHomeNextUpdate"/);
  assert.match(js,/setAttribute\('aria-busy','true'\)/);
 });
+
+
+test('etapa 3: novas licitações vêm de comparação real entre snapshots, nunca da carga inicial',()=>{
+ assert.match(js,/let recFilter='all',recCache=\[\],recInitialized=false/);
+ assert.match(js,/if\(recInitialized\)\{/);
+ assert.match(js,/if\(!before\.has\(key\)\)\{recPulse\.set\(key,'new'\)/);
+ assert.match(js,/renderedRecSignature===signature&&target\.querySelector\('\.rev-recs-list'\)/);
+ assert.match(js,/agendaInitialized=false,agendaSeen=new Map\(\)/);
+ assert.match(js,/if\(agendaInitialized\)\{/);
+ assert.match(js,/recentInitialized=false,recentSeen=new Map\(\)/);
+ assert.match(js,/if\(recentInitialized\)\{/);
+ assert.match(js,/radar:pulse-updates/);
+ assert.match(css,/@keyframes rlbPulseEnter/);
+ assert.match(css,/#view-home \.rlb-pulse-item\[data-pulse-state="new"\]/);
+ assert.match(css,/@media\(prefers-reduced-motion:reduce\)/);
+ assert.match(html,/id="rlbHomeNewUpdates"[^>]+aria-live="polite"/);
+});
