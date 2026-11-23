@@ -75,8 +75,57 @@ async function submitAuth(e){e?.preventDefault();const email=$('#authEmail')?.va
 async function checkSession(){try{const d=await api('/api/me');if(d.user)await enter(d.user);else throw new Error()}catch{$('#authScreen')?.classList.remove('hidden');$('#appShell')?.classList.add('hidden')}}
 async function enter(user){state.user=user;$('#authScreen')?.classList.add('hidden');$('#appShell')?.classList.remove('hidden');renderRadarAccount(user);$('#adminNav')?.classList.toggle('hidden',user.role!=='admin');show('home');startLive();startRadarDashboard()}
 async function logout(){try{await api('/api/auth/logout',{method:'POST',body:'{}'})}catch{}location.reload()}
-const titles={home:['Visão Geral','Seu centro de oportunidades'],radar:['Buscar Licitações','Pesquisa nacional e filtros avançados'],saved:['Oportunidades salvas',''], 'saved-searches':['Buscas salvas',''],alerts:['Alertas','Critérios e canais de notificação'],documents:['Documentos','Acervo pessoal'],ai:['IA RLB','Assistente para licitações'],admin:['Administração','Gestão da plataforma']};
-function show(v){state.view=v;setRadarMenu(false);$$('.view').forEach(x=>x.classList.remove('active'));$('#view-'+v)?.classList.add('active');$$('#mainNav [data-view]').forEach(x=>{const active=x.dataset.view===v;x.classList.toggle('active',active);if(active)x.setAttribute('aria-current','page');else x.removeAttribute('aria-current')});if($('#pageTitle'))$('#pageTitle').textContent=titles[v]?.[0]||'';if($('#pageSubtitle'))$('#pageSubtitle').textContent=titles[v]?.[1]||'';if(v==='saved'){renderSavedTenders();loadDashboardSaved('tender')}if(v==='saved-searches'){renderSavedSearches();loadDashboardSaved('search')}if(v==='alerts')loadAlertsPage();if(v==='documents')loadDocuments();if(v==='ai')loadAiStatus();if(v==='admin')loadAdmin()}
+const titles={home:['Visão Geral','Seu centro de oportunidades'],radar:['Buscar Licitações','Pesquisa nacional e filtros avançados'],saved:['Oportunidades salvas',''], 'saved-searches':['Buscas salvas',''],alerts:['Alertas','Critérios e canais de notificação'],documents:['Documentos','Acervo pessoal'],operation:['Minha Operação','Acompanhamentos e prazos'],ai:['IA RLB','Assistente para licitações'],admin:['Administração','Gestão da plataforma']};
+function show(v){
+  const target=$('#view-'+v);
+  if(!target)return;
+  const previous=state.view,changed=previous!==v;
+  state.view=v;
+  setRadarMenu(false);
+  $('.view').forEach(view=>view.classList.remove('active','rlb-view-enter'));
+  target.classList.add('active');
+  $('#mainNav [data-view]').forEach(button=>{
+    const active=button.dataset.view===v;
+    button.classList.toggle('active',active);
+    if(active)button.setAttribute('aria-current','page');
+    else button.removeAttribute('aria-current');
+  });
+  const label=titles[v]?.[0]||'Minha Operação';
+  if($('#pageTitle'))$('#pageTitle').textContent=label;
+  if($('#pageSubtitle'))$('#pageSubtitle').textContent=titles[v]?.[1]||'';
+  const breadcrumb=$('#rlbPageNavBar');
+  if(breadcrumb){
+    breadcrumb.hidden=v==='home';
+    if($('#rlbPageNavCurrent'))$('#rlbPageNavCurrent').textContent=label;
+  }
+  // Nunca herdar a rolagem de uma área anterior ao mudar de página.
+  const resetPosition=()=>{
+    window.scrollTo(0,0);
+    const scroller=$('#radar-home');
+    if(scroller)scroller.scrollTop=0;
+    document.documentElement.scrollTop=0;
+    document.body.scrollTop=0;
+  };
+  if(changed||window.scrollY>4||($('#radar-home')?.scrollTop||0)>4){
+    resetPosition();
+    requestAnimationFrame(resetPosition);
+  }
+  if(changed){
+    target.classList.add('rlb-view-enter');
+    target.addEventListener('animationend',()=>target.classList.remove('rlb-view-enter'),{once:true});
+    const focusTarget=v==='home'?$('#rlbHomeTitle'):$('#rlbPageNavCurrent');
+    if(focusTarget){
+      focusTarget.setAttribute('tabindex','-1');
+      focusTarget.focus({preventScroll:true});
+    }
+  }
+  if(v==='saved'){renderSavedTenders();loadDashboardSaved('tender')}
+  if(v==='saved-searches'){renderSavedSearches();loadDashboardSaved('search')}
+  if(v==='alerts')loadAlertsPage();
+  if(v==='documents')loadDocuments();
+  if(v==='ai')loadAiStatus();
+  if(v==='admin')loadAdmin();
+}
 function isMunicipal(x){return norm(x?.orgaoEntidade?.esferaId)==='M'||/MUNICIPIO|MUNICIPAL|PREFEITURA|CAMARA MUNICIPAL|FUNDO MUNICIPAL|SECRETARIA MUNICIPAL/.test(norm(org(x)+' '+(x?.unidadeOrgao?.nomeUnidade||'')))}
 function isChamber(x){return (norm(x?.orgaoEntidade?.poderId)==='L'&&norm(x?.orgaoEntidade?.esferaId)==='M')||/CAMARA MUNICIPAL|CAMARA DE VEREADORES|LEGISLATIVO MUNICIPAL/.test(norm(org(x)+' '+(x?.unidadeOrgao?.nomeUnidade||'')))}
 function renderLive() {
