@@ -67,7 +67,9 @@ try{
  assert.ok(await page.locator('#rlbHomeTitle').isVisible(),'Executive home opens after login');
  assert.equal(await page.locator('#rlbHomeKpis .rev-stat').count(),4);
  assert.equal(await page.locator('#rlbHomeKpis button.rev-stat').count(),4,'Every KPI must be clickable');
- assert.ok(await page.locator('#rlbHomeSearchForm').isVisible());
+ assert.equal(await page.locator('#rlbHomeSearchForm').count(),0,'No duplicated home search');
+ assert.equal(await page.locator('#radarSearchForm').count(),1,'One Radar search form');
+ assert.ok(await page.locator('#view-home [data-home-action="radar"]').first().isVisible());
  assert.equal(await page.locator('#rlbPageNavBar').isVisible(),false,'Breadcrumb stays hidden on home');
  assert.ok(await page.locator('#rlbHomeRecent').count()===1);
  note('Executive home layout and real KPI cards OK');
@@ -95,11 +97,10 @@ try{
  await page.locator('#searchKeyword').click();
  const searchFocus=await page.locator('#searchKeyword').evaluate(e=>({
    outline:getComputedStyle(e).outlineStyle,
-   shadow:getComputedStyle(e).boxShadow,
-   border:getComputedStyle(e).borderColor
+   parentShadow:getComputedStyle(e.closest('.rlb-radar-keyword')).boxShadow
  }));
- assert.equal(searchFocus.outline,'none','Search input uses a subtle border, not a thick blue outline');
- assert.notEqual(searchFocus.shadow,'none','A visible but understated field focus cue remains');
+ assert.equal(searchFocus.outline,'none','Radar keyword has no thick blue outline');
+ assert.notEqual(searchFocus.parentShadow,'none','Primary search wrapper retains a subtle focus cue');
  await page.keyboard.press('Tab');
  const keyboardFocus=await page.evaluate(()=>{
    const e=document.activeElement;
@@ -108,14 +109,11 @@ try{
  assert.equal(keyboardFocus.focusVisible,true,'Keyboard users retain an accessible visible focus cue');
  assert.equal(keyboardFocus.outline,'solid','Keyboard control retains visible focus ring');
  await gotoSection(page,'home');
- await page.locator('#rlbHomeKeyword').click();
- const homeFocus=await page.locator('#rlbHomeKeyword').evaluate(e=>({
-   outline:getComputedStyle(e).outlineStyle,
-   parentShadow:getComputedStyle(e.closest('.rlb-home-search-keyword')).boxShadow
- }));
- assert.equal(homeFocus.outline,'none','Home keyword does not show a large blue box');
- assert.notEqual(homeFocus.parentShadow,'none','Home search group retains a soft focus-within cue');
- note('Professional search focus, mouse navigation and accessible keyboard focus OK');
+ assert.equal(await page.locator('#rlbHomeSearchForm').count(),0,'Home has no separate form');
+ await page.locator('#view-home [data-home-action="radar"]').first().click();
+ await page.locator('#view-radar.active').waitFor({timeout});
+ assert.ok(await page.locator('#radarSearchForm').isVisible(),'Quick action opens the real Radar search');
+ note('Professional focus, keyboard access and home-to-Radar shortcut OK');
 
  // O navegador valida duas contas efêmeras, sem alterar papéis de uma
  // sessão já ativa. O usuário comum continua autenticado na aba principal.
@@ -261,29 +259,45 @@ try{
  await page.locator('#view-home.active').waitFor({timeout});
  note('Interactive deadline period, chart stage drilldown, calendar-first page and breadcrumb return OK');
 
- // Filtros avançados antigos não devem contaminar uma busca nova.
- await gotoSection(page,'radar');
- if(await page.locator('#radarFilters').evaluate(e=>e.hidden))await page.locator('#radarFiltersToggle').click();
- await page.locator('#radarMunicipality').fill('Cidade anterior');
- await page.locator('#radarOrganization').fill('Órgão anterior');
- await page.locator('#searchDays').selectOption('90');
+ // O painel executivo não duplica a busca; todos os critérios ficam no Radar.
  await gotoSection(page,'home');
- await page.locator('#rlbHomeKeyword').fill('combustível');
- await page.locator('#rlbHomeUf').selectOption('RN');
- await page.locator('#rlbHomeModality').selectOption('6');
- await page.locator('#rlbHomeClosingDays').selectOption('7');
- await page.locator('#rlbHomeSearchForm [type="submit"]').click();
+ assert.equal(await page.locator('#rlbHomeSearchForm').count(),0);
+ await page.locator('#view-home [data-home-action="radar"]').first().click();
  await page.locator('#view-radar.active').waitFor({timeout});
+ assert.ok(await page.locator('#radarStatePicker').isVisible(),'UF is always shown in Radar search');
+ assert.ok(await page.locator('#searchModality').isVisible(),'Modality is always shown');
+ assert.ok(await page.locator('#radarClosingDays').isVisible(),'Deadline is always shown');
+ assert.equal(await page.locator('#radarFilters').isVisible(),false,'Extra filters collapsed by default');
+ await page.locator('#searchKeyword').fill('combustível');
+ await page.locator('#radarStatePicker summary').click();
+ await page.locator('#radarStateSearch').fill('Rio Grande do Norte');
+ await page.locator('#radarStates input[value="RN"]').check();
+ await page.locator('#radarStateDone').click();
+ assert.equal(await page.locator('#radarStateSummary').textContent(),'RN');
+ await page.locator('#searchModality').selectOption('6');
+ await page.locator('#radarClosingDays').selectOption('7');
+ await page.locator('#radarFiltersToggle').click();
+ await page.locator('#radarMunicipality').fill('Natal');
+ await page.locator('#radarOrganization').fill('Prefeitura QA');
+ await page.locator('#searchDays').selectOption('30');
+ await page.locator('#radarSearchForm button[type="submit"]').click();
  await until(page,()=>window.scrollY<=4,timeout);
- assert.ok(await page.locator('#rlbPageNavBar').isVisible(),'Search opens in dedicated page with breadcrumb');
+ assert.ok(await page.locator('#rlbPageNavBar').isVisible(),'Search remains in Radar with breadcrumb');
  assert.equal(await page.locator('#searchKeyword').inputValue(),'combustível');
  assert.equal(await page.locator('#searchModality').inputValue(),'6');
  assert.equal(await page.locator('#radarClosingDays').inputValue(),'7');
  assert.equal(await page.locator('#radarStates input[value="RN"]').isChecked(),true);
- assert.equal(await page.locator('#radarMunicipality').inputValue(),'','Old municipality filter cleared');
- assert.equal(await page.locator('#radarOrganization').inputValue(),'','Old organization filter cleared');
- assert.equal(await page.locator('#searchDays').inputValue(),'0','Old publication date filter cleared');
- note('Executive search transfers keyword, UF, modality and deadline without hidden legacy filters OK');
+ assert.equal(await page.locator('#radarMunicipality').inputValue(),'Natal');
+ assert.equal(await page.locator('#radarOrganization').inputValue(),'Prefeitura QA');
+ assert.equal(await page.locator('#searchDays').inputValue(),'30');
+ assert.equal(await page.locator('#radarFilters').isVisible(),false,'Advanced panel collapses on submit');
+ assert.ok((await page.locator('#radarChips').textContent()).includes('RN'));
+ note('Single Radar search retains keyword, UF, modality, deadline and advanced fields OK');
+ await page.locator('#radarClear').click();
+ assert.equal(await page.locator('#searchKeyword').inputValue(),'');
+ assert.equal(await page.locator('#searchModality').inputValue(),'');
+ assert.equal(await page.locator('#radarStateSummary').textContent(),'Todo o Brasil');
+ note('Clear all search criteria from consolidated Radar page OK');
  await page.evaluate(()=>{window.scrollTo(0,document.body.scrollHeight);document.querySelector('#mainNav [data-view="home"]').click()});
  await page.locator('#view-home.active').waitFor({timeout});
  await until(page,()=>window.scrollY<=4,timeout);
@@ -324,10 +338,9 @@ try{
  await gotoSection(page,'home');
  const widths=await page.evaluate(()=>{
   const get=(selector)=>{const e=document.querySelector(selector);if(!e)return null;const r=e.getBoundingClientRect();return{x:r.x,right:r.right,width:r.width}};
-  return {screen:innerWidth,summary:get('#revSummary'),search:get('#rlbHomeSearchForm'),content:get('#view-home'),notification:get('.rev-n-bell')};
+  return {screen:innerWidth,summary:get('#revSummary'),content:get('#view-home'),notification:get('.rev-n-bell')};
  });
  assert.ok(widths.summary&&widths.summary.x>=-4&&widths.summary.right<=widths.screen+5,'Mobile summary should not overflow viewport: '+JSON.stringify(widths));
- assert.ok(widths.search&&widths.search.x>=-4&&widths.search.right<=widths.screen+5,'Mobile search fits viewport: '+JSON.stringify(widths));
  assert.ok(widths.content&&widths.content.right<=widths.screen+5,'Mobile executive home fits viewport: '+JSON.stringify(widths));
  await page.locator('.rev-n-bell').click();
  const box=await page.locator('.rev-n-panel').boundingBox();
@@ -344,16 +357,24 @@ try{
      await page.evaluate(next=>{document.documentElement.dataset.theme=next},theme);
      const dimensions=await page.evaluate(()=>{
        const root=document.querySelector('#view-home'),body=document.documentElement;
-       const e=document.querySelector('#rlbHomeSearchForm'),k=document.querySelector('#rlbHomeKpis');
-       const r=root.getBoundingClientRect(),a=e.getBoundingClientRect(),b=k.getBoundingClientRect();
-       return {innerWidth,documentWidth:body.scrollWidth,homeRight:r.right,searchRight:a.right,kpisRight:b.right};
+       const k=document.querySelector('#rlbHomeKpis');
+       const r=root.getBoundingClientRect(),b=k.getBoundingClientRect();
+       return {innerWidth,documentWidth:body.scrollWidth,homeRight:r.right,kpisRight:b.right};
      });
      assert.ok(dimensions.documentWidth<=width+6,'Horizontal overflow '+theme+' @'+width+': '+JSON.stringify(dimensions));
-     assert.ok(dimensions.homeRight<=width+6&&dimensions.searchRight<=width+6&&dimensions.kpisRight<=width+6,
+     assert.ok(dimensions.homeRight<=width+6&&dimensions.kpisRight<=width+6,
        'Home content overflows '+theme+' @'+width+': '+JSON.stringify(dimensions));
+     await gotoSection(page,'radar');
+     const bar=await page.locator('#radarSearchForm .radar-search-bar').boundingBox();
+     assert.ok(bar&&bar.x>=-4&&bar.x+bar.width<=width+6,
+       'Radar search should fit '+theme+' @'+width+': '+JSON.stringify(bar));
+     assert.ok(await page.locator('#radarStatePicker').isVisible(),'UF visible @'+width);
+     assert.ok(await page.locator('#searchModality').isVisible(),'Modality visible @'+width);
+     assert.ok(await page.locator('#radarClosingDays').isVisible(),'Deadline visible @'+width);
+     await gotoSection(page,'home');
    }
  }
- note('Executive responsive layout 320/390/768/1024/1440px in light and dark themes OK');
+ note('Executive home and Radar search responsive 320/390/768/1024/1440px, both themes OK');
 
  const fatal=problems.filter(x=>!(/ERR_CONNECTION|Failed to fetch|network error/i.test(x)));
  assert.deepEqual(fatal,[],'Unexpected browser JavaScript errors');
