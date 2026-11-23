@@ -7,6 +7,7 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const { Pool, types } = require("pg");
 const crypto = require("crypto");
+const {advanceRecurringDate,recurrenceDatesInRange,buildRecurringForecast,allocateInstallments} = require("./lib/financial-core");
 
 for (const key of ["DATABASE_URL","JWT_SECRET"]) {
   if (!process.env[key]) { console.error("Missing environment variable:",key); process.exit(1); }
@@ -49,30 +50,6 @@ const monthBounds = month => {
   if(Number.isNaN(d.getTime())) throw new Error("Mês inválido.");
   return [d.toISOString().slice(0,10),new Date(Date.UTC(d.getUTCFullYear(),d.getUTCMonth()+1,1,12)).toISOString().slice(0,10)];
 };
-function advanceRecurringDate(date,frequency){
-  const [year,month,day]=date.split("-").map(Number);
-  if(frequency==="weekly")return new Date(Date.UTC(year,month-1,day+7,12)).toISOString().slice(0,10);
-  if(frequency==="monthly"){
-    const monthIndex=month,nextYear=year+Math.floor(monthIndex/12),nextMonth=monthIndex%12,lastDay=new Date(Date.UTC(nextYear,nextMonth+1,0)).getUTCDate();
-    return nextYear+"-"+String(nextMonth+1).padStart(2,"0")+"-"+String(Math.min(day,lastDay)).padStart(2,"0");
-  }
-  if(frequency==="yearly"){
-    const nextYear=year+1,lastDay=new Date(Date.UTC(nextYear,month,0)).getUTCDate();
-    return nextYear+"-"+String(month).padStart(2,"0")+"-"+String(Math.min(day,lastDay)).padStart(2,"0");
-  }
-  throw new Error("Frequência recorrente inválida.");
-}
-function buildRecurringForecast(rule,endExclusive){
-  const amount=asNumber(rule.amount),nextDue=String(rule.next_due).slice(0,10);let due=nextDue,periodTotal=0,occurrences=0,iterations=0;
-  while(due<endExclusive&&iterations<600){periodTotal+=amount;occurrences++;due=advanceRecurringDate(due,rule.frequency);iterations++;}
-  return {rule_id:rule.id,account_id:rule.account_id||null,description:rule.description,amount,frequency:rule.frequency,due_on:nextDue,account_name:rule.account_name,category_name:rule.category_name||"Sem categoria",occurrences,period_total:periodTotal};
-}
-function recurrenceDatesInRange(rule,startInclusive,endExclusive){
-  let due=String(rule.next_due).slice(0,10),iterations=0;const dates=[];
-  while(due<startInclusive&&iterations<600){due=advanceRecurringDate(due,rule.frequency);iterations++;}
-  while(due<endExclusive&&iterations<1200){dates.push(due);due=advanceRecurringDate(due,rule.frequency);iterations++;}
-  return dates;
-}
 function dateDifference(from,to){const a=new Date(String(from).slice(0,10)+"T12:00:00Z"),b=new Date(String(to).slice(0,10)+"T12:00:00Z");return Math.round((b.getTime()-a.getTime())/86400000);}
 function buildCashflowChart(month,actualRows,expenseRules,pendingRows,reminderRows,generatedRecurringRows,incomeRules){
   const [year,monthNumber]=month.split("-").map(Number),items=[];
@@ -189,7 +166,7 @@ app.post("/api/categories",requireAuth,asyncRoute(async(req,res)=>{
 
 app.get("/api/accounts",requireAuth,asyncRoute(async(req,res)=>{
   const uid=req.user.id,bounds=monthBounds(saoPauloMonth());
-  const [r,rules,reminders]=await Promise.all([
+  const [r,rules,reminders,generatedRows]=await Promise.all([
     pool.query(
       "SELECT a.id,a.name,a.account_type,a.institution,a.opening_balance,a.color,a.is_active,"+
       "a.opening_balance+COALESCE(SUM(CASE WHEN t.status='paid' AND t.kind='income' AND t.account_id=a.id THEN t.amount WHEN t.status='paid' AND t.kind='expense' AND t.account_id=a.id THEN -t.amount WHEN t.status='paid' AND t.kind='transfer' AND t.account_id=a.id THEN -t.amount WHEN t.status='paid' AND t.kind='transfer' AND t.transfer_to_account_id=a.id THEN t.amount ELSE 0 END),0) AS current_balance,"+
@@ -198,10 +175,11 @@ app.get("/api/accounts",requireAuth,asyncRoute(async(req,res)=>{
       "FROM public.accounts a LEFT JOIN public.transactions t ON (t.account_id=a.id OR t.transfer_to_account_id=a.id) AND t.user_id=a.user_id "+
       "WHERE a.user_id=$1 AND a.is_active=true GROUP BY a.id ORDER BY a.created_at",[uid,bounds[1]]),
     pool.query("SELECT id,account_id,description,amount,frequency,next_due FROM public.recurring_rules WHERE user_id=$1 AND kind='expense' AND is_active=true AND account_id IS NOT NULL",[uid]),
-    pool.query("SELECT account_id,COALESCE(SUM(amount),0) AS total FROM public.calendar_reminders WHERE user_id=$1 AND account_id IS NOT NULL AND status='pending' AND due_on < $2::date GROUP BY account_id",[uid,bounds[1]])
+    pool.query("SELECT account_id,COALESCE(SUM(amount),0) AS total FROM public.calendar_reminders WHERE user_id=$1 AND account_id IS NOT NULL AND status='pending' AND due_on < $2::date GROUP BY account_id",[uid,bounds[1]]),
+    pool.query("SELECT recurring_rule_id,recurring_due_on FROM public.transactions WHERE user_id=$1 AND recurring_rule_id IS NOT NULL AND recurring_due_on >= $2::date AND recurring_due_on < $3::date",[uid,bounds[0],bounds[1]])
   ]);
-  const fixedByAccount={},reminderByAccount={};
-  for(const rule of rules.rows){const total=buildRecurringForecast(rule,bounds[1]).period_total;fixedByAccount[rule.account_id]=(fixedByAccount[rule.account_id]||0)+total;}
+  const fixedByAccount={},reminderByAccount={},recorded=new Set(generatedRows.rows.map(t=>String(t.recurring_rule_id)+":"+String(t.recurring_due_on).slice(0,10)));
+  for(const rule of rules.rows){const total=buildRecurringForecast(rule,bounds[0],bounds[1],recorded).period_total;fixedByAccount[rule.account_id]=(fixedByAccount[rule.account_id]||0)+total;}
   for(const reminder of reminders.rows)reminderByAccount[reminder.account_id]=asNumber(reminder.total);
   const accounts=r.rows.map(a=>{
     const fixed=asNumber(fixedByAccount[a.id]),pending=asNumber(a.pending_commitments),pendingIncome=asNumber(a.pending_income_commitments),reminder=asNumber(reminderByAccount[a.id]);
@@ -237,7 +215,7 @@ app.delete("/api/accounts/:id",requireAuth,asyncRoute(async(req,res)=>{
 }));
 app.get("/api/transactions",requireAuth,asyncRoute(async(req,res)=>{
   const values=[req.user.id];let filter="";
-  if(req.query.month&&/^\d{4}-\d{2}$/.test(req.query.month)){const bounds=monthBounds(req.query.month);values.push(bounds[0],bounds[1]);filter=" AND t.occurred_on >= $2::date AND t.occurred_on < $3::date";}
+  if(req.query.month&&/^\d{4}-\d{2}$/.test(req.query.month)){const bounds=monthBounds(req.query.month);values.push(bounds[0],bounds[1]);filter=" AND ((t.status IN ('paid','cancelled') AND t.occurred_on >= $2::date AND t.occurred_on < $3::date) OR (t.status IN ('pending','overdue') AND COALESCE(t.due_on,t.occurred_on) >= $2::date AND COALESCE(t.due_on,t.occurred_on) < $3::date))";}
   const r=await pool.query(
     "SELECT t.id,t.kind,t.description,t.amount,t.occurred_on,t.due_on,t.status,t.payment_method,t.notes,t.account_id,t.transfer_to_account_id,t.category_id,t.card_id,t.installment_number,t.installment_total,"+
     "c.name AS category_name,a.name AS account_name,ca.name AS card_name FROM public.transactions t "+
@@ -255,17 +233,17 @@ app.post("/api/transactions",requireAuth,asyncRoute(async(req,res)=>{
   if(b.categoryId&&!(await owned("public.categories",b.categoryId,req.user.id)))return res.status(400).json({error:"Categoria não encontrada."});
   if(b.cardId&&!(await owned("public.cards",b.cardId,req.user.id)))return res.status(400).json({error:"Cartão não encontrado."});
   if(kind==="transfer"&&(!b.accountId||!b.transferToAccountId||b.accountId===b.transferToAccountId||!(await owned("public.accounts",b.transferToAccountId,req.user.id))))return res.status(400).json({error:"Selecione duas contas diferentes para a transferência."});
-  const installments=kind==="expense"?Math.min(48,Math.max(1,Number(b.installments)||1)):1,group=installments>1?crypto.randomUUID():null,client=await pool.connect();
+  const installments=kind==="expense"?Math.min(48,Math.max(1,Number(b.installments)||1)):1,amounts=allocateInstallments(amount,installments),group=installments>1?crypto.randomUUID():null,client=await pool.connect();
   try{
     await client.query("BEGIN");const ids=[];
     for(let i=0;i<installments;i++){
       const d=new Date(occurred+"T12:00:00Z"),day=d.getUTCDate();d.setUTCDate(1);d.setUTCMonth(d.getUTCMonth()+i);d.setUTCDate(Math.min(day,new Date(Date.UTC(d.getUTCFullYear(),d.getUTCMonth()+1,0)).getUTCDate()));const date=d.toISOString().slice(0,10);
       const dueBase=b.dueOn&&validDate(b.dueOn)?b.dueOn:occurred,dueDate=new Date(dueBase+"T12:00:00Z"),dueDay=dueDate.getUTCDate();dueDate.setUTCDate(1);dueDate.setUTCMonth(dueDate.getUTCMonth()+i);dueDate.setUTCDate(Math.min(dueDay,new Date(Date.UTC(dueDate.getUTCFullYear(),dueDate.getUTCMonth()+1,0)).getUTCDate()));const dueValue=dueDate.toISOString().slice(0,10);
-      const title=installments>1?description+" ("+(i+1)+"/"+installments+")":description;
+      const title=installments>1?description+" ("+(i+1)+"/"+installments+")":description,installmentStatus=installments>1&&i>0&&status==="paid"?"pending":status;
       const r=await client.query(
         "INSERT INTO public.transactions(user_id,account_id,category_id,kind,description,amount,occurred_on,due_on,status,payment_method,notes,card_id,transfer_to_account_id,installment_group,installment_number,installment_total) "+
         "VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16) RETURNING id",
-        [req.user.id,b.accountId||null,b.categoryId||null,kind,title,amount,date,dueValue,status,b.paymentMethod||null,typeof b.notes==="string"?b.notes.slice(0,500):null,b.cardId||null,b.transferToAccountId||null,group,installments>1?i+1:null,installments>1?installments:null]);
+        [req.user.id,b.accountId||null,b.categoryId||null,kind,title,amounts[i],date,dueValue,installmentStatus,b.paymentMethod||null,typeof b.notes==="string"?b.notes.slice(0,500):null,b.cardId||null,b.transferToAccountId||null,group,installments>1?i+1:null,installments>1?installments:null]);
       ids.push(r.rows[0].id);
     }
     await client.query("COMMIT");res.status(201).json({ok:true,created:ids.length,ids});
@@ -509,7 +487,7 @@ app.get("/api/dashboard",requireAuth,asyncRoute(async(req,res)=>{
     pool.query("SELECT recurring_rule_id,recurring_due_on FROM public.transactions WHERE user_id=$1 AND recurring_rule_id IS NOT NULL AND recurring_due_on >= (date_trunc('month',$2::date)-interval '5 months')::date AND recurring_due_on < (date_trunc('month',$2::date)+interval '1 month')::date",[uid,bounds[0]]),
     pool.query("SELECT id,amount,frequency,next_due FROM public.recurring_rules WHERE user_id=$1 AND kind='income' AND is_active=true",[uid])
   ];
-  const results=await Promise.all(q),accounts=results[0].rows,totals=results[1].rows[0],balance=accounts.reduce((s,a)=>s+asNumber(a.current_balance),0),fixedExpenses=results[9].rows.map(rule=>buildRecurringForecast(rule,bounds[1])).sort((a,b)=>a.due_on.localeCompare(b.due_on)||a.description.localeCompare(b.description)),fixedExpenseTotal=fixedExpenses.reduce((sum,item)=>sum+item.period_total,0),outstandingExpense=asNumber(totals.outstanding_expense),outstandingIncome=asNumber(totals.outstanding_income),reminders=results[12].rows,reminderCommitments=reminders.reduce((sum,item)=>sum+asNumber(item.amount),0),reminderExpenseMonth=reminders.filter(item=>String(item.due_on).slice(0,10)>=bounds[0]).reduce((sum,item)=>sum+asNumber(item.amount),0),committedExpense=outstandingExpense+fixedExpenseTotal+reminderCommitments,projectedBalance=balance+outstandingIncome-committedExpense,expenseTotal=asNumber(totals.expense)+asNumber(totals.pending_expense_month)+reminderExpenseMonth,incomeTotal=asNumber(totals.income)+asNumber(totals.pending_income);
+  const results=await Promise.all(q),accounts=results[0].rows,totals=results[1].rows[0],balance=accounts.reduce((s,a)=>s+asNumber(a.current_balance),0),fixedExpenses=results[9].rows.map(rule=>buildRecurringForecast(rule,bounds[0],bounds[1],new Set(results[16].rows.map(t=>String(t.recurring_rule_id)+":"+String(t.recurring_due_on).slice(0,10))))).sort((a,b)=>a.due_on.localeCompare(b.due_on)||a.description.localeCompare(b.description)),fixedExpenseTotal=fixedExpenses.reduce((sum,item)=>sum+item.period_total,0),outstandingExpense=asNumber(totals.outstanding_expense),outstandingIncome=asNumber(totals.outstanding_income),reminders=results[12].rows,reminderCommitments=reminders.reduce((sum,item)=>sum+asNumber(item.amount),0),reminderExpenseMonth=reminders.filter(item=>String(item.due_on).slice(0,10)>=bounds[0]).reduce((sum,item)=>sum+asNumber(item.amount),0),committedExpense=outstandingExpense+fixedExpenseTotal+reminderCommitments,projectedBalance=balance+outstandingIncome-committedExpense,expenseTotal=asNumber(totals.expense)+asNumber(totals.pending_expense_month)+reminderExpenseMonth,incomeTotal=asNumber(totals.income)+asNumber(totals.pending_income);
   const fixedByAccount={},reminderByAccount={};for(const item of fixedExpenses)if(item.account_id)fixedByAccount[item.account_id]=(fixedByAccount[item.account_id]||0)+item.period_total;for(const item of reminders)if(item.account_id)reminderByAccount[item.account_id]=(reminderByAccount[item.account_id]||0)+asNumber(item.amount);
   for(const account of accounts){const fixed=asNumber(fixedByAccount[account.id]),pending=asNumber(account.pending_commitments),pendingIncome=asNumber(account.pending_income_commitments),reminder=asNumber(reminderByAccount[account.id]);account.fixed_commitments=fixed;account.reminder_commitments=reminder;account.total_committed=pending+fixed+reminder;account.projected_balance=asNumber(account.current_balance)+pendingIncome-pending-fixed-reminder;}
   const today=saoPauloToday(),alerts=[];

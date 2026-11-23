@@ -444,3 +444,11 @@ button{color:inherit}
 .income-forecast-dot{background:#bcebd4}
 .expense-forecast-dot{background:#f8c6c9}
 @media(max-width:680px){.chart-area{gap:6px;padding-left:2px;padding-right:2px}.chart-month{gap:3px}.chart-bar-stack{width:min(15px,42%)}.chart-legend{gap:8px 11px;font-size:8px}}
+
+.data-error-banner{display:flex;align-items:center;gap:10px;padding:12px 14px;margin-bottom:15px;border:1px solid #efd2a8;border-radius:12px;background:#fff8ed;color:#855920;font-size:12px}
+.data-error-banner[hidden]{display:none!important}
+.data-error-banner #data-error-detail{flex:1;min-width:0}
+.data-error-banner .error-dot{width:25px;height:25px;display:grid;place-items:center;border-radius:8px;background:#fff0d6;color:#af6617;font-weight:800;flex-shrink:0}
+.sync-indicator.sync-failed{background:#fff5e8;color:#a5661d;border-color:#f0d9ad}
+.sync-indicator.sync-failed i{background:#e5a53f;box-shadow:0 0 0 3px #e5a53f25}
+@media(max-width:680px){.data-error-banner{flex-wrap:wrap;font-size:11px}.data-error-banner button{margin-left:35px}}
