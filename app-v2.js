@@ -958,7 +958,12 @@ function renderRecommendationItems(){
       button.setAttribute('aria-pressed',String(selected));
     });
   }
-  const signature=JSON.stringify([recFilter,recs.map(x=>[recKey(x),recVersion(x)])]);
+  const urgencyTier=x=>{
+    const remaining=new Date(x.closes_at).getTime()-now;
+    return Number.isFinite(remaining)&&remaining>=0?
+      remaining<=86400000?'24h':remaining<=48*3600000?'48h':'normal':'past';
+  };
+  const signature=JSON.stringify([recFilter,recs.map(x=>[recKey(x),recVersion(x),urgencyTier(x)])]);
   if(renderedRecSignature===signature&&target.querySelector('.rev-recs-list'))return;
   renderedRecSignature=signature;
   target.replaceChildren();
@@ -1406,7 +1411,7 @@ function renderDeadlines(data){
       (isoFmt.format(e.parsed)>=today&&isoFmt.format(e.parsed)<=lastDay):
       (e.parsed>=start&&e.parsed.getTime()-start.getTime()<=deadlinePeriod*86400000)))
     .sort((a,b)=>a.parsed-b.parsed).slice(0,4);
-  const signature=JSON.stringify([deadlinePeriod,events.map(x=>[agendaKey(x),agendaVersion(x)])]);
+  const signature=JSON.stringify([deadlinePeriod,today,events.map(x=>[agendaKey(x),agendaVersion(x)])]);
   if(signature===renderedAgendaSignature&&list.querySelector('.rlb-home-deadline'))return;
   renderedAgendaSignature=signature;list.replaceChildren();
   if(!events.length){list.append(cardEmpty('Nenhum prazo registrado nos próximos '+deadlinePeriod+' dias.'));return}
@@ -1575,8 +1580,18 @@ function boot(){
     feedFilter=next;setActive('data-home-feed',next);
     renderRecent(null);
   });
+  let noticeTimer=0;
+  const detected={recommendations:0,deadlines:0,recent:0,changed:0};
   const shell=$('#appShell');
-  if(shell)new MutationObserver(()=>{if(logged())greeting();else clearPrivateData()}).observe(shell,{attributes:true,attributeFilter:['class']});
+  if(shell)new MutationObserver(()=>{
+    if(logged())greeting();
+    else{
+      clearPrivateData();
+      if(noticeTimer)clearTimeout(noticeTimer);
+      noticeTimer=0;
+      for(const key of Object.keys(detected))detected[key]=0;
+    }
+  }).observe(shell,{attributes:true,attributeFilter:['class']});
   document.addEventListener('radar:overview',event=>{
     if(!logged())return;
     overview=event.detail;greeting();
@@ -1599,8 +1614,6 @@ function boot(){
     $('#rlbHomeDeadlines')?.replaceChildren(cardEmpty(msg));
     $('#rlbHomePanorama')?.replaceChildren(cardEmpty('Não foi possível consultar os indicadores da sua operação.'));
   });
-  let noticeTimer=0;
-  const detected={recommendations:0,deadlines:0,recent:0,changed:0};
   document.addEventListener('radar:pulse-updates',event=>{
     if(!logged())return;
     const payload=event.detail||{},source=payload.source;
