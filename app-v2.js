@@ -94,11 +94,11 @@ function renderLive() {
 async function refreshLive(){if(state.livePromise)return state.livePromise;const task=(async()=>{try{const d=await api('/api/live-feed?limit=40',{timeoutMs:12000});state.live=d.items||[];renderLive();const s=d.status||{};if($('#metricStored'))$('#metricStored').textContent=Number(s.total_stored||0).toLocaleString('pt-BR');if($('#metricNew'))$('#metricNew').textContent=Number(s.last_new_count||0).toLocaleString('pt-BR');if($('#metricLast'))$('#metricLast').textContent=time(s.last_success_at);$('#statusDot')?.classList.toggle('ok',!s.consecutive_failures);if($('#monitorStatusText'))$('#monitorStatusText').textContent=s.running?'Varredura em andamento':`PNCP • ${s.live?.modalities_per_cycle||14} modalidades • ${s.interval_seconds||90}s`;if($('#liveMeta'))$('#liveMeta').textContent=`Atualização por eventos • varredura ${time(s.last_success_at)} • tela ${time(d.fetched_at)} • ${Number(s.total_stored||0).toLocaleString('pt-BR')} registros`}catch(e){if($('#liveMeta'))$('#liveMeta').textContent=e.code==='request_timeout'?'A atualização demorou mais que o esperado. Tentaremos novamente.':'Falha temporária ao sincronizar o feed.'}})();state.livePromise=task;try{return await task}finally{if(state.livePromise===task)state.livePromise=null}}
 function startLive(){clearInterval(state.timer);state.timer=null;try{state.sse?.close()}catch{}state.sse=null;refreshLive();try{state.sse=new EventSource('/api/live-events');const sync=()=>{if(state.view==='radar')refreshLive()};state.sse.addEventListener('procurement',sync);state.sse.addEventListener('status',sync);state.timer=setInterval(()=>{if(!state.sse||state.sse.readyState!==EventSource.OPEN)refreshLive()},90000)}catch{state.sse=null;state.timer=setInterval(refreshLive,90000)}}
 const dashboard = {
-  search: null, items: [], visible: 0, selected: '', savedSelected: '',
+  search: null, items: [], page: 0, listScroll: 0, selected: '', savedSelected: '',
   saved: new Map(), searches: new Map(), documents: new Map(),
   pendingSave: new Set(), savedLoads: new Map()
 };
-const dashboardPageSize = 30;
+const dashboardPageSize = 8;
 const radarIds = ['searchKeyword', 'radarMunicipality', 'searchModality', 'searchDays', 'radarClosingDays', 'radarOrder', 'radarOrganization'];
 const radarParams = ['keyword', 'municipality', 'modalidade', 'days', 'closingDays', 'order', 'org'];
 
@@ -179,7 +179,7 @@ function deadlineLabel(value) {
   return date.toDateString() === now.toDateString() ? 'Encerra amanhã' : '';
 }
 
-function dashboardRows(items, selected, more = 0) {
+function dashboardRows(items, selected) {
   if (!items.length) return '<p class="radar-message">Nenhuma oportunidade encontrada.</p>';
   return `<table class="radar-table">
     <thead><tr><th scope="col">Objeto</th><th scope="col">Município/UF</th><th scope="col">Prazo</th></tr></thead>
@@ -190,13 +190,71 @@ function dashboardRows(items, selected, more = 0) {
         <small>${esc(item.modality)} · ${esc(item.org)}</small></td>
       <td>${esc(item.place)}</td><td><span class="radar-mobile-label">Prazo </span>${esc(when(item.closing))}${deadline ? `<small class="radar-deadline">${deadline}</small>` : ''}</td>
     </tr>`;
-    }).join('')}</tbody></table>
-    ${more ? `<button type="button" class="radar-button radar-more" id="radarMore">Carregar mais oportunidades (${more} restantes)</button>` : ''}`;
+    }).join('')}</tbody></table>`;
 }
 
+const radarCompact = matchMedia('(max-width: 760px)');
+const opportunityIcon = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h8l4 4v14H6zM14 3v5h4M9 12h6M9 16h6"/></svg>';
+
 function resultRows() {
-  const visible = dashboard.items.slice(0, dashboard.visible);
-  $('#radarResults').innerHTML = dashboardRows(visible, dashboard.selected, dashboard.items.length - visible.length);
+  const total = dashboard.items.length;
+  if (!total) {
+    $('#radarResults').innerHTML = '<p class="radar-message">Nenhuma oportunidade encontrada.</p>';
+    return;
+  }
+  const start = dashboard.page * dashboardPageSize;
+  const end = Math.min(start + dashboardPageSize, total);
+  $('#radarResults').innerHTML = `<ul class="radar-opportunity-list">${dashboard.items.slice(start, end).map(item => {
+    const selected = item.key === dashboard.selected;
+    const deadline = deadlineLabel(item.closing);
+    return `<li><button type="button" class="radar-opportunity${selected ? ' radar-selected' : ''}" data-radar-select="${esc(item.key)}" aria-pressed="${selected}">
+      <span class="radar-opportunity-icon">${opportunityIcon}</span>
+      <span class="radar-opportunity-copy"><strong>${esc(item.title)}</strong>
+        <small>${esc(item.place)} <span class="radar-opportunity-org">· ${esc(item.org)}</span></small></span>
+      <span class="radar-opportunity-deadline"><span class="radar-mobile-label">Encerra: </span>${esc(when(item.closing))}${deadline ? `<small>${deadline}</small>` : ''}</span>
+      <span class="radar-opportunity-chevron" aria-hidden="true">›</span>
+    </button></li>`;
+  }).join('')}</ul>
+  <nav class="radar-pagination" aria-label="Paginação de oportunidades">
+    <span role="status">${start + 1}–${end} de ${total.toLocaleString('pt-BR')}</span>
+    <button type="button" class="radar-button" data-radar-page="-1" ${start === 0 ? 'disabled' : ''}>‹ Anterior</button>
+    <button type="button" class="radar-primary" data-radar-page="1" ${end === total ? 'disabled' : ''}>Próxima ›</button>
+  </nav>`;
+}
+
+function selectRadarResult(index, showDetail, moveFocus = false) {
+  const item = dashboard.items[index];
+  if (!item) return;
+  if (showDetail && radarCompact.matches && !$('#view-radar').classList.contains('radar-detail-open')) {
+    dashboard.listScroll = window.scrollY;
+    $('#view-radar').classList.add('radar-detail-open');
+  }
+  const page = Math.floor(index / dashboardPageSize);
+  const samePage = page === dashboard.page && $('#radarResults [data-radar-select]');
+  dashboard.page = page;
+  dashboard.selected = item.key;
+  if (!samePage) resultRows();
+  else $$('#radarResults [data-radar-select]').forEach(button => {
+    const selected = button.dataset.radarSelect === item.key;
+    button.classList.toggle('radar-selected', selected);
+    button.setAttribute('aria-pressed', String(selected));
+  });
+  const panel = $('#radarDetail');
+  renderRadarDetail(panel, item, index);
+  if (showDetail && (radarCompact.matches || moveFocus)) {
+    panel.scrollTop = 0;
+    $('h2', panel)?.focus({ preventScroll: true });
+    if (radarCompact.matches) window.scrollTo({ top: 0, behavior: 'instant' });
+  } else if (!showDetail) {
+    $('#radarResultsTitle').focus({ preventScroll: true });
+    $('#radarListPanel').scrollIntoView({ block: 'nearest', behavior: 'instant' });
+  }
+}
+
+function closeRadarResult() {
+  $('#view-radar').classList.remove('radar-detail-open');
+  $('#radarResults [aria-pressed="true"]')?.focus({ preventScroll: true });
+  window.scrollTo({ top: dashboard.listScroll, behavior: 'instant' });
 }
 
 function radarBusy(isBusy) {
@@ -210,6 +268,7 @@ async function runDashboardSearch(query = dashboardQuery()) {
   dashboard.search?.abort();
   dashboard.search = controller;
   query.set('workspace', '1');
+  $('#view-radar').classList.remove('radar-detail-open');
   radarBusy(true);
   renderDashboardChips();
   $('#radarSearchMeta').textContent = 'Consultando a base sincronizada do Radar…';
@@ -219,12 +278,12 @@ async function runDashboardSearch(query = dashboardQuery()) {
     const response = await api('/api/licitacoes?' + query, { signal: controller.signal, timeoutMs: 20000 });
     if (controller.signal.aborted) return;
     dashboard.items = (response.items || []).map(radarItem);
-    dashboard.visible = dashboardPageSize;
+    dashboard.page = 0;
     dashboard.selected = dashboard.items[0]?.key || '';
     const count = dashboard.items.length.toLocaleString('pt-BR');
     $('#radarSearchMeta').textContent = `${count} ${dashboard.items.length === 1 ? 'oportunidade' : 'oportunidades'} · PNCP${response.partial ? ' · consulta parcial' : ''}`;
     resultRows();
-    renderRadarDetail($('#radarDetail'), dashboard.items[0]);
+    renderRadarDetail($('#radarDetail'), dashboard.items[0], 0);
   } catch (error) {
     if (controller.signal.aborted) return;
     $('#radarSearchMeta').textContent = error.message;
@@ -240,7 +299,7 @@ function externalRadarLink(url, label, className = 'radar-button') {
   return href ? `<a class="${className}" href="${esc(href)}" target="_blank" rel="noopener noreferrer">${esc(label)} <span aria-hidden="true">↗</span></a>` : '';
 }
 
-function renderRadarDetail(panel, item) {
+function renderRadarDetail(panel, item, index = -1) {
   if (!item) {
     panel.innerHTML = '<p class="radar-message">Selecione uma oportunidade para consultar os detalhes e documentos.</p>';
     return;
@@ -259,6 +318,10 @@ function renderRadarDetail(panel, item) {
     </div>
     <dl>${rows.filter(([, value])=>value).map(([label,value])=>`<div><dt>${label}</dt><dd>${esc(value)}</dd></div>`).join('')}</dl>
     <h3>Documentos da licitação</h3><div class="radar-documents" aria-live="polite"></div>
+    ${index >= 0 ? `<nav class="radar-detail-navigation" aria-label="Navegação entre oportunidades">
+      <button type="button" class="radar-button" data-radar-step="-1" ${index === 0 ? 'disabled' : ''}>‹ Oportunidade anterior</button>
+      <button type="button" class="radar-button" data-radar-step="1" ${index + 1 === dashboard.items.length ? 'disabled' : ''}>Próxima oportunidade ›</button>
+    </nav>` : ''}
   </article>`;
   loadRadarDocuments(panel.querySelector('.radar-documents'), item);
 }
@@ -369,13 +432,12 @@ async function changeRadarSave(item, button) {
   finally { dashboard.pendingSave.delete(item.key); button.disabled = false; }
 }
 
-function selectRadarItem(button, saved) {
+function selectSavedRadarItem(button) {
   const key = button.dataset.radarSelect;
-  const panel = $(saved ? '#radarSavedDetail' : '#radarDetail');
-  const item = saved ? dashboard.saved.get(key) : dashboard.items.find(entry => entry.key === key);
+  const panel = $('#radarSavedDetail');
+  const item = dashboard.saved.get(key);
   if (!item) return;
-  if (saved) dashboard.savedSelected = key;
-  else dashboard.selected = key;
+  dashboard.savedSelected = key;
   $$('[data-radar-select]', button.closest('table')).forEach(entry => {
     const active = entry === button;
     entry.setAttribute('aria-pressed', String(active));
@@ -439,19 +501,19 @@ function bindRadarDashboard() {
     $('#' + id).addEventListener('click', () => { applyDashboardQuery(params); runDashboardSearch(); });
   }
   $('#radarResults').addEventListener('click', event => {
-    if (event.target.closest('#radarMore')) {
-      const first = dashboard.visible;
-      dashboard.visible += dashboardPageSize;
-      resultRows();
-      $$('#radarResults [data-radar-select]')[first]?.focus();
-    }
+    const page = event.target.closest('[data-radar-page]');
+    if (page) selectRadarResult((dashboard.page + Number(page.dataset.radarPage)) * dashboardPageSize, false);
     if (event.target.closest('#radarRetry')) runDashboardSearch();
     const button = event.target.closest('[data-radar-select]');
-    if (button) selectRadarItem(button, false);
+    if (button) selectRadarResult(dashboard.items.findIndex(item => item.key === button.dataset.radarSelect), true);
+  });
+  radarCompact.addEventListener('change', () => $('#view-radar').classList.remove('radar-detail-open'));
+  $('#radarDetail').addEventListener('keydown', event => {
+    if (event.key === 'Escape' && radarCompact.matches && $('#view-radar').classList.contains('radar-detail-open')) closeRadarResult();
   });
   $('#radarSavedList').addEventListener('click', event => {
     const button = event.target.closest('[data-radar-select]');
-    if (button) selectRadarItem(button, true);
+    if (button) selectSavedRadarItem(button);
   });
   for (const [id, item] of [['radarDetail', () => dashboard.items.find(entry => entry.key === dashboard.selected)],
     ['radarSavedDetail', () => dashboard.saved.get(dashboard.savedSelected)]]) {
@@ -459,9 +521,11 @@ function bindRadarDashboard() {
       const button = event.target.closest('[data-radar-save]');
       if (button) changeRadarSave(item(), button);
       if (event.target.closest('[data-radar-back]')) {
-        const list = id === 'radarDetail' ? '#radarResults' : '#radarSavedList';
-        $(list + ' [aria-pressed="true"]')?.focus();
+        if (id === 'radarDetail') closeRadarResult();
+        else $('#radarSavedList [aria-pressed="true"]')?.focus();
       }
+      const step = event.target.closest('[data-radar-step]');
+      if (step) selectRadarResult(dashboard.items.findIndex(entry => entry.key === dashboard.selected) + Number(step.dataset.radarStep), true, true);
       if (event.target.closest('[data-radar-doc-retry]') && item()) loadRadarDocuments($('.radar-documents',event.currentTarget), item());
     });
   }
