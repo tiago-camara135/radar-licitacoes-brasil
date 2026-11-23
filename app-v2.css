@@ -2954,3 +2954,194 @@ html[data-theme="dark"] #view-home .rlb-home-deadline-status[data-urgent=true]{b
   #appShell .view.active.rlb-view-enter{animation:none!important}
   #view-home .rev-stat,#view-home .rlb-home-filter-group button{transition:none!important;transform:none!important}
 }
+
+
+/* ================================================================
+   Radar UX refinado · navegação limpa, foco contextual e acabamento
+   Profissionalização visual sem remover indicadores de acessibilidade
+   ================================================================ */
+#appShell{
+  --rlb-interaction-accent:#078a6a;
+  --rlb-interaction-soft:rgba(8,152,112,.12);
+  --rlb-interaction-edge:rgba(8,152,112,.37);
+  --rlb-polish-shadow:0 8px 28px rgba(18,45,82,.055);
+}
+html[data-theme="dark"] #appShell{
+  --rlb-interaction-accent:#39dfae;
+  --rlb-interaction-soft:rgba(58,224,174,.13);
+  --rlb-interaction-edge:rgba(58,224,174,.4);
+  --rlb-polish-shadow:0 12px 29px rgba(0,0,0,.16);
+}
+/* Cabeçalhos focados por JavaScript não devem parecer campos editáveis.
+   Permanecem programaticamente focáveis para leitores de tela. */
+#appShell :is(#rlbPageNavCurrent,#pageTitle,#rlbHomeTitle,#radarResultsTitle)[tabindex="-1"]:focus,
+#appShell :is(#rlbPageNavCurrent,#pageTitle,#rlbHomeTitle,#radarResultsTitle)[tabindex="-1"]:focus-visible{
+  outline:none!important;
+  box-shadow:none!important;
+}
+/* Contorno discreto só para navegação real por teclado, nos dois temas. */
+#appShell.radar-layout :is(button,a,select,summary):focus-visible{
+  outline:2px solid var(--rlb-interaction-accent)!important;
+  outline-offset:2px!important;
+}
+#appShell.radar-layout :is(input,textarea):focus-visible{
+  outline:2px solid var(--rlb-interaction-accent)!important;
+  outline-offset:1px!important;
+}
+#appShell.radar-layout .rev-op-item textarea:focus-visible,
+#appShell.radar-layout #radarSearchForm .radar-search-bar input:focus-visible{
+  outline:none!important;
+  border-color:var(--rlb-interaction-accent)!important;
+  box-shadow:0 0 0 3px var(--rlb-interaction-soft)!important;
+}
+#appShell #view-home .rlb-home-search :is(input,select):focus-visible{
+  outline:none!important;
+  box-shadow:none!important;
+}
+#appShell #view-home .rlb-home-search :is(.rlb-home-search-field,.rlb-home-search-keyword):focus-within{
+  border-color:var(--rlb-interaction-edge)!important;
+  background:color-mix(in srgb,var(--rlb-interaction-accent) 3%,var(--rlb-home-surface))!important;
+  box-shadow:0 0 0 3px var(--rlb-interaction-soft);
+}
+/* O campo de busca não deve ficar destacado ao abrir outra área. */
+#appShell #view-radar .radar-search-bar{
+  gap:10px;
+  padding:7px;
+  border:1px solid var(--radar-line,var(--line));
+  border-radius:13px;
+  background:var(--radar-paper,var(--surface));
+  box-shadow:var(--rlb-polish-shadow);
+}
+#appShell #view-radar .radar-search-bar #searchKeyword:focus-visible{
+  border-color:var(--rlb-interaction-accent)!important;
+  outline:none!important;
+  box-shadow:0 0 0 3px var(--rlb-interaction-soft)!important;
+}
+#appShell #view-radar .radar-search-bar #searchKeyword{
+  border:1px solid transparent!important;
+  border-radius:9px!important;
+  min-height:42px;
+  padding-inline:12px;
+  font-size:13px;
+  background:var(--radar-soft,var(--surface2))!important;
+  color:var(--radar-text,var(--text));
+  transition:border-color .15s ease,box-shadow .15s ease;
+}
+#appShell #view-radar .radar-search-bar :is(.radar-primary,.radar-button){
+  border-radius:9px!important;
+  min-height:42px;
+  padding-inline:18px;
+  font-size:12px;
+  font-weight:760;
+  transition:transform .16s ease,box-shadow .16s ease,background-color .16s ease;
+}
+#appShell #view-radar .radar-search-bar .radar-primary{
+  background:linear-gradient(125deg,#078f6a,#076a53)!important;
+  border-color:#09745a!important;
+  color:#fff!important;
+  box-shadow:0 4px 12px rgba(5,123,85,.12);
+}
+#appShell #view-radar .radar-search-bar .radar-primary:hover:not(:disabled){
+  transform:translateY(-1px);
+  background:linear-gradient(125deg,#089e76,#087a60)!important;
+  box-shadow:0 6px 16px rgba(5,123,85,.18);
+}
+#appShell #view-radar .radar-search-bar .radar-button:hover{
+  border-color:var(--rlb-interaction-edge);
+  background:var(--radar-soft,var(--surface2));
+}
+#appShell #view-radar #radarFilters{
+  border-radius:12px;
+  border-color:var(--radar-line,var(--line));
+  background:var(--radar-paper,var(--surface));
+  box-shadow:var(--rlb-polish-shadow);
+}
+#appShell #view-radar .radar-opportunity{
+  transition:background-color .16s ease,box-shadow .16s ease;
+}
+#appShell #view-radar .radar-opportunity.radar-selected{
+  box-shadow:inset 3px 0 var(--rlb-interaction-accent)!important;
+  background:var(--rlb-interaction-soft);
+}
+#appShell #view-radar .radar-opportunity:hover:not(.radar-selected){
+  background:color-mix(in srgb,var(--rlb-interaction-accent) 6%,var(--radar-paper,var(--surface)));
+}
+/* A trilha de navegação assume papel de barra contextual, não de um quadro azul. */
+#appShell #rlbPageNavBar{
+  border-radius:12px;
+  padding:10px 13px;
+  border-color:var(--radar-line,var(--line));
+  background:var(--radar-paper,var(--surface));
+  box-shadow:0 4px 18px rgba(15,43,81,.035);
+}
+#appShell #rlbPageNavBar .rlb-page-trail{gap:8px}
+#appShell #rlbPageNavBar .rlb-page-divider{font-size:12px;opacity:.48}
+#appShell #rlbPageNavCurrent{
+  font-size:11px;letter-spacing:-.01em;
+  color:var(--radar-text,var(--text));
+}
+#appShell #rlbPageNavBar .rlb-page-back{
+  border-radius:8px;
+  background:var(--radar-soft,var(--surface2));
+  transition:border-color .15s ease,background-color .15s ease;
+}
+#appShell #rlbPageNavBar :is(.rlb-page-back,.rlb-page-crumb-home):hover{
+  color:var(--rlb-interaction-accent);
+  border-color:var(--rlb-interaction-edge);
+}
+#appShell #view-home .rlb-home-card{
+  border-radius:14px;
+  box-shadow:var(--rlb-polish-shadow);
+}
+#appShell #view-home .rlb-home-search{
+  border-radius:14px;
+  box-shadow:var(--rlb-polish-shadow);
+}
+#appShell #view-home .rlb-home-search :is(.rlb-home-search-keyword,.rlb-home-search-field){
+  transition:border-color .15s ease,background-color .15s ease,box-shadow .15s ease;
+}
+#appShell #view-home .rlb-home-search-submit{
+  background:linear-gradient(125deg,#078f6a,#076a53);
+  border-color:#09745a;
+  box-shadow:0 4px 12px rgba(5,123,85,.12);
+}
+#appShell #view-home .rlb-home-search-submit:hover{
+  box-shadow:0 6px 16px rgba(5,123,85,.18);
+}
+#appShell #view-home .rlb-home-filter-group button{
+  border-radius:8px;
+  transition:border-color .16s ease,background-color .16s ease,color .16s ease;
+}
+#appShell #view-home :is(.rev-rec,.rlb-home-table-row){
+  transition:background-color .16s ease,border-color .16s ease;
+}
+#appShell #view-home .rev-rec:hover{
+  border-color:var(--rlb-interaction-edge);
+  background:color-mix(in srgb,var(--rlb-interaction-accent) 5%,var(--rlb-home-surface));
+}
+#appShell #view-home .rlb-home-table-row:hover{
+  background:color-mix(in srgb,var(--rlb-interaction-accent) 4%,var(--rlb-home-surface));
+}
+#appShell #view-home .rlb-home-legend-item:focus-visible{
+  border-radius:8px;
+  background:var(--rlb-interaction-soft);
+}
+#appShell .view.active.rlb-view-enter{
+  animation-duration:195ms;
+  animation-timing-function:cubic-bezier(.2,.8,.2,1);
+}
+@media(max-width:620px){
+  #appShell #view-radar .radar-search-bar{gap:6px;padding:6px}
+  #appShell #view-radar .radar-search-bar :is(.radar-primary,.radar-button){
+    min-height:39px;padding-inline:10px;font-size:11px
+  }
+  #appShell #view-radar .radar-search-bar #searchKeyword{min-height:40px;font-size:12px}
+  #appShell #rlbPageNavBar{padding:8px 10px}
+}
+@media(prefers-reduced-motion:reduce){
+  #appShell #view-radar .radar-search-bar *,
+  #appShell #view-home .rlb-home-search *,
+  #appShell #view-home :is(.rev-rec,.rlb-home-table-row){
+    transition:none!important;
+  }
+}

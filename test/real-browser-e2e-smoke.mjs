@@ -78,6 +78,45 @@ try{
  assert.notEqual(inTheme,changed,'Authenticated theme control works');
  note('Registration, authenticated dashboard, four metrics, user role and theme OK');
 
+ // Corrige o "quadrado azul" sem remover o foco visível para teclado.
+ await gotoSection(page,'radar');
+ const clickedPage=await page.evaluate(()=>{
+   const active=document.activeElement,crumb=document.querySelector('#rlbPageNavCurrent');
+   const input=document.querySelector('#searchKeyword');
+   return {
+     activeId:active?.id||'',
+     crumbOutline:getComputedStyle(crumb).outlineStyle,
+     searchFocused:document.activeElement===input,
+     searchShadow:getComputedStyle(input).boxShadow
+   };
+ });
+ assert.equal(clickedPage.crumbOutline,'none','The contextual heading has no blue programmatic focus rectangle');
+ assert.equal(clickedPage.searchFocused,false,'Page navigation does not auto-focus search input');
+ await page.locator('#searchKeyword').click();
+ const searchFocus=await page.locator('#searchKeyword').evaluate(e=>({
+   outline:getComputedStyle(e).outlineStyle,
+   shadow:getComputedStyle(e).boxShadow,
+   border:getComputedStyle(e).borderColor
+ }));
+ assert.equal(searchFocus.outline,'none','Search input uses a subtle border, not a thick blue outline');
+ assert.notEqual(searchFocus.shadow,'none','A visible but understated field focus cue remains');
+ await page.keyboard.press('Tab');
+ const keyboardFocus=await page.evaluate(()=>{
+   const e=document.activeElement;
+   return {tag:e?.tagName,focusVisible:e?.matches(':focus-visible'),outline:getComputedStyle(e).outlineStyle};
+ });
+ assert.equal(keyboardFocus.focusVisible,true,'Keyboard users retain an accessible visible focus cue');
+ assert.equal(keyboardFocus.outline,'solid','Keyboard control retains visible focus ring');
+ await gotoSection(page,'home');
+ await page.locator('#rlbHomeKeyword').click();
+ const homeFocus=await page.locator('#rlbHomeKeyword').evaluate(e=>({
+   outline:getComputedStyle(e).outlineStyle,
+   parentShadow:getComputedStyle(e.closest('.rlb-home-search-keyword')).boxShadow
+ }));
+ assert.equal(homeFocus.outline,'none','Home keyword does not show a large blue box');
+ assert.notEqual(homeFocus.parentShadow,'none','Home search group retains a soft focus-within cue');
+ note('Professional search focus, mouse navigation and accessible keyboard focus OK');
+
  // O navegador valida duas contas efêmeras, sem alterar papéis de uma
  // sessão já ativa. O usuário comum continua autenticado na aba principal.
  const adminCtx=await browser.newContext({viewport:{width:1366,height:850},locale:'pt-BR',timezoneId:'America/Fortaleza',extraHTTPHeaders:{'X-Forwarded-For':'198.51.100.27'}});
