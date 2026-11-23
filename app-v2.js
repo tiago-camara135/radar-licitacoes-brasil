@@ -816,6 +816,7 @@ const safeUrl=raw=>{try{const u=new URL(raw);return ['http:','https:'].includes(
 const formatted=x=>{const d=new Date(x);return Number.isNaN(d.getTime())?'Data não informada':d.toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'})};
 let rows=[],filter='all',open=false,loading=false,lastProfile=0,epoch=0;
 let recFilter='all',recCache=[],recInitialized=false,renderedRecSignature='',recPulse=new Map();
+let rotateRecommendations=false,cycleSelection=null;
 const recKey=x=>[x?.org_cnpj,x?.year,x?.sequence].map(String).join('-');
 const recVersion=x=>JSON.stringify([x?.object_text,x?.closes_at,Number(x?.fit?.score),x?.modality_name]);
 const ui={};
@@ -844,6 +845,11 @@ function install(){
   document.addEventListener('keydown',e=>{if(e.key==='Escape'&&open){setOpen(false);ui.bell.focus()}});
   document.addEventListener('pointerdown',e=>{if(open&&!ui.wrap.contains(e.target))setOpen(false)});
   document.addEventListener('radar:overview',e=>recommendations(e.detail));
+  document.addEventListener('radar:recommendations-cycle',()=>{rotateRecommendations=true});
+  document.addEventListener('radar:overview-error',()=>{
+    rotateRecommendations=false;
+    recommendationStatus('Falha ao consultar recomendações. A última seleção foi mantida.');
+  });
   const recControls=$('#rlbHomeRecommendationFilters');
   if(recControls)recControls.addEventListener('click',event=>{
     const button=event.target.closest('[data-home-rec-filter]');
@@ -851,7 +857,7 @@ function install(){
   });
   document.addEventListener('radar:home-rec-filter',event=>setRecommendationFilter(event.detail?.filter));
   const shell=$('#appShell');
-  new MutationObserver(()=>{if(!logged()){epoch++;setOpen(false);rows=[];lastProfile=0;recCache=[];recFilter='all';recInitialized=false;renderedRecSignature='';recPulse.clear();ui.count.textContent='—';$('#revRecommendations')?.remove()}else profile()}).observe(shell,{attributes:true,attributeFilter:['class']});
+  new MutationObserver(()=>{if(!logged()){epoch++;setOpen(false);rows=[];lastProfile=0;recCache=[];rotateRecommendations=false;cycleSelection=null;recFilter='all';recInitialized=false;renderedRecSignature='';recPulse.clear();recommendationStatus('');ui.count.textContent='—';$('#revRecommendations')?.remove()}else profile()}).observe(shell,{attributes:true,attributeFilter:['class']});
   document.addEventListener('visibilitychange',()=>{if(!document.hidden&&logged()&&Date.now()-lastProfile>90000)profile()});
   if(logged())profile();
 }
@@ -904,8 +910,15 @@ async function markAll(){
 }
 function setRecommendationFilter(value){
   if(!['all','high','soon','today'].includes(value))return;
+  if(recFilter!==value)cycleSelection=null;
   recFilter=value;
   renderRecommendationItems();
+}
+function recommendationStatus(message){
+  const status=$('#pulseRecommendationStatus');
+  if(!status)return;
+  status.hidden=!message;
+  status.textContent=message;
 }
 function recommendations(d){
   const incoming=Array.isArray(d?.recommendations)?d.recommendations:[];
@@ -925,6 +938,7 @@ function recommendations(d){
     detail:{source:'recommendations',added,changed}
   }));
   renderRecommendationItems();
+  rotateRecommendations=false;
 }
 function renderRecommendationItems(){
   const panel=$('#revSummary');if(!panel)return;
@@ -932,9 +946,10 @@ function renderRecommendationItems(){
   if(!target){target=el('div','rev-recommendations');target.id='revRecommendations';const homeSlot=$('#rlbHomeRecommendations');if(homeSlot)homeSlot.replaceChildren(target);else{const foot=$('.rev-summary-footer',panel);panel.insertBefore(target,foot||null)}}
   const now=Date.now(),week=7*86400000;
   const dayOf=value=>new Intl.DateTimeFormat('sv-SE',{timeZone:'America/Fortaleza',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(value));
-  const recs=recCache.filter(x=>{
-    if(recFilter==='high')return Number(x.fit?.score)>=85;
+  const eligible=recCache.filter(x=>{
     const close=new Date(x.closes_at).getTime();
+    if(!x.closes_at||!Number.isFinite(close)||close<now)return false;
+    if(recFilter==='high')return Number(x.fit?.score)>=85;
     if(recFilter==='soon')return Number.isFinite(close)&&close>=now&&close<=now+week;
     if(recFilter==='today'){
       const detected=new Date(x.detected_at).getTime();
@@ -949,7 +964,26 @@ function renderRecommendationItems(){
     };
     return priority(b)-priority(a)||
       (Number(b.fit?.score)||0)-(Number(a.fit?.score)||0);
-  }).slice(0,3);
+  });
+  const previous=new Set(cycleSelection||[]);
+  let recs=eligible.slice(0,3);
+  if(rotateRecommendations||recPulse.size){
+    const fresh=eligible.filter(x=>recPulse.has(recKey(x)));
+    const last=eligible.findIndex(x=>recKey(x)===cycleSelection?.at(-1));
+    const angled=[...eligible.slice(last+1),...eligible.slice(0,last+1)];
+    const others=angled.filter(x=>!recPulse.has(recKey(x)));
+    // Move previously displayed records behind the other eligible records on a completed consultation.
+    const alternatives=others.filter(x=>!previous.has(recKey(x)));
+    const current=others.filter(x=>previous.has(recKey(x)));
+    if(fresh.length||eligible.length>3)recs=[...fresh,...alternatives,...current].slice(0,3);
+    recommendationStatus(fresh.length?'':'Nenhuma nova oportunidade compatível nesta consulta.');
+  }else if(previous.size){
+    const byKey=new Map(eligible.map(x=>[recKey(x),x]));
+    const retained=cycleSelection.map(key=>byKey.get(key)).filter(Boolean);
+    recs=[...retained,...eligible.filter(x=>!previous.has(recKey(x)))].slice(0,3);
+    recommendationStatus('');
+  }
+  cycleSelection=recs.map(recKey);
   const group=$('#rlbHomeRecommendationFilters');
   if(group){
     let today=group.querySelector('[data-home-rec-filter="today"]');
@@ -971,8 +1005,6 @@ function renderRecommendationItems(){
   if(renderedRecSignature===signature&&target.querySelector('.rev-recs-list'))return;
   renderedRecSignature=signature;
   target.replaceChildren();
-  const head=el('div','rev-recs-head'),title=el('strong','','Recomendadas para seus alertas'),note=el('small','','Aderência estimada aos critérios; não representa chance de vencer.');
-  head.append(title,note);target.append(head);
   if(!recs.length){
     target.append(el('p','rev-recs-empty',recFilter==='all'?
       'Configure alertas com palavras-chave para receber recomendações.':
@@ -1001,7 +1033,7 @@ function renderRecommendationItems(){
         untilClose<=86400000?'Prazo em até 24h':'Prazo em até 48h'));
     }else if(highFit)info.append(el('span','rlb-priority-chip rlb-priority-high','Alta aderência'));
     if(pulse){
-      const badge=el('span','rlb-pulse-chip',pulse==='new'?'Nova oportunidade':'Atualizada');
+      const badge=el('span','rlb-pulse-chip',pulse==='new'?'Nova no Radar':'Atualizada');
       info.append(badge);
       setTimeout(()=>{card.classList.remove('rlb-pulse-item');card.removeAttribute('data-pulse-state');badge.remove()},10000);
     }
@@ -1018,7 +1050,8 @@ function renderRecommendationItems(){
     }
     const url=safeUrl(x.pncp_url);
     if(url){const a=el('a','','Abrir PNCP');a.href=url;a.target='_blank';a.rel='noopener noreferrer';side.append(a)}
-    card.append(info,side);list.append(card);
+    const icon=el('span','pulse-rec-icon','≡');icon.setAttribute('aria-hidden','true');
+    card.append(icon,info,side);list.append(card);
   }
   document.dispatchEvent(new CustomEvent('radar:recommendations-rendered'));
 }
@@ -1333,6 +1366,7 @@ function requestDashboardRefresh(){
   const button=$('#rlbHomeRefresh');
   if(button){button.disabled=true;button.setAttribute('aria-busy','true')}
   liveLabel('Consultando recomendações e prazos…','loading');
+  document.dispatchEvent(new CustomEvent('radar:recommendations-cycle'));
   document.dispatchEvent(new CustomEvent('radar:overview-refresh-request'));
   document.dispatchEvent(new CustomEvent('radar:live-refresh-request'));
   updateLiveClock();
@@ -1457,22 +1491,20 @@ function renderPanorama(data){
     const action=element('button','rlb-home-action-text','Buscar oportunidades');action.type='button';action.dataset.homeAction='radar';info.append(action);
     root.append(info);return;
   }
-  const ring=element('div','rlb-home-ring');
-  let cursor=0;const stops=[];
-  for(const g of groups){const next=cursor+g.count/sum*100;stops.push(g.color+' '+cursor.toFixed(2)+'% '+next.toFixed(2)+'%');cursor=next}
-  ring.style.background='conic-gradient('+stops.join(',')+')';
-  const inner=element('div','rlb-home-ring-center');
-  inner.append(element('strong','',totalFormat(sum)),element('span','','acompanhadas'));ring.append(inner);
-  const legend=element('div','rlb-home-legend');
+  const chart=element('div','pulse-stage-chart');
+  chart.setAttribute('aria-label',totalFormat(sum)+' licitações acompanhadas');
+  const largest=Math.max(...groups.map(g=>g.count));
   for(const g of groups){
-    const item=element('button','rlb-home-legend-item'),label=element('span','',g.label);
+    const item=element('button','pulse-stage'),label=element('span','',g.label);
     item.type='button';item.dataset.homeAction='stage';item.dataset.homeStage=g.status;
     item.setAttribute('aria-label',g.label+': '+totalFormat(g.count)+' licitação(ões). Ver acompanhamento');
-    const mark=element('i','');mark.style.background=g.color;label.prepend(mark);
-    item.append(label,element('strong','',totalFormat(g.count)),element('span','rlb-home-legend-arrow','↗'));
-    legend.append(item);
+    const track=element('span','pulse-stage-track'),bar=element('i','');
+    bar.style.width=(100*g.count/largest)+'%';bar.style.background=g.color;
+    track.append(bar);
+    item.append(label,track,element('strong','',totalFormat(g.count)));
+    chart.append(item);
   }
-  root.append(ring,legend);
+  root.append(chart);
 }
 function renderRecent(rows){
   const root=$('#rlbHomeRecent');if(!root)return;

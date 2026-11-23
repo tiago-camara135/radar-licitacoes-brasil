@@ -180,7 +180,7 @@ try{
  note('Recent feed toggles use real closing dates; no simulated opportunity numbers OK');
  const recentHref=await page.locator('#rlbHomeRecent a.rlb-home-table-open').first().getAttribute('href');
  assert.ok(recentHref?.startsWith('https://pncp.gov.br/app/editais/'),'Recent item links to official PNCP');
- await page.locator('#revSummary .rev-action').first().click();
+ await page.locator('#rlbHomeRefresh').click();
  await until(page,()=>document.querySelector('#revRecommendations')?.textContent?.includes('Aquisição de combustível para a frota CI'),25000).catch(()=>{throw Error('Recommendations did not render the seeded matching tender')});
  await page.locator('#revRecommendations .rev-rec').first().waitFor({timeout});
  const score=await page.locator('#revRecommendations .rev-rec .rev-rec-side b').first().textContent();
@@ -249,6 +249,25 @@ try{
    'Identical refreshed recommendations preserve DOM and do not blink');
  await page.evaluate(data=>document.dispatchEvent(new CustomEvent('radar:overview',{detail:data})),originalOverview);
  note('Real-snapshot diff highlights only newly introduced recommendations; unchanged cards do not blink OK');
+ // Cycle through compatible records even when the next successful response has no new IDs.
+ await page.evaluate(data=>{
+   const first=data.recommendations[0];
+   const recommendations=Array.from({length:7},(_,i)=>({...first,sequence:Number(first.sequence)+100+i}));
+   window.__qaRotationOverview={...data,recommendations};
+   document.dispatchEvent(new CustomEvent('radar:overview',{detail:window.__qaRotationOverview}));
+ },originalOverview);
+ const beforeRotation=await page.locator('#revRecommendations .rev-rec').evaluateAll(cards=>cards.map(card=>card.dataset.seq));
+ await page.evaluate(()=>{
+   document.dispatchEvent(new CustomEvent('radar:recommendations-cycle'));
+   document.dispatchEvent(new CustomEvent('radar:overview',{detail:window.__qaRotationOverview}));
+ });
+ const afterRotation=await page.locator('#revRecommendations .rev-rec').evaluateAll(cards=>cards.map(card=>card.dataset.seq));
+ assert.equal(afterRotation.length,3);
+ assert.ok(afterRotation.every(id=>!beforeRotation.includes(id)),'Unchanged response should rotate to other compatible records');
+ assert.equal(await page.locator('#revRecommendations [data-pulse-state]').count(),0,'Rotated records should not be reported as new');
+ await page.evaluate(data=>document.dispatchEvent(new CustomEvent('radar:overview',{detail:data})),originalOverview);
+ note('Successful consultation rotates compatible recommendations without false novelty');
+
 
  await page.locator('.rev-n-bell').click();
  await page.locator('#revNotifPanel:not([hidden])').waitFor({state:'visible',timeout});
@@ -286,11 +305,11 @@ try{
  await gotoSection(page,'home');
  // A gravação em Minha Operação deve atualizar KPIs, panorama e prazos
  // sem exigir botão Atualizar nem esperar o cache expirar.
- await until(page,()=>document.querySelector('#rlbHomePanorama .rlb-home-ring-center strong')?.textContent?.trim()==='1',18000);
+ await until(page,()=>document.querySelector('#rlbHomePanorama .pulse-stage-chart')?.getAttribute('aria-label')==='1 licitações acompanhadas',18000);
  await until(page,()=>document.querySelector('#rlbHomeKpis .rev-stat:nth-child(3) .rev-value')?.textContent?.trim()==='1',18000);
- await page.locator('#revSummary .rev-action').first().click();
+ await page.locator('#rlbHomeRefresh').click();
  assert.ok(await page.locator('#rlbHomeDeadlines .rlb-home-deadline').count()>0,'Real deadline agenda present');
- assert.ok(await page.locator('#rlbHomePanorama .rlb-home-ring').count()===1,'Real tracking chart present');
+ assert.ok(await page.locator('#rlbHomePanorama .pulse-stage-chart').count()===1,'Real tracking chart present');
  await page.locator('#rlbHomeDeadlineControls [data-home-period="30"]').click();
  assert.equal(await page.locator('#rlbHomeDeadlineControls [data-home-period="30"]').getAttribute('aria-pressed'),'true');
  await page.locator('#rlbHomeDeadlineControls [data-home-period="7"]').click();
@@ -437,11 +456,11 @@ try{
      const home=document.querySelector('#view-home');
      const first=home.querySelector('.rev-stat');
      const styles=getComputedStyle(first);
-     return {color:styles.color,background:styles.backgroundImage,
+     return {color:styles.color,background:styles.backgroundColor,
        surface:getComputedStyle(home).getPropertyValue('--rlb-home-surface').trim()};
    }));
  }
- assert.notEqual(themePalettes[0].background,themePalettes[1].background,'KPI gradient must react to theme');
+ assert.notEqual(themePalettes[0].background,themePalettes[1].background,'KPI surface color must react to theme');
  assert.notEqual(themePalettes[0].color,themePalettes[1].color,'KPI text must react to theme');
  assert.notEqual(themePalettes[0].surface,themePalettes[1].surface,'Card surfaces must react to theme');
  // Toggle real preserva interação e preferência, não apenas atributo via JS.

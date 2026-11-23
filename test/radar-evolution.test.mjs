@@ -22,7 +22,7 @@ test('pontuações vêm do backend, com justificativas e ressalvas',()=>{
  assert.match(js,/radar:overview/);
  assert.match(js,/x\.fit\?\.score/);
  assert.match(js,/x\.fit\?\.reasons/);
- assert.match(js,/não representa chance de vencer/);
+ assert.match(fs.readFileSync(new URL('../app-v2.html',import.meta.url),'utf8'),/não representa probabilidade de vencer/);
 });
 
 
