@@ -980,6 +980,14 @@ function install(){
  main.insertBefore(ui.page,$('#view-saved')||null);
  b.addEventListener('click',()=>{if($('#pageTitle'))$('#pageTitle').textContent='Minha Operação';if($('#pageSubtitle'))$('#pageSubtitle').textContent='Acompanhamento e calendário';if(logged())load(false)});
  document.addEventListener('radar:overview',e=>{if(!logged())return;overview=e.detail;installTrackActions();if(ui.page.classList.contains('active')&&!ui.root.querySelector('textarea:focus'))render()});
+ document.addEventListener('radar:operation-filter',event=>{
+   const requested=event.detail?.status;
+   if(!['all','analisar','preparing','participating','closed'].includes(requested))return;
+   filter=requested;
+   if(ui.page.classList.contains('active')){
+     if(overview)render();else load(false);
+   }
+ });
  const shell=$('#appShell');
  new MutationObserver(()=>{if(!logged()){generation++;updateQueues.clear();overview=null;ui.root.replaceChildren(el('p','rev-op-loading','Entre para consultar sua operação.'))}else installTrackActions()}).observe(shell,{attributes:true,attributeFilter:['class']});
  document.addEventListener('click',e=>{const button=e.target.closest('[data-rev-track]');if(button&&logged())addTracking(button)});
@@ -1063,10 +1071,15 @@ function render(){
  const grid=el('div','rev-op-layout'),main=el('section','rev-op-list'),right=el('aside','rev-op-side');
  const items=Array.isArray(overview.tracking)?overview.tracking:[];
  const select=el('select','rev-op-filter');select.setAttribute('aria-label','Filtrar licitações por situação');
- for(const [value,label] of [['all','Todos os estágios'],...Object.entries(status)]){const o=el('option','',label);o.value=value;select.append(o)}
+ for(const [value,label] of [['all','Todos os estágios'],['preparing','Preparando proposta'],['participating','Em participação'],['closed','Encerradas'],...Object.entries(status)]){const o=el('option','',label);o.value=value;select.append(o)}
  select.value=filter;select.addEventListener('change',()=>{filter=select.value;render()});
  const topline=el('div','rev-op-section-head');topline.append(el('strong','','Licitações acompanhadas ('+items.length+')'),select);main.append(topline);
- const list=el('div','rev-op-items'),visible=items.filter(x=>filter==='all'||x.status===filter);
+ const list=el('div','rev-op-items'),visible=items.filter(x=>{
+   if(filter==='preparing')return ['preparando_documentacao','proposta_pronta'].includes(x.status);
+   if(filter==='participating')return ['participando','recurso'].includes(x.status);
+   if(filter==='closed')return ['vencida','perdida','arquivada'].includes(x.status);
+   return filter==='all'||x.status===filter;
+ });
  if(!visible.length)list.append(el('p','rev-op-empty','Nenhuma licitação neste estágio. Utilize “Acompanhar” no detalhe ou nas recomendações do Radar.'));
  for(const x of visible)list.append(itemCard(x));main.append(list);
  const legend=el('p','rev-op-disclaimer','Datas de encerramento são as registradas na fonte consultada. Confirme sempre eventuais alterações no edital e no portal oficial.');
