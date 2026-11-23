@@ -424,9 +424,15 @@ try{
  note('Mobile 390px responsiveness, notifications and keyboard Escape OK');
 
  // Visibilidade em mais larguras, sem rolagem horizontal oculta, nos dois temas.
- for(const width of [320,390,768,1024,1440]){
-   await page.setViewportSize({width,height:880});
+ for(const [width,height] of [[320,700],[390,844],[768,880],[800,600],[1024,768],[1280,720],[1366,768],[1440,900],[1536,864],[1920,1080],[2560,1440],[3440,1440],[1280,550]]){
+   await page.setViewportSize({width,height});
    await gotoSection(page,'home');
+   if(width>=1160){
+     const rail=await page.locator('#mainNav').boundingBox();
+     const panel=await page.locator('#view-home').boundingBox();
+     assert.ok(rail.width>=64 && rail.width<=92 && rail.x+rail.width<=panel.x);
+     assert.ok(rail.y+rail.height<=height);
+   }
    for(const theme of ['light','dark']){
      await page.evaluate(next=>{document.documentElement.dataset.theme=next},theme);
      const dimensions=await page.evaluate(()=>{

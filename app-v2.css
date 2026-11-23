@@ -3933,10 +3933,11 @@ html[data-theme="dark"] #view-home {
   #appShell.radar-layout:has(.view.active) #mainNav {
     position: fixed !important;
     top: 78px;
-    left: max(10px, calc((100vw - 1480px) / 2));
+    left: var(--pulse-desktop-margin);
     display: flex !important;
     flex-direction: column;
-    width: 52px !important;
+    width: var(--pulse-rail-width) !important;
+    box-sizing: border-box;
     max-height: calc(100dvh - 94px);
     overflow: auto !important;
     padding: 5px !important;
@@ -3947,7 +3948,8 @@ html[data-theme="dark"] #view-home {
   }
   #appShell.radar-layout:has(.view.active) #mainNav button:not(.hidden) {
     justify-content: center !important;
-    min-height: 36px;
+    min-height: clamp(44px,3.2vw,56px) !important;
+    flex-shrink: 0 !important;
     width: 100%;
     min-width: 0 !important;
     padding: 4px !important;
@@ -3973,7 +3975,10 @@ html[data-theme="dark"] #view-home {
 
 @media (min-width: 1160px) {
   #appShell.radar-layout:not(.hidden):has(.view.active) {
-    grid-template-columns: 64px minmax(0,1fr);
+    --pulse-rail-width: clamp(64px, 4.8vw, 92px);
+    --pulse-desktop-margin: max(12px, calc((100% - 1800px) / 2));
+    --pulse-desktop-gap: clamp(12px, 1.2vw, 24px);
+    grid-template-columns: var(--pulse-desktop-margin) var(--pulse-rail-width) minmax(0,1fr) var(--pulse-desktop-margin);
     grid-template-rows: 64px minmax(0,1fr);
   }
   #appShell.radar-layout:has(.view.active) .sidebar {
@@ -3989,7 +3994,7 @@ html[data-theme="dark"] #view-home {
     border-color: #364b68 !important;
   }
   #appShell.radar-layout:has(.view.active) .sidebar-inner {
-    width: min(100%,1480px) !important;
+    width: min(calc(100% - 24px),1800px) !important;
     height: 64px !important;
     min-height: 0 !important;
     margin-inline: auto !important;
@@ -4038,8 +4043,9 @@ html[data-theme="dark"] #view-home {
     background: var(--radar-soft) !important;
   }
   #appShell.radar-layout:has(.view.active) #radar-home {
-    grid-area: 2 / 2;
-    width: min(1360px,calc(100% - 22px)) !important;
+    grid-area: 2 / 3;
+    width: calc(100% - var(--pulse-desktop-gap)) !important;
+    margin-inline: var(--pulse-desktop-gap) 0 !important;
     padding-left: 0 !important;
   }
   #appShell.radar-layout .main:has(.view.active) .topbar {
@@ -4148,3 +4154,8 @@ html[data-theme] #appShell #radarAccountControls {
 #appShell .pulse-rec-icon[data-icon="electric"]{--pulse-icon:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.7%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22m13%202-9%2012h7l-1%208%2010-13h-8z%22/%3E%3C/svg%3E")}
 
 #appShell .pulse-rec-icon[data-icon="health"]{--pulse-icon:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.7%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M9%203h6v6h6v6h-6v6H9v-6H3V9h6z%22/%3E%3C/svg%3E")}
+
+@media(min-width:1160px){
+ #appShell.radar-layout #mainNav .nav-icon svg{width:clamp(20px,1.55vw,28px)!important;height:clamp(20px,1.55vw,28px)!important}
+ #appShell #view-home{max-width:none}
+}
