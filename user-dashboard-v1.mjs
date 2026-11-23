@@ -1,4 +1,5 @@
 import { Pool } from 'pg';
+import { effectivePncpDeadline } from './pncp-operational-date-v1.mjs';
 
 const PORT=Number(process.env.PORT||10000);
 const DATABASE_URL=String(process.env.DATABASE_URL||'');
@@ -79,7 +80,8 @@ async function documentHealth(uid){
   return{score,baseline_count:BASELINE.length,present:BASELINE.length-missing,missing,expired,due7,due30,states,next,map};
 }
 
-const recommendationSql=`SELECT m.pncp_id,m.org_cnpj,m.year,m.sequence,m.modality_code,m.modality_name,m.object_text,m.org_name,m.municipality,m.uf,m.estimated_value,m.published_at,m.closes_at,m.pncp_url,m.origin_url,m.detected_at,
+const deadlineSql=effectivePncpDeadline('m');
+const recommendationSql=`SELECT m.pncp_id,m.org_cnpj,m.year,m.sequence,m.modality_code,m.modality_name,m.object_text,m.org_name,m.municipality,m.uf,m.estimated_value,m.published_at,${deadlineSql} AS closes_at,m.pncp_url,m.origin_url,m.detected_at,
   ARRAY_REMOVE(ARRAY_AGG(DISTINCT a.name),NULL) AS alert_names
 FROM monitored_procurements m
 JOIN saved_alerts a ON a.user_id=$1 AND a.enabled=TRUE
@@ -91,7 +93,7 @@ JOIN saved_alerts a ON a.user_id=$1 AND a.enabled=TRUE
  AND (a.org_cnpj IS NULL OR a.org_cnpj='' OR m.org_cnpj=a.org_cnpj)
  AND (a.min_value IS NULL OR m.estimated_value>=a.min_value)
  AND (a.max_value IS NULL OR m.estimated_value<=a.max_value)
-WHERE m.closes_at IS NOT NULL AND m.closes_at>=NOW()
+WHERE ${deadlineSql}>=NOW()
  AND ($2::text[] IS NULL OR UPPER(m.uf)=ANY($2::text[]))
 GROUP BY m.pncp_id,m.org_cnpj,m.year,m.sequence,m.modality_code,m.modality_name,m.object_text,m.org_name,m.municipality,m.uf,m.estimated_value,m.published_at,m.closes_at,m.pncp_url,m.origin_url,m.detected_at
 ORDER BY m.detected_at DESC LIMIT 60`;
@@ -112,7 +114,7 @@ async function recommendations(uid,docsMap,geo){
   return rows.map(r=>{const ref=dateOnly(r.closes_at)||today(),ready=readinessFor(docsMap,ref),alerts=Array.isArray(r.alert_names)?r.alert_names.filter(Boolean):[],fit=fitFor(r,ready,geo,alerts);return{...r,estimated_value:r.estimated_value==null?null:Number(r.estimated_value),readiness:ready,fit,match_reason:alerts.length?`Corresponde a ${alerts.slice(0,2).join(' • ')}`:'Compatível com seus filtros'}}).sort((a,b)=>b.fit.score-a.fit.score||b.readiness.score-a.readiness.score||new Date(a.closes_at)-new Date(b.closes_at)).slice(0,18);
 }
 async function tracking(uid){
-  return qMaybe(`SELECT t.id,t.pncp_key,t.org_cnpj,t.year,t.sequence,t.status,t.notes,t.created_at,t.updated_at,m.pncp_id,m.modality_name,m.object_text,m.org_name,m.municipality,m.uf,m.estimated_value,m.closes_at,m.pncp_url,m.origin_url
+  return qMaybe(`SELECT t.id,t.pncp_key,t.org_cnpj,t.year,t.sequence,t.status,t.notes,t.created_at,t.updated_at,m.pncp_id,m.modality_name,m.object_text,m.org_name,m.municipality,m.uf,m.estimated_value,${deadlineSql} AS closes_at,m.pncp_url,m.origin_url
   FROM user_tender_tracking t LEFT JOIN monitored_procurements m ON m.org_cnpj=t.org_cnpj AND m.year=t.year AND m.sequence=t.sequence
   WHERE t.user_id=$1 ORDER BY CASE t.status WHEN 'participando' THEN 1 WHEN 'proposta_pronta' THEN 2 WHEN 'preparando_documentacao' THEN 3 WHEN 'analisar' THEN 4 WHEN 'recurso' THEN 5 ELSE 9 END,t.updated_at DESC`,[uid]);
 }

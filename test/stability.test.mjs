@@ -34,7 +34,7 @@ test('readiness button remains in normal document flow',()=>{
 
 test('live Radar feed excludes expired and unknown-deadline opportunities',()=>{
   const s=read('live-monitor-v5.mjs');
-  assert.match(s,/closes_at IS NOT NULL AND closes_at>=NOW\(\)/);
+  assert.match(s,/WHERE \$\{deadlineSql\}>=NOW\(\)/);
   assert.match(s,/active_feed_only:true/);
   assert.match(s,/fetchPncpRange/);
 });
@@ -65,7 +65,7 @@ test('source transparency distinguishes PNCP from external platform links',()=>{
   const server=read('production-v17.mjs');
   assert.match(html,/source-transparency-v1\.css\?v=2114/);
   assert.match(html,/source-transparency-v1\.js\?v=2115/);
-  assert.match(html,/app-v2\.js\?v=20261123-pulse-audit-1/);
+  assert.match(html,/app-v2\.js\?v=20261123-pulse-deadline-1/);
   assert.match(source,/Fonte oficial: PNCP/);
   assert.match(source,/Ir para plataforma ↗/);
   assert.match(source,/Ver no PNCP ↗/);

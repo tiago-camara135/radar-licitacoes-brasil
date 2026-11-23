@@ -1,3 +1,5 @@
+import { pncpDeadline } from './pncp-operational-date-v1.mjs';
+
 const PNCP_BASE_URL = process.env.PNCP_BASE_URL || 'https://pncp.gov.br/api/consulta';
 export const PNCP_MODALITY_CODES = Array.from({length:14},(_,i)=>i+1);
 const PREFERRED_PAGE_SIZE = Math.min(Math.max(Number(process.env.PNCP_PAGE_SIZE || 50),10),50);
@@ -16,7 +18,7 @@ const clean = (v,n=500) => String(v ?? '').trim().slice(0,n);
 export const textNorm = v => String(v ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
 export const ymd = d => new Date(d).toISOString().slice(0,10).replaceAll('-','');
 export const municipalityOf = x => x?.unidadeOrgao?.municipioNome || x?.unidadeOrgao?.nomeMunicipio || x?.municipioNome || '';
-export const closingOf = x => x?.dataEncerramentoProposta || x?.dataFimRecebimentoProposta || null;
+export const closingOf = x => pncpDeadline(x?.dataEncerramentoProposta || x?.dataFimRecebimentoProposta || null);
 export const resultKey = x => clean(x?.numeroControlePNCP,180) || [digits(x?.orgaoEntidade?.cnpj),x?.anoCompra||'',x?.sequencialCompra||'',x?._modalidadeConsultada||x?.modalidadeId||''].join('-');
 export function pncpUrl(x){
   const cnpj=digits(x?.orgaoEntidade?.cnpj),year=Number(x?.anoCompra),seq=Number(x?.sequencialCompra);
