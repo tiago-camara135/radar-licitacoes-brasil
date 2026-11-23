@@ -804,6 +804,7 @@ const logged=()=>!!$('#appShell')&&!$('#appShell').classList.contains('hidden');
 const safeUrl=raw=>{try{const u=new URL(raw);return ['http:','https:'].includes(u.protocol)&&!u.username&&!u.password?u.href:''}catch{return''}};
 const formatted=x=>{const d=new Date(x);return Number.isNaN(d.getTime())?'Data não informada':d.toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'})};
 let rows=[],filter='all',open=false,loading=false,lastProfile=0,epoch=0;
+let recFilter='all',recCache=[];
 const ui={};
 function install(){
   const bar=$('#appShell .topbar');if(!bar)return;
@@ -830,8 +831,14 @@ function install(){
   document.addEventListener('keydown',e=>{if(e.key==='Escape'&&open){setOpen(false);ui.bell.focus()}});
   document.addEventListener('pointerdown',e=>{if(open&&!ui.wrap.contains(e.target))setOpen(false)});
   document.addEventListener('radar:overview',e=>recommendations(e.detail));
+  const recControls=$('#rlbHomeRecommendationFilters');
+  if(recControls)recControls.addEventListener('click',event=>{
+    const button=event.target.closest('[data-home-rec-filter]');
+    if(button&&recControls.contains(button))setRecommendationFilter(button.dataset.homeRecFilter);
+  });
+  document.addEventListener('radar:home-rec-filter',event=>setRecommendationFilter(event.detail?.filter));
   const shell=$('#appShell');
-  new MutationObserver(()=>{if(!logged()){epoch++;setOpen(false);rows=[];lastProfile=0;ui.count.textContent='—';$('#revRecommendations')?.remove()}else profile()}).observe(shell,{attributes:true,attributeFilter:['class']});
+  new MutationObserver(()=>{if(!logged()){epoch++;setOpen(false);rows=[];lastProfile=0;recCache=[];recFilter='all';ui.count.textContent='—';$('#revRecommendations')?.remove()}else profile()}).observe(shell,{attributes:true,attributeFilter:['class']});
   document.addEventListener('visibilitychange',()=>{if(!document.hidden&&logged()&&Date.now()-lastProfile>90000)profile()});
   if(logged())profile();
 }
@@ -882,15 +889,52 @@ async function markAll(){
     }finally{clearTimeout(t)}
   }catch(e){ui.message.textContent=e.message}finally{ui.mark.disabled=false}
 }
+function setRecommendationFilter(value){
+  if(!['all','high','soon','today'].includes(value))return;
+  recFilter=value;
+  renderRecommendationItems();
+}
 function recommendations(d){
+  recCache=Array.isArray(d?.recommendations)?d.recommendations:[];
+  renderRecommendationItems();
+}
+function renderRecommendationItems(){
   const panel=$('#revSummary');if(!panel)return;
   let target=$('#revRecommendations');
   if(!target){target=el('div','rev-recommendations');target.id='revRecommendations';const homeSlot=$('#rlbHomeRecommendations');if(homeSlot)homeSlot.replaceChildren(target);else{const foot=$('.rev-summary-footer',panel);panel.insertBefore(target,foot||null)}}
-  const recs=Array.isArray(d?.recommendations)?d.recommendations.slice(0,3):[];
+  const now=Date.now(),week=7*86400000;
+  const dayOf=value=>new Intl.DateTimeFormat('sv-SE',{timeZone:'America/Fortaleza',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(value));
+  const recs=recCache.filter(x=>{
+    if(recFilter==='high')return Number(x.fit?.score)>=85;
+    const close=new Date(x.closes_at).getTime();
+    if(recFilter==='soon')return Number.isFinite(close)&&close>=now&&close<=now+week;
+    if(recFilter==='today'){
+      const detected=new Date(x.detected_at).getTime();
+      return Number.isFinite(detected)&&dayOf(detected)===dayOf(now);
+    }
+    return true;
+  }).slice(0,3);
+  const group=$('#rlbHomeRecommendationFilters');
+  if(group){
+    let today=group.querySelector('[data-home-rec-filter="today"]');
+    if(recFilter==='today'&&!today){
+      today=el('button','','Novas hoje');today.type='button';today.dataset.homeRecFilter='today';group.append(today);
+    }else if(recFilter!=='today'&&today){today.remove()}
+    group.querySelectorAll('[data-home-rec-filter]').forEach(button=>{
+      const selected=button.dataset.homeRecFilter===recFilter;
+      button.classList.toggle('active',selected);
+      button.setAttribute('aria-pressed',String(selected));
+    });
+  }
   target.replaceChildren();
   const head=el('div','rev-recs-head'),title=el('strong','','Recomendadas para seus alertas'),note=el('small','','Aderência estimada aos critérios; não representa chance de vencer.');
   head.append(title,note);target.append(head);
-  if(!recs.length){target.append(el('p','rev-recs-empty','Configure alertas com palavras-chave para receber recomendações.'));return}
+  if(!recs.length){
+    target.append(el('p','rev-recs-empty',recFilter==='all'?
+      'Configure alertas com palavras-chave para receber recomendações.':
+      'Nenhuma recomendação atende a este filtro. Selecione “Todas” para ver as demais.'));
+    return;
+  }
   const list=el('div','rev-recs-list');target.append(list);
   for(const x of recs){
     const card=el('article','rev-rec'),info=el('div','rev-rec-main');
