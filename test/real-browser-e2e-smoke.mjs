@@ -196,6 +196,16 @@ try{
  await page.locator('#rlbHomeRecommendationFilters [data-home-rec-filter="all"]').click();
  await until(page,()=>document.querySelector('#revRecommendations')?.textContent?.includes('Aquisição de combustível para a frota CI'),timeout);
  note('Interactive KPI drilldown, fit filters and exact tender tracking identity OK');
+ // Refresh manual usa os mesmos endpoints de dados reais do ciclo de 5 minutos.
+ const overviewRequest=page.waitForRequest(request=>request.url().includes('/api/dashboard/overview'),{timeout:15000});
+ const liveRequest=page.waitForRequest(request=>request.url().includes('/api/live-feed?'),{timeout:15000});
+ await page.locator('#rlbHomeRefresh').click();
+ await Promise.all([overviewRequest,liveRequest]);
+ await until(page,()=>document.querySelector('#rlbHomeLiveBar')?.dataset.state==='ready',16000);
+ assert.match(await page.locator('#rlbHomeLastUpdate').textContent(),/Dados consultados às/);
+ assert.match(await page.locator('#rlbHomeNextUpdate').textContent(),/Próxima consulta em/);
+ assert.equal(await page.locator('#rlbHomeRefresh').isEnabled(),true);
+ note('Dashboard refresh queries real overview + national feed and updates live clock OK');
 
  await page.locator('.rev-n-bell').click();
  await page.locator('#revNotifPanel:not([hidden])').waitFor({state:'visible',timeout});
