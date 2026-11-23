@@ -87,6 +87,17 @@ try{
  await pool.query("UPDATE users SET role='admin' WHERE id=$1",[adminId]);
  const adminReload=await adminPage.reload({waitUntil:'domcontentloaded'});
  assert.equal(adminReload.status(),200,'Admin page reload must succeed');
+ await adminPage.waitForTimeout(450);
+ const adminState=await adminPage.evaluate(()=>({
+   shell:document.querySelector('#appShell')?.className,
+   runtime:document.querySelector('#runtimeMessage')?.textContent,
+   auth:document.querySelector('#authMessage')?.textContent,
+   documentReady:document.readyState,
+   home:!!document.querySelector('#view-home'),
+   breadcrumb:!!document.querySelector('#rlbPageNavBar')
+ }));
+ console.log('[browser-qa] admin reload diagnostic '+JSON.stringify(adminState)+
+   ' errors='+JSON.stringify(problems.slice(-4)));
  await adminPage.locator('#appShell:not(.hidden)').waitFor({state:'visible',timeout});
  await adminPage.locator('#adminNav').waitFor({state:'visible',timeout});
  await gotoSection(adminPage,'admin');
