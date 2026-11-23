@@ -25,27 +25,6 @@ new Function(publicSiteConfigJs);
 
 const legacyMarker="\n\n(()=>{\n'use strict';\nconst CHECK_MS=5*60*1000;";
 const runtimeCss=`
-#rlbNationalNoticeHost{
-  top:72px!important;
-  bottom:auto!important;
-  right:14px!important;
-  width:min(300px,calc(100vw - 28px))!important;
-  transform:scale(.90);
-  transform-origin:top right;
-}
-#rlbNationalNoticeHost>article{
-  padding:8px 9px 9px!important;
-  border-radius:11px!important;
-}
-@media(max-width:600px){
-  #rlbNationalNoticeHost{
-    top:62px!important;
-    right:8px!important;
-    width:min(292px,calc(100vw - 16px))!important;
-    transform:scale(.92);
-  }
-}
-
 #authScreen.auth-home-v1.hidden{display:none!important}
 
 #mainNav #adminNav.hidden,

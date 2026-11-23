@@ -344,7 +344,8 @@ function renderRadarDetail(panel, item, index = -1) {
   ];
   panel.innerHTML = `<article class="result-item radar-detail-card" data-radar-key="${esc(item.key)}">
     <button type="button" class="radar-button radar-back" data-radar-back><span aria-hidden="true">‹</span> Voltar à lista</button>
-    <h2 tabindex="-1">${esc(item.title)}</h2>
+    <h2 tabindex="-1"${item.title.length > 105 ? ' class="radar-title-clamp"' : ''}>${esc(item.title)}</h2>
+    ${item.title.length > 105 ? '<button type="button" class="radar-title-toggle" data-radar-title-toggle aria-expanded="false">Ver objeto completo</button>' : ''}
     <div class="radar-actions radar-detail-actions">
       ${dashboardUrl(item.official) ? `<a class="radar-primary radar-official" href="${esc(dashboardUrl(item.official))}" target="_blank" rel="noopener noreferrer">${radarOpenIcon}Ver edital</a>` : ''}
       ${/^[\w-]{1,100}$/.test(item.key) ? `<button type="button" data-radar-save class="radar-button" aria-pressed="${saved}">${radarSaveLabel(saved)}</button>` : ''}
@@ -557,6 +558,13 @@ function bindRadarDashboard() {
       if (event.target.closest('[data-radar-back]')) {
         if (id === 'radarDetail') closeRadarResult();
         else $('#radarSavedList [aria-pressed="true"]')?.focus();
+      }
+      const toggle = event.target.closest('[data-radar-title-toggle]');
+      if (toggle) {
+        const expanded = toggle.getAttribute('aria-expanded') === 'true';
+        toggle.setAttribute('aria-expanded', String(!expanded));
+        toggle.textContent = expanded ? 'Ver objeto completo' : 'Recolher objeto';
+        $('h2', event.currentTarget).classList.toggle('radar-title-clamp', expanded);
       }
       const step = event.target.closest('[data-radar-step]');
       if (step) selectRadarResult(dashboard.items.findIndex(entry => entry.key === dashboard.selected) + Number(step.dataset.radarStep), true, true);

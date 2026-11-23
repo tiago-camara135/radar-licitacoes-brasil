@@ -2,23 +2,92 @@
 'use strict';
 if(window.__rlbOnsiteNotificationsV4)return;window.__rlbOnsiteNotificationsV4=true;
 const DISPLAY_MS=7000,COOLDOWN_MS=30000,LOAD_INTERVAL_MS=60000,FIRST_LOAD_MS=2500;
-let queue=[],queued=new Set(),active=null,loading=false,timer=null,nextTimer=null;
+let queue=[],queued=new Set(),active=null,loading=false,timer=null;
 const text=v=>String(v??'').trim();
-function host(){let h=document.getElementById('rlbNationalNoticeHost');if(h)return h;h=document.createElement('div');h.id='rlbNationalNoticeHost';h.setAttribute('aria-live','polite');document.body.appendChild(h);reposition();return h}
-function reposition(){const h=document.getElementById('rlbNationalNoticeHost');if(!h)return;Object.assign(h.style,{position:'fixed',right:innerWidth<600?'10px':'20px',bottom:innerWidth<600?'68px':'82px',zIndex:'146',width:innerWidth<600?'min(340px, calc(100vw - 20px))':'min(350px, calc(100vw - 40px))',display:'grid',pointerEvents:'none'})}
+function host() {
+  let region = document.getElementById('rlbNationalNoticeHost');
+  if (!region) {
+    region = document.createElement('div');
+    region.id = 'rlbNationalNoticeHost';
+    region.setAttribute('aria-live', 'polite');
+    document.body.appendChild(region);
+  }
+  return region;
+}
 async function api(path,opt={}){const r=await fetch(path,{credentials:'same-origin',cache:'no-store',...opt,headers:{accept:'application/json',...(opt.body?{'content-type':'application/json'}:{}),...(opt.headers||{})}});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.error||`Erro ${r.status}`);return d}
 async function markRead(id){try{await api(`/api/stability/notifications/onsite/${id}/read`,{method:'POST',body:'{}'})}catch{}}
-function createCard(row){const p=row.payload||{},url=text(p.pncp_url)||text(p.origin_url);const card=document.createElement('article');card.dataset.deliveryId=String(row.id);card.setAttribute('role','status');Object.assign(card.style,{pointerEvents:'auto',position:'relative',padding:'11px 12px 12px',border:'1px solid var(--line)',borderRadius:'13px',background:'color-mix(in srgb, var(--surface) 96%, transparent)',color:'var(--text)',boxShadow:'0 16px 38px rgba(0,0,0,.20)',backdropFilter:'blur(16px)',WebkitBackdropFilter:'blur(16px)',cursor:url?'pointer':'default',overflow:'hidden'});
-const accent=document.createElement('span');Object.assign(accent.style,{position:'absolute',left:'0',top:'9px',bottom:'11px',width:'3px',borderRadius:'0 4px 4px 0',background:'linear-gradient(180deg,var(--emerald),var(--cyan))'});
-const top=document.createElement('div');Object.assign(top.style,{display:'flex',alignItems:'center',justifyContent:'space-between',gap:'8px',marginBottom:'5px'});const label=document.createElement('div');label.textContent='● ALERTA COMPATÍVEL • RADAR';Object.assign(label.style,{fontSize:'7px',fontWeight:'950',letterSpacing:'.08em',color:'var(--emerald)'});const close=document.createElement('button');close.type='button';close.setAttribute('aria-label','Fechar notificação');close.textContent='×';Object.assign(close.style,{width:'23px',height:'23px',borderRadius:'7px',border:'1px solid var(--line)',background:'var(--surface2)',color:'var(--muted)',fontSize:'15px',lineHeight:'1',padding:'0',cursor:'pointer'});top.append(label,close);
-const title=document.createElement('div');title.textContent=text(p.object)||'Nova oportunidade compatível com seu alerta.';Object.assign(title.style,{fontSize:'10.5px',fontWeight:'850',lineHeight:'1.35',display:'-webkit-box',WebkitLineClamp:'3',WebkitBoxOrient:'vertical',overflow:'hidden'});
-const meta=document.createElement('div');meta.textContent=[text(row.alert_name||p.alert_name),text(p.modality),[text(p.municipality),text(p.uf)].filter(Boolean).join(' / ')].filter(Boolean).join(' • ');Object.assign(meta.style,{fontSize:'8.2px',color:'var(--muted)',marginTop:'6px'});
-const org=document.createElement('div');org.textContent=text(p.org);Object.assign(org.style,{fontSize:'8px',color:'var(--muted)',marginTop:'3px'});
-const foot=document.createElement('div');Object.assign(foot.style,{display:'flex',justifyContent:'space-between',alignItems:'center',gap:'8px',marginTop:'8px',paddingTop:'7px',borderTop:'1px solid var(--line)'});const source=document.createElement('span');source.textContent='Correspondência do seu alerta';Object.assign(source.style,{fontSize:'7.3px',color:'var(--muted)'});const open=document.createElement('span');open.textContent=url?'Abrir ↗':'Radar';Object.assign(open.style,{fontSize:'8.5px',fontWeight:'900',color:'var(--emerald)'});foot.append(source,open);
-card.append(accent,top,title,meta,org,foot);
-const finish=()=>{if(active===card)active=null;card.remove();setTimeout(displayNext,COOLDOWN_MS)};close.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();finish()});if(url)card.addEventListener('click',()=>window.open(url,'_blank','noopener'));card.__finish=finish;return card}
-async function displayNext(){if(active||!queue.length)return;const row=queue.shift();queued.delete(String(row.id));const card=createCard(row);active=card;host().appendChild(card);markRead(row.id);try{if(!matchMedia('(prefers-reduced-motion: reduce)').matches)card.animate([{opacity:0,transform:'translateX(110%)'},{opacity:1,transform:'translateX(0)'}],{duration:350,easing:'cubic-bezier(.16,1,.3,1)'})}catch{}setTimeout(()=>{if(active===card)card.__finish?.()},DISPLAY_MS)}
+function noticeText(tag, className, value) {
+  const element = document.createElement(tag);
+  element.className = className;
+  element.textContent = value;
+  return element;
+}
+
+function noticeUrl(value) {
+  try {
+    const url = new URL(value);
+    return ['https:', 'http:'].includes(url.protocol) && !url.username && !url.password ? url.href : '';
+  } catch { return ''; }
+}
+
+function createCard(row) {
+  const p = row.payload || {};
+  const url = noticeUrl(p.pncp_url) || noticeUrl(p.origin_url);
+  const card = document.createElement('article');
+  card.className = 'radar-notice';
+  card.dataset.deliveryId = String(row.id);
+
+  const icon = noticeText('span', 'radar-notice-icon', '');
+  icon.setAttribute('aria-hidden','true');
+  icon.innerHTML = '<svg viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-12 0c0 6-3 7-3 9h18c0-2-3-3-3-9ZM10 21h4"/></svg>';
+  const eyebrow = noticeText('span', 'radar-notice-label', 'Oportunidade compatível');
+  const close = noticeText('button', 'radar-notice-close', '×');
+  close.type = 'button';
+  close.setAttribute('aria-label','Fechar notificação');
+  const title = noticeText('strong', 'radar-notice-title', text(p.object) || 'Nova oportunidade compatível com seu alerta.');
+  const meta = [text(p.org), [text(p.municipality),text(p.uf)].filter(Boolean).join('/')].filter(Boolean).join(' · ');
+  const alertName = text(row.alert_name || p.alert_name);
+  card.append(icon, eyebrow, close, title);
+  if (meta) card.append(noticeText('div', 'radar-notice-meta', meta));
+  if (alertName || url) {
+    const footer = noticeText('footer', 'radar-notice-footer', '');
+    if (alertName) footer.append(noticeText('span', 'radar-notice-alert', alertName));
+    if (url) {
+      const link = noticeText('a', 'radar-notice-link', 'Ver oportunidade ↗');
+      link.href = url;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      footer.append(link);
+    }
+    card.append(footer);
+  }
+  return { card, close };
+}
+
+function displayNext() {
+  if (active || !queue.length) return;
+  const row = queue.shift();
+  queued.delete(String(row.id));
+  const { card, close } = createCard(row);
+  active = card;
+  host().appendChild(card);
+  markRead(row.id);
+
+  const finish = () => {
+    if (active !== card) return;
+    active = null;
+    card.remove();
+    setTimeout(displayNext, COOLDOWN_MS);
+  };
+  const expire = () => {
+    if (active !== card) return;
+    if (card.matches(':hover, :focus-within')) setTimeout(expire, 1000);
+    else finish();
+  };
+  close.addEventListener('click', finish);
+  setTimeout(expire, DISPLAY_MS);
+}
 async function loadBatch(){if(loading||document.hidden)return;loading=true;try{const shell=document.getElementById('appShell');if(!shell||shell.classList.contains('hidden'))return;const d=await api('/api/stability/notifications/onsite?limit=30');for(const row of d.items||[]){const k=String(row.id);if(!queued.has(k)&&String(active?.dataset.deliveryId||'')!==k){queue.push(row);queued.add(k)}}displayNext()}catch(e){if(!/401/.test(String(e.message)))console.warn('RLB onsite personalized:',e?.message||e)}finally{loading=false}}
-function start(){setTimeout(loadBatch,FIRST_LOAD_MS);timer=setInterval(loadBatch,LOAD_INTERVAL_MS);const shell=document.getElementById('appShell');if(shell)new MutationObserver(()=>{if(!shell.classList.contains('hidden'))setTimeout(loadBatch,900)}).observe(shell,{attributes:true,attributeFilter:['class']});addEventListener('resize',reposition,{passive:true});document.addEventListener('visibilitychange',()=>{if(!document.hidden)loadBatch()})}
+function start(){setTimeout(loadBatch,FIRST_LOAD_MS);timer=setInterval(loadBatch,LOAD_INTERVAL_MS);const shell=document.getElementById('appShell');if(shell)new MutationObserver(()=>{if(!shell.classList.contains('hidden'))setTimeout(loadBatch,900)}).observe(shell,{attributes:true,attributeFilter:['class']});document.addEventListener('visibilitychange',()=>{if(!document.hidden)loadBatch()})}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
 })();
