@@ -25,7 +25,9 @@ O deploy é feito pelo Render a partir da branch tvc-control-app. O banco de dad
 - Dashboard com saldo, receitas, despesas, pendências e fluxo de seis meses.
 - Contas, categorias, cartões, lançamentos e transferências entre contas.
 - Parcelamento de despesas em lançamentos mensais.
-- Orçamentos por categoria, metas e relatórios CSV.
+- Orçamentos por categoria, metas, relatórios CSV e lembretes editáveis de pagamentos no calendário.
+- Saldo real negativo sem bloqueio; projeção com compromissos pendentes, lembretes e recorrências.
+- Atividade recente no dashboard e validação de conta vinculada para movimentações pagas.
 - Interface responsiva, tema claro/escuro e instalação PWA.
 
 ## Observações

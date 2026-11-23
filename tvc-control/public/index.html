@@ -7,7 +7,7 @@
 <meta name="description" content="TVC Control — controle financeiro pessoal com clareza e inteligência.">
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="icon" href="/icon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/styles.css?v=12">
+<link rel="stylesheet" href="/styles.css?v=13">
 <title>TVC Control | Gestão financeira</title>
 </head>
 <body>
@@ -46,20 +46,20 @@
     <div class="brand"><span class="brand-mark">T</span><span><b>TVC Control</b><small>GESTÃO FINANCEIRA</small></span></div>
     <div class="side-caption">MENU PRINCIPAL</div>
     <nav class="side-nav">
-      <button class="nav-link active" data-page="dashboard"><span class="nav-icon">▦</span>Visão geral</button>
-      <button class="nav-link" data-page="calendar"><span class="nav-icon">▦</span>Calendário</button>
-      <button class="nav-link" data-page="transactions"><span class="nav-icon">↕</span>Lançamentos</button>
-      <button class="nav-link" data-page="accounts"><span class="nav-icon">▣</span>Minhas contas</button>
-      <button class="nav-link" data-page="cards"><span class="nav-icon">▤</span>Cartões</button>
-      <button class="nav-link" data-page="recurring"><span class="nav-icon">⟳</span>Despesas fixas</button>
-      <button class="nav-link" data-page="budgets"><span class="nav-icon">◷</span>Orçamentos</button>
-      <button class="nav-link" data-page="goals"><span class="nav-icon">◎</span>Metas e sonhos</button>
-      <button class="nav-link" data-page="reports"><span class="nav-icon">▥</span>Relatórios</button>
+      <button class="nav-link active" data-page="dashboard"><svg class="nav-svg" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="5" rx="1.5"/><rect x="13" y="10" width="8" height="11" rx="1.5"/><rect x="3" y="13" width="8" height="8" rx="1.5"/></svg><span class="nav-label">Visão geral</span></button>
+      <button class="nav-link" data-page="calendar"><svg class="nav-svg" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 10h18M8 14h3M8 17h2"/></svg><span class="nav-label">Calendário</span></button>
+      <button class="nav-link" data-page="transactions"><svg class="nav-svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4v16m0 0-3-3m3 3 3-3M17 20V4m0 0-3 3m3-3 3 3"/></svg><span class="nav-label">Lançamentos</span></button>
+      <button class="nav-link" data-page="accounts"><svg class="nav-svg" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 9h18m-5 5h.01"/></svg><span class="nav-label">Minhas contas</span></button>
+      <button class="nav-link" data-page="cards"><svg class="nav-svg" viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="4.5" width="19" height="15" rx="2"/><path d="M3 9h18M7 15h4"/></svg><span class="nav-label">Cartões</span></button>
+      <button class="nav-link" data-page="recurring"><svg class="nav-svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 7v5h-5M4 17v-5h5"/><path d="M5.6 9A7 7 0 0 1 18 6l2 6M4 12l2 6a7 7 0 0 0 12.4-3"/></svg><span class="nav-label">Despesas fixas</span></button>
+      <button class="nav-link" data-page="budgets"><svg class="nav-svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V5m0 14h17M7 15l4-4 3 2 6-7"/></svg><span class="nav-label">Orçamentos</span></button>
+      <button class="nav-link" data-page="goals"><svg class="nav-svg" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></svg><span class="nav-label">Metas e sonhos</span></button>
+      <button class="nav-link" data-page="reports"><svg class="nav-svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V10m6 10V4m6 16v-7m4 7V7"/></svg><span class="nav-label">Relatórios</span></button>
     </nav>
     <div class="side-caption side-caption-spaced">PREFERÊNCIAS</div>
     <nav class="side-nav">
-      <button class="nav-link" data-page="settings"><span class="nav-icon">⚙</span>Configurações</button>
-      <button class="nav-link" id="theme-toggle"><span class="nav-icon">◐</span>Alternar aparência</button>
+      <button class="nav-link" data-page="settings"><svg class="nav-svg" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="m19.4 15 .1.1a1.7 1.7 0 0 1-2.4 2.4l-.1-.1a1.7 1.7 0 0 0-2.9 1.2v.2a1.7 1.7 0 0 1-3.4 0v-.2a1.7 1.7 0 0 0-2.9-1.2l-.1.1a1.7 1.7 0 0 1-2.4-2.4l.1-.1a1.7 1.7 0 0 0-1.2-2.9H4a1.7 1.7 0 0 1 0-3.4h.2a1.7 1.7 0 0 0 1.2-2.9l-.1-.1a1.7 1.7 0 0 1 2.4-2.4l.1.1a1.7 1.7 0 0 0 2.9-1.2V2a1.7 1.7 0 0 1 3.4 0v.2a1.7 1.7 0 0 0 2.9 1.2l.1-.1a1.7 1.7 0 0 1 2.4 2.4l-.1.1a1.7 1.7 0 0 0 1.2 2.9h.2a1.7 1.7 0 0 1 0 3.4h-.2a1.7 1.7 0 0 0-1.2 2.9Z"/></svg><span class="nav-label">Configurações</span></button>
+      <button class="nav-link" id="theme-toggle"><svg class="nav-svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.5 14.2A8.5 8.5 0 0 1 9.8 3.5 8.5 8.5 0 1 0 20.5 14.2Z"/></svg><span class="nav-label">Alternar aparência</span></button>
     </nav>
     <div class="sidebar-bottom">
       <div class="sidebar-help"><span class="help-icon">✦</span><div><b>Um passo de cada vez</b><small>Pequenos hábitos constroem grandes resultados.</small></div></div>
@@ -84,9 +84,9 @@
         <div class="sync-indicator"><i></i> Dados sincronizados</div>
       </div>
       <div class="stats-grid">
-        <article class="stat-card stat-main"><div class="stat-top"><span>Saldo total</span><span class="stat-icon">▣</span></div><div class="stat-value" id="stat-balance">R$ 0,00</div><div class="stat-foot"><span class="trend neutral">●</span> Saldo real das suas contas</div><div class="stat-glow"></div></article>
-        <article class="stat-card"><div class="stat-top"><span>Receitas do mês</span><span class="stat-icon green">↓</span></div><div class="stat-value positive" id="stat-income">R$ 0,00</div><div class="stat-foot">Entradas confirmadas no período</div></article>
-        <article class="stat-card"><div class="stat-top"><span>Despesas do mês</span><span class="stat-icon red">↗</span></div><div class="stat-value negative" id="stat-expense">R$ 0,00</div><div class="stat-foot">Pagas e lançadas a pagar</div></article>
+        <article class="stat-card stat-main"><div class="stat-top"><span>Saldo atual</span><span class="stat-icon">▣</span></div><div class="stat-value" id="stat-balance">R$ 0,00</div><div class="stat-foot" id="stat-balance-note"><span class="trend neutral">●</span> Saldo real das suas contas</div><div class="stat-glow"></div></article>
+        <article class="stat-card"><div class="stat-top"><span>Receitas do mês</span><span class="stat-icon green">↓</span></div><div class="stat-value positive" id="stat-income">R$ 0,00</div><div class="stat-foot">Recebidas + a receber no período</div></article>
+        <article class="stat-card"><div class="stat-top"><span>Despesas do mês</span><span class="stat-icon red">↗</span></div><div class="stat-value negative" id="stat-expense">R$ 0,00</div><div class="stat-foot">Pagas, pendentes e lembretes do mês</div></article>
         <article class="stat-card stat-projected"><div class="stat-top"><span>Saldo projetado</span><span class="stat-icon amber">◎</span></div><div class="stat-value" id="stat-pending">R$ 0,00</div><div class="stat-foot" id="stat-pending-note">Após compromissos e despesas previstas</div></article>
       </div>
 
@@ -123,13 +123,20 @@
         <article class="panel"><div class="panel-heading"><div><h3>Orçamentos</h3><p>Acompanhe seus limites por categoria</p></div><button class="link-button" data-go="budgets">Gerenciar →</button></div><div id="budget-preview" class="budget-list"><div class="empty-state">Defina um limite para começar a acompanhar.</div></div></article>
         <article class="panel"><div class="panel-heading"><div><h3>Metas e sonhos</h3><p>Seus objetivos financeiros</p></div><button class="link-button" data-go="goals">Ver metas →</button></div><div id="goal-preview" class="goal-list"><div class="empty-state">Crie sua primeira meta financeira.</div></div></article>
       </div>
+      <div class="dashboard-activity-grid">
+        <article class="panel dashboard-activity-panel">
+          <div class="panel-heading"><div><h3>Atividade recente</h3><p>Novos registros e atualizações do seu planejamento financeiro</p></div><span class="panel-tag">ÚLTIMAS ATIVIDADES</span></div>
+          <div id="dashboard-activity-list" class="dashboard-activity-list"><div class="empty-state">Suas contas, lançamentos, orçamentos, metas e lembretes aparecerão aqui.</div></div>
+        </article>
+      </div>
+
     </section>
 
     <section class="page" id="page-calendar">
-      <div class="page-intro calendar-page-intro"><div><h2>Calendário financeiro</h2><p>Visualize pagamentos, recebimentos e recorrências por data.</p></div><div class="calendar-controls"><button class="btn btn-secondary" data-calendar-shift="-1" aria-label="Mês anterior">‹</button><b id="calendar-month-label">Mês</b><button class="btn btn-secondary" data-calendar-shift="1" aria-label="Próximo mês">›</button><button class="btn btn-secondary" data-calendar-today>Hoje</button></div></div>
+      <div class="page-intro calendar-page-intro"><div><h2>Calendário financeiro</h2><p>Visualize pagamentos, recebimentos e lembretes de pagamentos por data.</p></div><div class="calendar-controls"><button class="btn btn-primary" data-create="reminder">＋ Novo lembrete</button><button class="btn btn-secondary" data-calendar-shift="-1" aria-label="Mês anterior">‹</button><b id="calendar-month-label">Mês</b><button class="btn btn-secondary" data-calendar-shift="1" aria-label="Próximo mês">›</button><button class="btn btn-secondary" data-calendar-today>Hoje</button></div></div>
       <div class="calendar-layout">
         <article class="panel calendar-panel"><div class="calendar-weekdays" id="calendar-weekdays"></div><div class="calendar-grid" id="calendar-grid"></div><div class="calendar-legend"><span><i class="income"></i>Receitas</span><span><i class="expense"></i>Despesas</span><span><i class="transfer"></i>Transferências</span></div></article>
-        <article class="panel calendar-day-panel"><div class="panel-heading"><div><h3 id="calendar-day-title">Dia selecionado</h3><p id="calendar-day-count">0 evento(s)</p></div></div><div class="calendar-day-total-label">Despesas do dia<strong id="calendar-day-total">R$ 0,00</strong></div><div id="calendar-day-events" class="calendar-event-list"><div class="empty-state">Selecione uma data para ver os compromissos.</div></div></article>
+        <article class="panel calendar-day-panel"><div class="panel-heading"><div><h3 id="calendar-day-title">Dia selecionado</h3><p id="calendar-day-count">0 evento(s)</p></div><button class="icon-button small-action" type="button" data-create="reminder" aria-label="Adicionar lembrete para este dia" title="Adicionar pagamento neste dia">＋</button></div><div class="calendar-day-total-label">Despesas do dia<strong id="calendar-day-total">R$ 0,00</strong></div><div id="calendar-day-events" class="calendar-event-list"><div class="empty-state">Selecione uma data para ver os compromissos.</div></div></article>
       </div>
     </section>
 
@@ -165,7 +172,7 @@
 
     <section class="page" id="page-reports">
       <div class="page-intro"><div><h2>Relatórios</h2><p>Uma leitura clara da sua movimentação financeira.</p></div><button class="btn btn-secondary" id="export-csv">⇩ Exportar CSV</button></div>
-      <div class="stats-grid report-stats"><article class="stat-card"><div class="stat-top"><span>Receitas</span><span class="stat-icon green">↙</span></div><div class="stat-value positive" id="report-income">R$ 0,00</div></article><article class="stat-card"><div class="stat-top"><span>Despesas</span><span class="stat-icon red">↗</span></div><div class="stat-value negative" id="report-expense">R$ 0,00</div></article><article class="stat-card"><div class="stat-top"><span>Resultado</span><span class="stat-icon">＝</span></div><div class="stat-value" id="report-net">R$ 0,00</div></article><article class="stat-card"><div class="stat-top"><span>Lançamentos</span><span class="stat-icon amber">▤</span></div><div class="stat-value" id="report-count">0</div></article></div>
+      <div class="stats-grid report-stats"><article class="stat-card"><div class="stat-top"><span>Receitas previstas</span><span class="stat-icon green">↙</span></div><div class="stat-value positive" id="report-income">R$ 0,00</div></article><article class="stat-card"><div class="stat-top"><span>Despesas previstas</span><span class="stat-icon red">↗</span></div><div class="stat-value negative" id="report-expense">R$ 0,00</div></article><article class="stat-card"><div class="stat-top"><span>Resultado projetado</span><span class="stat-icon">＝</span></div><div class="stat-value" id="report-net">R$ 0,00</div></article><article class="stat-card"><div class="stat-top"><span>Lançamentos</span><span class="stat-icon amber">▤</span></div><div class="stat-value" id="report-count">0</div></article></div>
       <div class="dashboard-grid report-detail-grid">
          <article class="panel"><div class="panel-heading"><div><h3>Comparativo dos últimos 6 meses</h3><p>Receitas e despesas pagas mês a mês</p></div></div><div id="report-trend" class="report-trend"></div><p id="report-comparison" class="report-insight"></p></article>
          <article class="panel"><div class="panel-heading"><div><h3>Resumo por categoria</h3><p>Despesas pagas e pendentes no período</p></div></div><div id="report-categories" class="category-list"></div><p id="report-insight" class="report-insight"></p></article>
@@ -184,17 +191,17 @@
     <footer class="app-footer"><span>© <span id="year"></span> TVC Control</span><span>Seu dinheiro, sob controle.</span></footer>
   </main>
   <nav class="mobile-nav">
-    <button class="mobile-link active" data-page="dashboard"><span>▦</span>Início</button>
-    <button class="mobile-link" data-page="calendar"><span>▦</span>Agenda</button>
-    <button class="mobile-link" data-page="transactions"><span>↕</span>Lançamentos</button>
-    <button class="mobile-link" data-page="accounts"><span>▣</span>Contas</button>
-    <button class="mobile-link" data-page="cards"><span>▤</span>Cartões</button>
-    <button class="mobile-link" data-page="recurring"><span>⟳</span>Fixas</button>
-    <button class="mobile-link" data-page="settings"><span>⚙</span>Mais</button>
+    <button class="mobile-link active" data-page="dashboard"><span class="mobile-icon"><svg class="nav-svg" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="5" rx="1.5"/><rect x="13" y="10" width="8" height="11" rx="1.5"/><rect x="3" y="13" width="8" height="8" rx="1.5"/></svg></span><span class="mobile-label">Início</span></button>
+    <button class="mobile-link" data-page="calendar"><span class="mobile-icon"><svg class="nav-svg" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 10h18M8 14h3M8 17h2"/></svg></span><span class="mobile-label">Agenda</span></button>
+    <button class="mobile-link" data-page="transactions"><span class="mobile-icon"><svg class="nav-svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4v16m0 0-3-3m3 3 3-3M17 20V4m0 0-3 3m3-3 3 3"/></svg></span><span class="mobile-label">Mov.</span></button>
+    <button class="mobile-link" data-page="accounts"><span class="mobile-icon"><svg class="nav-svg" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 9h18m-5 5h.01"/></svg></span><span class="mobile-label">Contas</span></button>
+    <button class="mobile-link" data-page="cards"><span class="mobile-icon"><svg class="nav-svg" viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="4.5" width="19" height="15" rx="2"/><path d="M3 9h18M7 15h4"/></svg></span><span class="mobile-label">Cartões</span></button>
+    <button class="mobile-link" data-page="recurring"><span class="mobile-icon"><svg class="nav-svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 7v5h-5M4 17v-5h5"/><path d="M5.6 9A7 7 0 0 1 18 6l2 6M4 12l2 6a7 7 0 0 0 12.4-3"/></svg></span><span class="mobile-label">Fixas</span></button>
+    <button class="mobile-link" data-page="settings"><span class="mobile-icon"><svg class="nav-svg" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="m19.4 15 .1.1a1.7 1.7 0 0 1-2.4 2.4l-.1-.1a1.7 1.7 0 0 0-2.9 1.2v.2a1.7 1.7 0 0 1-3.4 0v-.2a1.7 1.7 0 0 0-2.9-1.2l-.1.1a1.7 1.7 0 0 1-2.4-2.4l.1-.1a1.7 1.7 0 0 0-1.2-2.9H4a1.7 1.7 0 0 1 0-3.4h.2a1.7 1.7 0 0 0 1.2-2.9l-.1-.1a1.7 1.7 0 0 1 2.4-2.4l.1.1a1.7 1.7 0 0 0 2.9-1.2V2a1.7 1.7 0 0 1 3.4 0v.2a1.7 1.7 0 0 0 2.9 1.2l.1-.1a1.7 1.7 0 0 1 2.4 2.4l-.1.1a1.7 1.7 0 0 0 1.2 2.9h.2a1.7 1.7 0 0 1 0 3.4h-.2a1.7 1.7 0 0 0-1.2 2.9Z"/></svg></span><span class="mobile-label">Mais</span></button>
   </nav>
 </div>
 
 <div id="modal" class="modal" hidden><div class="modal-backdrop" data-close-modal></div><section class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modal-title"><div class="modal-head"><div><div class="eyebrow">TVC CONTROL</div><h2 id="modal-title">Novo lançamento</h2></div><button class="icon-button" data-close-modal aria-label="Fechar">×</button></div><form id="modal-form" class="form-stack"><div id="modal-fields" class="modal-fields"></div><div class="modal-actions"><button class="btn btn-secondary" type="button" data-close-modal>Cancelar</button><button class="btn btn-primary" id="modal-submit" type="submit">Salvar</button></div></form></section></div>
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
-<script src="/app.js?v=11" defer></script>
+<script src="/app.js?v=12" defer></script>
 </body></html>
