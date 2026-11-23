@@ -70,23 +70,23 @@ try{
  assert.notEqual(inTheme,changed,'Authenticated theme control works');
  note('Registration, authenticated dashboard, four metrics, user role and theme OK');
 
- // Exercita permissões cedo, antes do volume elevado de requisições da suíte.
- // As alterações de função afetam somente a conta temporária do banco CI.
- await pool.query("UPDATE users SET role='admin' WHERE id=$1",[userId]);
- const adminReload=await page.reload({waitUntil:'domcontentloaded'});
- assert.equal(adminReload.status(),200,'Admin page must reload within ordinary request budget');
- await page.locator('#appShell:not(.hidden)').waitFor({state:'visible',timeout});
- await page.locator('#adminNav').waitFor({state:'visible',timeout});
- await gotoSection(page,'admin');
- await page.locator('#revHealth .rev-action').click();
- await until(page,()=>document.querySelector('#revHealthStatus')?.textContent?.includes('Serviço operacional'),timeout);
- note('Admin-only navigation and live health diagnostic OK');
- await pool.query("UPDATE users SET role='user' WHERE id=$1",[userId]);
- const userReload=await page.reload({waitUntil:'domcontentloaded'});
- assert.equal(userReload.status(),200,'Regular user must reload after role downgrade');
- await page.locator('#appShell:not(.hidden)').waitFor({state:'visible',timeout});
- assert.equal(await page.locator('#adminNav').isVisible(),false,'Admin controls disappear after downgrade');
- note('Admin-to-user role isolation OK');
+ // O navegador valida duas contas efêmeras, sem alterar papéis de uma
+ // sessão já ativa. O usuário comum continua autenticado na aba principal.
+ const adminCtx=await browser.newContext({viewport:{width:1366,height:850},locale:'pt-BR',timezoneId:'America/Fortaleza'});
+ const adminPage=await adminCtx.newPage();
+ adminPage.on('pageerror',e=>problems.push('admin: '+e.message));
+ adminId=await register(adminPage,adminEmail);
+ await pool.query("UPDATE users SET role='admin' WHERE id=$1",[adminId]);
+ const adminReload=await adminPage.reload({waitUntil:'domcontentloaded'});
+ assert.equal(adminReload.status(),200,'Admin page reload must succeed');
+ await adminPage.locator('#appShell:not(.hidden)').waitFor({state:'visible',timeout});
+ await adminPage.locator('#adminNav').waitFor({state:'visible',timeout});
+ await gotoSection(adminPage,'admin');
+ await adminPage.locator('#revHealth .rev-action').click();
+ await until(adminPage,()=>document.querySelector('#revHealthStatus')?.textContent?.includes('Serviço operacional'),timeout);
+ assert.equal(await page.locator('#adminNav').isVisible(),false,'Ordinary account cannot access admin controls');
+ note('Admin health, role separation and ordinary account isolation OK');
+ await adminCtx.close();
 
  await gotoSection(page,'alerts');
  await page.locator('#alertName').fill('Combustíveis QA '+token);
