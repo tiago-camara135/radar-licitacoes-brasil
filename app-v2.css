@@ -3145,3 +3145,131 @@ html[data-theme="dark"] #appShell{
     transition:none!important;
   }
 }
+
+
+/* Radar · página única de pesquisa, com filtros essenciais sempre visíveis.
+   A Visão Geral permanece dedicada a indicadores, agenda e oportunidades. */
+#appShell #view-radar .rlb-radar-search-heading{
+  display:flex;align-items:flex-end;justify-content:space-between;gap:18px;
+  margin:2px 0 14px;
+}
+#appShell #view-radar .rlb-radar-search-eyebrow{
+  display:inline-block;color:var(--rlb-interaction-accent);font-size:10px;
+  font-weight:820;letter-spacing:.09em;margin-bottom:5px
+}
+#appShell #view-radar .rlb-radar-search-heading h2{
+  margin:0 0 4px;font-size:clamp(20px,2.2vw,27px);
+  letter-spacing:-.037em;line-height:1.2;color:var(--radar-text)
+}
+#appShell #view-radar .rlb-radar-search-heading p{
+  margin:0;color:var(--radar-muted);font-size:11px;line-height:1.55
+}
+#appShell #view-radar .rlb-radar-search-source{
+  flex:none;display:inline-flex;align-items:center;gap:8px;
+  padding:8px 11px;border:1px solid var(--radar-line);border-radius:30px;
+  background:var(--radar-paper);font-size:10px;font-weight:650;color:var(--radar-muted)
+}
+#appShell #view-radar .rlb-radar-search-source>span{
+  width:7px;height:7px;border-radius:50%;background:#13ba86;
+  box-shadow:0 0 0 3px rgba(19,186,134,.10)
+}
+#appShell #view-radar #radarSearchForm .radar-search-bar{
+  display:grid;align-items:stretch;
+  grid-template-columns:minmax(180px,2.5fr) minmax(112px,.9fr) minmax(154px,1.3fr) minmax(142px,1.1fr) auto auto;
+  gap:8px;padding:9px;border-radius:14px;
+}
+#appShell #view-radar #radarSearchForm .radar-search-bar>*{min-width:0}
+#appShell #view-radar #radarSearchForm .radar-search-bar>label{
+  display:flex;align-items:center;gap:8px;min-width:0;
+  margin:0;padding:0 10px;border:1px solid var(--radar-line);
+  border-radius:9px;background:var(--radar-soft);
+}
+#appShell #view-radar #radarSearchForm .radar-search-bar .rlb-radar-keyword svg{
+  width:17px;height:17px;flex:none;fill:none;stroke:var(--radar-muted);
+  stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round
+}
+#appShell #view-radar #radarSearchForm .radar-search-bar #searchKeyword{
+  height:41px;min-height:41px;min-width:0;width:100%;
+  padding:0 2px;border:0!important;border-radius:0!important;
+  background:transparent!important;box-shadow:none!important;
+  outline:none!important;color:var(--radar-text);font-size:12px;font-weight:500
+}
+#appShell #view-radar #radarSearchForm .radar-search-bar .rlb-radar-keyword:focus-within{
+  border-color:var(--rlb-interaction-edge);
+  box-shadow:0 0 0 3px var(--rlb-interaction-soft)
+}
+#appShell #view-radar #radarSearchForm .radar-search-bar .rlb-radar-select select{
+  border:0;outline:none;box-shadow:none;
+  background:transparent!important;color:var(--radar-text);
+  width:100%;min-width:0;min-height:41px;height:41px;padding:0 1px;
+  font-size:11px;cursor:pointer
+}
+#appShell #view-radar #radarSearchForm .radar-search-bar .rlb-radar-select:focus-within{
+  border-color:var(--rlb-interaction-edge);
+  box-shadow:0 0 0 3px var(--rlb-interaction-soft)
+}
+#appShell #view-radar #radarSearchForm #radarStatePicker{
+  position:relative;z-index:15;min-width:0;border:1px solid var(--radar-line);
+  border-radius:9px;background:var(--radar-soft);
+}
+#appShell #view-radar #radarSearchForm #radarStatePicker summary{
+  min-width:0;height:41px;min-height:41px;
+  border:0!important;border-radius:9px;padding:0 10px;
+  display:flex;align-items:center;gap:5px;cursor:pointer;
+  font-size:11px;line-height:1.2;color:var(--radar-text)
+}
+#appShell #view-radar #radarStatePicker summary>span{font-size:10px;color:var(--radar-muted)}
+#appShell #view-radar #radarStatePicker summary strong{font-size:11px;font-weight:720;max-width:100%;min-width:0}
+#appShell #view-radar #radarStatePicker[open]{border-color:var(--rlb-interaction-edge)}
+#appShell #view-radar #radarStatePicker:focus-within{
+  border-color:var(--rlb-interaction-edge);
+  box-shadow:0 0 0 3px var(--rlb-interaction-soft)
+}
+#appShell #view-radar #radarStatePicker .radar-state-popover{
+  z-index:80;background:var(--radar-paper);border:1px solid var(--radar-line);
+  border-radius:12px;box-shadow:0 16px 38px rgba(11,35,64,.18)
+}
+#appShell #view-radar #radarSearchForm .radar-search-bar>.radar-primary,
+#appShell #view-radar #radarSearchForm .radar-search-bar>.radar-button{
+  min-height:41px;align-self:stretch;padding:0 15px;
+  font-size:11px;font-weight:760;border-radius:9px
+}
+#appShell #view-radar #radarSearchForm .radar-search-bar>.radar-button[aria-expanded="true"]{
+  border-color:var(--rlb-interaction-edge);
+  background:var(--rlb-interaction-soft);color:var(--rlb-interaction-accent)
+}
+#appShell #view-radar #radarSearchForm #radarFilters:not([hidden]){
+  margin-top:4px;border-radius:11px
+}
+#appShell #view-radar #radarSearchForm #radarFilters:not([hidden])>.radar-filters{
+  display:contents
+}
+#appShell #view-radar #radarSearchForm .radar-filter-bar{
+  padding-top:4px;gap:8px
+}
+@media(max-width:1280px){
+ #appShell #view-radar #radarSearchForm .radar-search-bar{
+   grid-template-columns:minmax(115px,1fr) minmax(144px,1.15fr) minmax(135px,1fr) auto auto
+ }
+ #appShell #view-radar #radarSearchForm .rlb-radar-keyword{grid-column:1/-1}
+}
+@media(max-width:700px){
+ #appShell #view-radar .rlb-radar-search-heading{align-items:flex-start;flex-direction:column;gap:6px}
+ #appShell #view-radar .rlb-radar-search-source{padding:5px 9px}
+ #appShell #view-radar #radarSearchForm .radar-search-bar{
+   grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;padding:7px
+ }
+ #appShell #view-radar #radarSearchForm .rlb-radar-keyword{grid-column:1/-1}
+ #appShell #view-radar #radarSearchForm .rlb-radar-period{grid-column:1/-1}
+ #appShell #view-radar #radarSearchForm .radar-search-bar>.radar-primary,
+ #appShell #view-radar #radarSearchForm .radar-search-bar>.radar-button{min-height:40px}
+}
+@media(max-width:380px){
+ #appShell #view-radar #radarSearchForm .radar-search-bar #searchKeyword{font-size:11px}
+ #appShell #view-radar #radarStatePicker summary{padding:0 6px}
+ #appShell #view-radar .rlb-radar-search-heading h2{font-size:21px}
+}
+@media(prefers-reduced-motion:reduce){
+ #appShell #view-radar #radarSearchForm .radar-search-bar *,
+ #appShell #view-radar #radarSearchForm .radar-search-bar:focus-within{transition:none!important}
+}
