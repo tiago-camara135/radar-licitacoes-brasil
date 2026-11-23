@@ -38,7 +38,9 @@ async function register(page,identity){
  return rows[0].id;
 }
 async function gotoSection(page,name){
-  await page.locator('#mainNav [data-view="'+name+'"]').click();
+  const link=page.locator('#mainNav [data-view="'+name+'"]');
+  if(!(await link.isVisible()))await page.locator('#radarMenuToggle').click();
+  await link.click();
   await page.locator('#view-'+name+'.active').waitFor({timeout});
 }
 async function screenshotOnFailure(page,name){
@@ -87,7 +89,7 @@ try{
 
  await gotoSection(page,'radar');
  await page.locator('#revSummary .rev-action').first().click();
- await until(page,query=>document.querySelector('#revRecommendations')?.textContent?.includes(query),25000).catch(()=>{throw Error('Recommendations did not render the seeded matching tender')});
+ await until(page,()=>document.querySelector('#revRecommendations')?.textContent?.includes('Aquisição de combustível para a frota CI'),25000).catch(()=>{throw Error('Recommendations did not render the seeded matching tender')});
  await page.locator('#revRecommendations .rev-rec').first().waitFor({timeout});
  const score=await page.locator('#revRecommendations .rev-rec .rev-rec-side b').first().textContent();
  assert.match(score,/\d+%/,'Aderência score must be populated');
@@ -96,7 +98,7 @@ try{
 
  await page.locator('.rev-n-bell').click();
  await page.locator('#revNotifPanel:not([hidden])').waitFor({state:'visible',timeout});
- await until(page,query=>document.querySelector('#revNotifPanel .rev-n-list')?.textContent?.includes(query),15000);
+ await until(page,()=>document.querySelector('#revNotifPanel .rev-n-list')?.textContent?.includes('Aquisição de combustível para a frota CI'),15000);
  await page.locator('.rev-n-filter').filter({hasText:'Não lidos'}).click();
  assert.ok((await page.locator('#revNotifPanel .rev-n-item.unread').count())>=1);
  await page.locator('.rev-n-mark').click();
@@ -108,13 +110,13 @@ try{
 
  await page.locator('#revRecommendations [data-rev-track]').first().click();
  await page.locator('#view-operation.active').waitFor({timeout});
- await until(page,query=>document.querySelector('#view-operation .rev-op-items')?.textContent?.includes(query),20000);
+ await until(page,()=>document.querySelector('#view-operation .rev-op-items')?.textContent?.includes('Aquisição de combustível para a frota CI'),20000);
  await page.locator('#view-operation .rev-op-item-controls select').first().selectOption('participando');
  await until(page,()=>document.querySelector('#view-operation .rev-op-item-controls select')?.value==='participando');
  const notes='Conferir documentação CI '+token;
  await page.locator('#view-operation .rev-op-item textarea').first().fill(notes);
  await page.locator('#view-operation .rev-op-item button').filter({hasText:'Salvar anotação'}).first().click();
- await until(page,query=>document.querySelector('#view-operation .rev-op-item textarea')?.value===query,20000);
+ await until(page,()=>document.querySelector('#view-operation .rev-op-item textarea')?.value?.startsWith('Conferir documentação CI '),20000);
  const dbTrack=await pool.query('SELECT status,notes FROM user_tender_tracking WHERE user_id=$1 AND org_cnpj=$2 AND year=$3 AND sequence=$4',[userId,cnpj,year,sequence]);
  assert.equal(dbTrack.rows[0]?.status,'participando');
  assert.equal(dbTrack.rows[0]?.notes,notes);
@@ -128,7 +130,7 @@ try{
  await page.locator('#radarSearchName').fill('Busca QA '+token);
  await page.locator('#radarSaveDialog button[value=save]').click();
  await gotoSection(page,'saved-searches');
- await until(page,query=>document.querySelector('#radarSavedSearchList')?.textContent?.includes(query),20000);
+ await until(page,()=>document.querySelector('#radarSavedSearchList')?.textContent?.includes('Busca QA '),20000);
  note('Save and retrieve search via UI OK');
 
  await gotoSection(page,'documents');
