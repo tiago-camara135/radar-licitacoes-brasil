@@ -39,3 +39,26 @@ test('Saved searches and opportunities are scoped to the authenticated user and 
   assert.deepEqual((await request(1, 'GET', root+'search')).data.items, []);
   assert.equal((await request(1, 'GET', root+'tender')).data.items.length, 1);
 });
+
+test('Radar delivers official PNCP PDFs as attachments and keeps upstream fallback on the fixed source', async t => {
+  let sentUrl;
+  const pdf = Buffer.from('%PDF-1.7 test');
+  const requestFetch = t.mock.method(globalThis, 'fetch', async (url, options) => {
+    sentUrl = url;
+    assert.equal(options.redirect, 'manual');
+    return new Response(pdf, { headers: { 'Content-Type': 'application/pdf' } });
+  });
+  const route = createRadarWorkspaceRouter({pool:null, readJson:async()=>({}), json:()=>{}});
+  const headers = new Map();
+  const response = {setHeader:(key,value)=>headers.set(key,value), end(body){this.body=body}};
+  const url = new URL('http://localhost/api/radar/documents/12345678000199/2026/1/2/download?name=Edital%20p%C3%BAblico');
+  await route({method:'GET'}, response, url, {id:1});
+  assert.equal(response.statusCode, 200);
+  assert.deepEqual(response.body, pdf);
+  assert.equal(headers.get('Content-Disposition'), "attachment; filename*=UTF-8''Edital%20p%C3%BAblico.pdf");
+  assert.equal(sentUrl, 'https://pncp.gov.br/api/pncp/v1/orgaos/12345678000199/compras/2026/1/arquivos/2');
+  requestFetch.mock.mockImplementation(async () => Response.redirect('https://example.test'));
+  await route({method:'GET'}, response, url, {id:1});
+  assert.equal(response.statusCode, 302);
+  assert.equal(headers.get('Location'), sentUrl);
+});

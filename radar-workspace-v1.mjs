@@ -1,6 +1,7 @@
 import { isSafePublicOriginUrl } from './tender-source-resilience-v2.mjs';
 
 const documentPath = /^\/api\/radar\/documents\/(\d{14})\/(\d{4})\/([1-9]\d{0,8})$/;
+const downloadPath = /^\/api\/radar\/documents\/(\d{14})\/(\d{4})\/([1-9]\d{0,8})\/([1-9]\d{0,9})\/download$/;
 const savedPath = /^\/api\/radar\/saved\/(tender|search)(?:\/([\w-]{1,100}))?$/;
 const text = (value, max) => String(value ?? '').trim().slice(0, max);
 
@@ -25,6 +26,45 @@ async function documents(cnpj, year, sequence) {
     source: fromOrigin ? 'Portal de origem' : 'PNCP',
     url: publicUrl(doc.url) || (fromOrigin ? '' : `${base}/${doc.sequencialDocumento}`)
   })).filter(doc => doc.url);
+}
+
+async function downloadDocument(res, [cnpj, year, sequence, id], name) {
+  const source = `https://pncp.gov.br/api/pncp/v1/orgaos/${cnpj}/compras/${year}/${sequence}/arquivos/${id}`;
+  const fallback = () => {
+    res.statusCode = 302;
+    res.setHeader('Location', source);
+    res.setHeader('Cache-Control', 'no-store');
+    return res.end();
+  };
+  const limit = 16 * 1024 * 1024;
+  try {
+    const response = await fetch(source, { redirect: 'manual', signal: AbortSignal.timeout(15000) });
+    const mime = response.headers.get('content-type') || '';
+    if (!response.ok || !response.body || /html|json|xml/i.test(mime) || Number(response.headers.get('content-length')) > limit) {
+      await response.body?.cancel();
+      return fallback();
+    }
+    const chunks = [];
+    let length = 0;
+    for await (const chunk of response.body) {
+      length += chunk.length;
+      if (length > limit) break;
+      chunks.push(chunk);
+    }
+    if (!length || length > limit) return fallback();
+    const filename = text(name, 180).replace(/[\u0000-\u001f\u007f/\\]/g, '_').toWellFormed() || `documento-${id}`;
+    const completeName = /application\/pdf/i.test(mime) && !/\.pdf$/i.test(filename) ? filename + '.pdf' : filename;
+    const encoded = encodeURIComponent(completeName).replace(/['()*]/g, char => '%' + char.charCodeAt(0).toString(16));
+    res.statusCode = 200;
+    res.setHeader('Content-Type', 'application/octet-stream');
+    res.setHeader('Content-Disposition', "attachment; filename*=UTF-8''" + encoded);
+    res.setHeader('Content-Length', length);
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('Cache-Control', 'no-store');
+    return res.end(Buffer.concat(chunks, length));
+  } catch {
+    return fallback();
+  }
 }
 
 function savedData(kind, body) {
@@ -59,6 +99,8 @@ export function createRadarWorkspaceRouter({ pool, readJson, json }) {
     return schema;
   }
   return async function handleRadarWorkspace(req, res, url, user) {
+    const download = url.pathname.match(downloadPath);
+    if (download && req.method === 'GET') return downloadDocument(res, download.slice(1), url.searchParams.get('name'));
     const file = url.pathname.match(documentPath);
     if (file && req.method === 'GET') {
       try {
