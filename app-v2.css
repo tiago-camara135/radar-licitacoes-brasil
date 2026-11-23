@@ -2498,3 +2498,35 @@ html[data-theme="dark"] .toast:not(.error) {
 .rev-summary-footer span{font-size:11px;color:var(--radar-muted,var(--muted))}
 @media(max-width:760px){.rev-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.rev-summary-head{align-items:flex-start}}
 @media(max-width:390px){#view-radar .rev-summary{padding:12px}.rev-summary-footer{align-items:flex-start;flex-direction:column}}
+
+
+/* Radar Evolution — Etapa 2: central de notificações e aderência */
+#appShell .topbar{position:relative}
+.rev-n-wrap{position:relative;margin-left:auto}
+.rev-n-bell{display:flex;gap:7px;align-items:center;justify-content:center;min-height:37px;padding:7px 10px;border-radius:9px;background:var(--radar-paper,var(--surface));border:1px solid var(--radar-line,var(--line));color:var(--radar-text,var(--text));font-size:11px;font-weight:700;cursor:pointer}
+.rev-n-count{min-width:20px;height:20px;border-radius:50%;padding:0 4px;background:var(--radar-blue,var(--brand));color:#fff;display:grid;place-items:center;font-size:10px;font-variant-numeric:tabular-nums}
+.rev-n-panel[hidden]{display:none}
+.rev-n-panel{position:absolute;top:calc(100% + 8px);right:0;width:min(356px,calc(100vw - 25px));z-index:600;padding:13px;border:1px solid var(--radar-line,var(--line));border-radius:13px;background:var(--radar-paper,var(--surface));color:var(--radar-text,var(--text));box-shadow:0 20px 52px rgba(0,0,0,.22)}
+.rev-n-head,.rev-n-controls{display:flex;justify-content:space-between;align-items:center;gap:6px}.rev-n-head div{display:grid;gap:2px}
+.rev-n-head strong{font-size:13px}.rev-n-head small{font-size:10px;color:var(--radar-muted,var(--muted))}
+.rev-n-close{width:28px;height:28px;border:1px solid var(--radar-line,var(--line));border-radius:8px;background:transparent;color:inherit;font-size:20px;line-height:1}
+.rev-n-controls{justify-content:flex-start;flex-wrap:wrap;margin:12px 0}
+.rev-n-filter,.rev-n-mark{padding:6px 8px;border:1px solid var(--radar-line,var(--line));border-radius:7px;background:var(--radar-soft,var(--surface2));color:inherit;font-size:10px;font-weight:700}
+.rev-n-filter.active{background:var(--radar-blue,var(--brand));color:#fff;border-color:transparent}
+.rev-n-mark{margin-left:auto}
+.rev-n-message{font-size:10px;color:var(--radar-muted,var(--muted));margin:6px 0}
+.rev-n-list{display:grid;gap:7px;max-height:min(52vh,430px);overflow:auto;overscroll-behavior:contain}
+.rev-n-item{display:grid;gap:5px;padding:10px;border:1px solid var(--radar-line,var(--line));border-radius:9px;background:var(--radar-soft,var(--surface2))}
+.rev-n-item.unread{border-left:3px solid var(--radar-blue,var(--brand))}
+.rev-n-flag{color:var(--radar-blue,var(--brand));font-size:9px;font-weight:800}
+.rev-n-item strong{font-size:11px;line-height:1.35;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden}
+.rev-n-item small,.rev-n-line{font-size:10px;color:var(--radar-muted,var(--muted))}
+.rev-n-line{display:flex;align-items:center;justify-content:space-between;gap:8px}.rev-n-line a{color:var(--radar-blue,var(--brand));font-weight:750}
+.rev-recommendations{display:grid;gap:9px;border-top:1px solid var(--radar-line,var(--line));padding-top:11px}
+.rev-recs-head{display:flex;gap:6px 12px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.rev-recs-head strong{font-size:12px}.rev-recs-head small,.rev-recs-empty{font-size:10px;color:var(--radar-muted,var(--muted))}
+.rev-recs-list{display:grid;gap:7px}.rev-rec{display:flex;justify-content:space-between;align-items:center;gap:10px;border:1px solid var(--radar-line,var(--line));border-radius:9px;padding:9px 10px;background:var(--radar-soft,var(--surface2))}
+.rev-rec-main{display:grid;gap:3px;min-width:0}.rev-rec-main strong{font-size:11px;font-weight:730;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.rev-rec-main small{font-size:9px;color:var(--radar-muted,var(--muted));overflow-wrap:anywhere}
+.rev-rec-side{display:grid;gap:1px;flex:0 0 auto;text-align:right}.rev-rec-side b{font-size:18px;color:var(--radar-blue,var(--brand))}.rev-rec-side small{font-size:9px;color:var(--radar-muted,var(--muted))}.rev-rec-side a{font-size:10px;color:var(--radar-blue,var(--brand));font-weight:750;margin-top:4px}
+@media(max-width:540px){.rev-n-wrap{margin-left:5px}.rev-n-bell{font-size:0;gap:0;padding:7px}.rev-n-count{font-size:10px}.rev-n-panel{right:-4px;max-width:calc(100vw - 25px)}.rev-recs-head{align-items:start;flex-direction:column}}
