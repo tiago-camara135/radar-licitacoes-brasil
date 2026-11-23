@@ -2180,3 +2180,101 @@ html[data-theme="dark"] #authScreen.auth-screen { background: #0a1428 !important
   color: #fff !important;
   border-color: var(--radar-blue) !important;
 }
+
+/* Tipografia da referência, proporção do painel e tema */
+#appShell.radar-layout .page-title { font-weight: 780 !important; letter-spacing: -.045em !important; }
+#appShell.radar-layout .main-nav b { font-weight: 610 !important; letter-spacing: -.012em !important; }
+#appShell .radar-opportunity-copy strong { font-weight: 690; letter-spacing: -.018em; }
+#appShell .radar-detail-card h2 {
+  font-size: clamp(17px, 1.55vw, 22px);
+  line-height: 1.26;
+  font-weight: 760;
+  letter-spacing: -.034em;
+}
+#appShell .radar-detail-card h2.radar-title-clamp {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.radar-title-toggle {
+  justify-self: start;
+  padding: 3px 0 6px;
+  border: 0;
+  background: transparent;
+  color: var(--radar-text);
+  font-size: 12px;
+  font-weight: 620;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+#appShell .radar-detail-card { gap: 8px; padding: clamp(12px, 1.2vw, 15px); }
+#appShell .radar-detail-card dl { font-size: 12px; gap: 4px; }
+#appShell .radar-detail-card .radar-detail-actions :is(.radar-official,[data-radar-save]) { min-height: 38px; font-size: 13px; }
+.radar-detail-navigation button { max-width: 100%; min-height: 36px; font-size: 12px; }
+@media (min-width: 761px) {
+  #radarWorkspace { grid-template-columns: minmax(0,1.62fr) minmax(0,1fr); }
+}
+.radar-theme-row {
+  display: grid;
+  grid-template-columns: auto minmax(0,1fr);
+  align-items: center;
+  gap: 8px;
+  color: #e5eeff;
+}
+.radar-theme-row label { font-size: 12px; font-weight: 650; }
+#appShell .radar-theme-row #radarTheme { min-height: 36px; padding: 5px 7px; font-size: 12px; }
+@media (min-width: 761px) and (max-width: 1100px) {
+  .radar-theme-row { color: var(--radar-text); }
+}
+
+/* Notificações entregues pelos alertas do Radar */
+#rlbNationalNoticeHost {
+  position: fixed;
+  right: max(12px,env(safe-area-inset-right));
+  bottom: max(76px, calc(env(safe-area-inset-bottom) + 68px));
+  z-index: 146;
+  width: min(350px,calc(100vw - 24px));
+  pointer-events: none;
+}
+.radar-notice {
+  --notice-ink: #101c38;
+  --notice-muted: #475775;
+  --notice-border: #d0daea;
+  --notice-paper: #fff;
+  --notice-blue: #064bea;
+  --notice-soft: #e2efff;
+  display: grid;
+  grid-template-columns: 34px minmax(0,1fr) 32px;
+  align-items: center;
+  gap: 6px 9px;
+  padding: 11px 12px;
+  pointer-events: auto;
+  border: 1px solid var(--notice-border);
+  border-left: 3px solid var(--notice-blue);
+  border-radius: 12px;
+  background: var(--notice-paper);
+  color: var(--notice-ink);
+  font-family: "Radar Inter", Inter, system-ui, sans-serif;
+  box-shadow: 0 10px 30px #07163829;
+}
+html[data-theme="dark"] .radar-notice {
+  --notice-ink: #edf4ff;
+  --notice-muted: #b8c9e2;
+  --notice-border: #3a5070;
+  --notice-paper: #101f38;
+  --notice-blue: #9fc3ff;
+  --notice-soft: #1c365d;
+}
+.radar-notice-icon,.radar-notice-close { display: grid; place-items: center; border-radius: 8px; aspect-ratio: 1; }
+.radar-notice-icon { background: var(--notice-soft); color: var(--notice-blue); }
+.radar-notice-icon svg { width: 19px; height: 19px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.radar-notice-label { color: var(--notice-blue); font-size: 12px; font-weight: 690; }
+.radar-notice-close { background: transparent; border: 1px solid transparent; color: var(--notice-muted); font-size: 21px; line-height: 1; padding: 0; }
+.radar-notice-close:hover { background: var(--notice-soft); }
+.radar-notice-title,.radar-notice-meta,.radar-notice-footer { grid-column: 1 / -1; overflow-wrap: anywhere; }
+.radar-notice-title { font-size: 14px; line-height: 1.35; font-weight: 710; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.radar-notice-meta,.radar-notice-alert { color: var(--notice-muted); font-size: 11px; }
+.radar-notice-footer { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 4px 8px; border-top: 1px solid var(--notice-border); padding-top: 6px; }
+.radar-notice-link { margin-left: auto; padding: 5px 0; color: var(--notice-blue); font-size: 12px; font-weight: 680; }
+.radar-notice-link:hover { text-decoration: underline; }
