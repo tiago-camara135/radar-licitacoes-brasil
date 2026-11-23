@@ -3,7 +3,7 @@ const state={user:null,categories:[],accounts:[],cards:[],transactions:[],budget
 const brl=new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"}),money=v=>brl.format(Number(v||0));
 const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const dateBR=v=>v?new Date(String(v).slice(0,10)+"T12:00:00").toLocaleDateString("pt-BR"):"—";
-const todayLocal=()=>new Intl.DateTimeFormat("sv-SE",{timeZone:"America/Sao_Paulo",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
+function todayLocal(){return new Intl.DateTimeFormat("sv-SE",{timeZone:"America/Sao_Paulo",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());}
 const monthName=v=>{const a=v.split("-");return new Date(+a[0],+a[1]-1,1).toLocaleDateString("pt-BR",{month:"long",year:"numeric"});};
 const symbol=n=>({Moradia:"⌂",Alimentação:"◉",Transporte:"↗",Saúde:"✚",Educação:"▤",Lazer:"✧",Serviços:"▧",Compras:"◇",Salário:"↙","Renda extra":"✦",Investimentos:"↗"}[n]||"◌");
 let toastTimer;
