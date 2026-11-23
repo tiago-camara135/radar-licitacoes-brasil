@@ -120,3 +120,8 @@ test('agenda 7 ou 30 dias, feed vigente e estágios do gráfico são filtros fun
  assert.match(js,/calendar-focused/);
  assert.match(css,/#view-operation\.calendar-focused \.rev-op-layout/);
 });
+
+test('troca de telas não chama forEach em querySelector de elemento único',()=>{
+ assert.match(js,/document\.querySelectorAll\('\.view'\)\.forEach/);
+ assert.match(js,/document\.querySelectorAll\('#mainNav \[data-view\]'\)\.forEach/);
+});
