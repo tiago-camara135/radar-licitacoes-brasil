@@ -938,6 +938,9 @@ function renderRecommendationItems(){
   const list=el('div','rev-recs-list');target.append(list);
   for(const x of recs){
     const card=el('article','rev-rec'),info=el('div','rev-rec-main');
+    card.dataset.cnpj=String(x.org_cnpj||'');
+    card.dataset.year=String(x.year||'');
+    card.dataset.seq=String(x.sequence||'');
     info.append(el('strong','',x.object_text||'Oportunidade sem descrição'),el('small','',[x.modality_name,x.municipality,x.uf].filter(Boolean).join(' • ')));
     const why=Array.isArray(x.fit?.reasons)?x.fit.reasons.slice(0,2):[];
     if(why.length)info.append(el('small','rev-rec-why',why.join(' · ')));
@@ -948,6 +951,7 @@ function renderRecommendationItems(){
     if(url){const a=el('a','','Abrir PNCP');a.href=url;a.target='_blank';a.rel='noopener noreferrer';side.append(a)}
     card.append(info,side);list.append(card);
   }
+  document.dispatchEvent(new CustomEvent('radar:recommendations-rendered'));
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});else install();
 })();
@@ -980,6 +984,9 @@ function install(){
  main.insertBefore(ui.page,$('#view-saved')||null);
  b.addEventListener('click',()=>{ui.page.classList.remove('calendar-focused');if($('#pageTitle'))$('#pageTitle').textContent='Minha Operação';if($('#pageSubtitle'))$('#pageSubtitle').textContent='Acompanhamento e calendário';if(logged())load(false)});
  document.addEventListener('radar:overview',e=>{if(!logged())return;overview=e.detail;installTrackActions();if(ui.page.classList.contains('active')&&!ui.root.querySelector('textarea:focus'))render()});
+ document.addEventListener('radar:recommendations-rendered',()=>{
+   if(logged())installTrackActions();
+ });
  document.addEventListener('radar:operation-focus',event=>{
    ui.page.classList.toggle('calendar-focused',event.detail?.focus==='calendar');
  });
@@ -999,10 +1006,12 @@ function install(){
 }
 function installTrackActions(){
  const cards=all('#revRecommendations .rev-rec');
- const recs=Array.isArray(overview?.recommendations)?overview.recommendations.slice(0,3):[];
- cards.forEach((card,i)=>{
-  const x=recs[i],side=$('.rev-rec-side',card);if(!x||!side||side.querySelector('[data-rev-track]'))return;
-  const b=el('button','rev-track-button','Acompanhar');b.type='button';b.dataset.revTrack='1';b.dataset.cnpj=x.org_cnpj||'';b.dataset.year=x.year;b.dataset.seq=x.sequence;side.append(b);
+ cards.forEach(card=>{
+  const side=$('.rev-rec-side',card);
+  if(!side||side.querySelector('[data-rev-track]')||!/^[0-9]{14}$/.test(card.dataset.cnpj||''))return;
+  const b=el('button','rev-track-button','Acompanhar');b.type='button';b.dataset.revTrack='1';
+  b.dataset.cnpj=card.dataset.cnpj;b.dataset.year=card.dataset.year;b.dataset.seq=card.dataset.seq;
+  side.append(b);
  });
  for(const id of ['#radarDetail','#radarSavedDetail']){const root=$(id);if(root)decorateDetail(root)}
 }
