@@ -25,7 +25,7 @@ for(const marker of ['__rlbCompanyDocumentsV1','habilitationNav','view-habilitat
 const cssResponse=await fetch(base+'/assets/app-v2.css',{headers:{accept:'text/css'},cache:'no-store'});
 assert.equal(cssResponse.status,200,'app-v2.css deve ser servido');
 const css=await cssResponse.text();
-for(const marker of ['.habilitation-view','.hab-nav-badge','.rev-summary','.rev-n-panel','.rev-op-layout','.rev-health']){
+for(const marker of ['.habilitation-view','.hab-nav-badge','.rev-summary','.rev-n-panel','.rev-op-layout','.rev-health','#appShell #ai-assistant.ai-widget-open']){
   assert.ok(css.includes(marker),`CSS servido deve conter ${marker}`);
 }
 
