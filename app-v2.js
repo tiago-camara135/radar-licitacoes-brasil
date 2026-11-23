@@ -728,7 +728,7 @@ if(window.__radarEvolutionSummary)return;window.__radarEvolutionSummary=true;
 const $=(s,r=document)=>r.querySelector(s);
 const el=(tag,cls,text)=>{const a=document.createElement(tag);if(cls)a.className=cls;if(text!==undefined)a.textContent=String(text);return a};
 const number=v=>Number.isFinite(Number(v))&&v!==undefined&&v!==null?Number(v).toLocaleString('pt-BR'):'—';
-let busy=false,lastLoad=0,lastIdentity='';
+let busy=false,lastLoad=0,lastIdentity='',epoch=0;
 const ui={};
 function logged(){return !!$('#appShell')&&!$('#appShell').classList.contains('hidden')}
 function identity(){return String($('#radarUserName')?.textContent||'').trim()}
@@ -748,7 +748,7 @@ function install(){
  const go=el('button','rev-action','Gerenciar alertas');go.type='button';go.addEventListener('click',()=>$('#mainNav [data-view="alerts"]')?.click());
  footer.append(ui.next,go);panel.append(head,grid,footer);view.insertBefore(panel,$('#radarSearchForm')||view.firstChild);
  const shell=$('#appShell');
- if(shell)new MutationObserver(()=>{if(!logged()){lastLoad=0;lastIdentity='';ui.values.forEach(x=>x.textContent='—');ui.status.textContent='Entre na conta para consultar os indicadores.'}else load(false)}).observe(shell,{attributes:true,attributeFilter:['class']});
+ if(shell)new MutationObserver(()=>{if(!logged()){epoch++;lastLoad=0;lastIdentity='';ui.values.forEach(x=>x.textContent='—');ui.status.textContent='Entre na conta para consultar os indicadores.'}else load(false)}).observe(shell,{attributes:true,attributeFilter:['class']});
  document.addEventListener('click',e=>{if(e.target.closest('#mainNav [data-view="radar"]'))load(false)});
  document.addEventListener('visibilitychange',()=>{if(!document.hidden&&Date.now()-lastLoad>180000)load(false)});
  if(logged())load(false);
@@ -756,12 +756,12 @@ function install(){
 async function load(force){
  if(!logged()||busy)return;
  const who=identity();if(!force&&lastIdentity===who&&Date.now()-lastLoad<180000)return;
- busy=true;ui.refresh.disabled=true;ui.refresh.textContent='Atualizando…';ui.status.textContent='Consultando indicadores…';
+ const requestEpoch=epoch;busy=true;ui.refresh.disabled=true;ui.refresh.textContent='Atualizando…';ui.status.textContent='Consultando indicadores…';
  const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),12000);
  try{
    const r=await fetch('/api/dashboard/overview',{credentials:'same-origin',cache:'no-store',signal:controller.signal,headers:{accept:'application/json'}});
    if(!r.ok)throw Error(r.status===401?'Sessão expirada. Entre novamente.':'Não foi possível consultar os indicadores.');
-   const d=await r.json(),m=d.metrics||{};
+   const d=await r.json(),m=d.metrics||{};if(!logged()||requestEpoch!==epoch)return;
    ['new_matches_today','recommended_high','tracked_active','upcoming_7d'].forEach((k,i)=>ui.values[i].textContent=number(m[k]));
    const priorities=Array.isArray(d.priorities)?d.priorities:[];
    const critical=priorities.filter(x=>x&&['high','critical'].includes(x.tone)).length;
@@ -770,6 +770,7 @@ async function load(force){
    lastIdentity=who;lastLoad=Date.now();
    document.dispatchEvent(new CustomEvent('radar:overview',{detail:d}));
  }catch(e){
+   if(!logged()||requestEpoch!==epoch)return;
    ui.status.textContent=e.name==='AbortError'?'A consulta demorou. Tente novamente.':e.message;
    ui.next.textContent='As demais funcionalidades do Radar continuam disponíveis.';
  }finally{clearTimeout(timeout);busy=false;ui.refresh.disabled=false;ui.refresh.textContent='Atualizar'}
@@ -787,7 +788,7 @@ const el=(tag,cls,txt)=>{const v=document.createElement(tag);if(cls)v.className=
 const logged=()=>!!$('#appShell')&&!$('#appShell').classList.contains('hidden');
 const safeUrl=raw=>{try{const u=new URL(raw);return ['http:','https:'].includes(u.protocol)&&!u.username&&!u.password?u.href:''}catch{return''}};
 const formatted=x=>{const d=new Date(x);return Number.isNaN(d.getTime())?'Data não informada':d.toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'})};
-let rows=[],filter='all',open=false,loading=false,lastProfile=0;
+let rows=[],filter='all',open=false,loading=false,lastProfile=0,epoch=0;
 const ui={};
 function install(){
   const bar=$('#appShell .topbar');if(!bar)return;
@@ -815,29 +816,29 @@ function install(){
   document.addEventListener('pointerdown',e=>{if(open&&!ui.wrap.contains(e.target))setOpen(false)});
   document.addEventListener('radar:overview',e=>recommendations(e.detail));
   const shell=$('#appShell');
-  new MutationObserver(()=>{if(!logged()){setOpen(false);rows=[];lastProfile=0;ui.count.textContent='—'}else profile()}).observe(shell,{attributes:true,attributeFilter:['class']});
+  new MutationObserver(()=>{if(!logged()){epoch++;setOpen(false);rows=[];lastProfile=0;ui.count.textContent='—';$('#revRecommendations')?.remove()}else profile()}).observe(shell,{attributes:true,attributeFilter:['class']});
   document.addEventListener('visibilitychange',()=>{if(!document.hidden&&logged()&&Date.now()-lastProfile>90000)profile()});
   if(logged())profile();
 }
 function setOpen(next){open=Boolean(next);ui.panel.hidden=!open;ui.bell.setAttribute('aria-expanded',String(open));if(open)load()}
 async function profile(){
-  if(!logged())return;
+  if(!logged())return;const requestEpoch=epoch;
   try{const controller=new AbortController(),t=setTimeout(()=>controller.abort(),12000);
     try{const r=await fetch('/api/notifications/profile',{credentials:'same-origin',cache:'no-store',signal:controller.signal});
-      if(!r.ok)throw Error('Sem contagem');const d=await r.json();const n=Math.max(0,Number(d.unread_count||0));
+      if(!r.ok)throw Error('Sem contagem');const d=await r.json();if(!logged()||requestEpoch!==epoch)return;const n=Math.max(0,Number(d.unread_count||0));
       ui.count.textContent=n>99?'99+':String(n);lastProfile=Date.now();
     }finally{clearTimeout(t)}
-  }catch{ui.count.textContent='—'}
+  }catch{if(logged()&&requestEpoch===epoch)ui.count.textContent='—'}
 }
 async function load(){
-  if(!logged()||loading)return;loading=true;ui.message.textContent='Carregando notificações…';
+  if(!logged()||loading)return;const requestEpoch=epoch;loading=true;ui.message.textContent='Carregando notificações…';
   const controller=new AbortController(),t=setTimeout(()=>controller.abort(),12000);
   try{
     const r=await fetch('/api/notifications/deliveries?limit=100',{credentials:'same-origin',cache:'no-store',signal:controller.signal,headers:{accept:'application/json'}});
     if(!r.ok)throw Error(r.status===401?'Acesse sua conta para consultar os alertas.':'Falha ao consultar notificações.');
-    const d=await r.json();rows=(Array.isArray(d.items)?d.items:[]).filter(x=>x.channel==='onsite');
+    const d=await r.json();if(!logged()||requestEpoch!==epoch)return;rows=(Array.isArray(d.items)?d.items:[]).filter(x=>x.channel==='onsite');
     render();await profile();
-  }catch(e){ui.list.replaceChildren();ui.message.textContent=e.name==='AbortError'?'A consulta demorou. Tente novamente.':e.message;
+  }catch(e){if(!logged()||requestEpoch!==epoch)return;ui.list.replaceChildren();ui.message.textContent=e.name==='AbortError'?'A consulta demorou. Tente novamente.':e.message;
     const retry=el('button','rev-n-filter','Tentar novamente');retry.type='button';retry.addEventListener('click',load);ui.list.append(retry)
   }finally{clearTimeout(t);loading=false}
 }
@@ -917,7 +918,7 @@ function install(){
  ui.page=el('section','view rev-operation');ui.page.id='view-operation';
  ui.root=el('div','rev-op-root');ui.root.append(el('p','rev-op-loading','Carregando licitações acompanhadas…'));ui.page.append(ui.root);
  main.insertBefore(ui.page,$('#view-saved')||null);
- b.addEventListener('click',()=>{if(logged())load(false)});
+ b.addEventListener('click',()=>{if($('#pageTitle'))$('#pageTitle').textContent='Minha Operação';if($('#pageSubtitle'))$('#pageSubtitle').textContent='Acompanhamento e calendário';if(logged())load(false)});
  document.addEventListener('radar:overview',e=>{if(!logged())return;overview=e.detail;installTrackActions();if(ui.page.classList.contains('active')&&!ui.root.querySelector('textarea:focus'))render()});
  const shell=$('#appShell');
  new MutationObserver(()=>{if(!logged()){generation++;overview=null;ui.root.replaceChildren(el('p','rev-op-loading','Entre para consultar sua operação.'))}else installTrackActions()}).observe(shell,{attributes:true,attributeFilter:['class']});
@@ -955,7 +956,7 @@ async function load(force){
  loading=true;ui.root.replaceChildren(el('p','rev-op-loading','Carregando dados da conta…'));
  const seq=generation;
  try{const d=await request('/api/dashboard/overview');if(!logged()||seq!==generation)return;overview=d;render();installTrackActions()}
- catch(e){ui.root.replaceChildren(el('p','rev-op-error',e.message));const retry=el('button','rev-track-button','Tentar novamente');retry.type='button';retry.addEventListener('click',()=>load(true));ui.root.append(retry)}
+ catch(e){if(seq!==generation||!logged())return;ui.root.replaceChildren(el('p','rev-op-error',e.message));const retry=el('button','rev-track-button','Tentar novamente');retry.type='button';retry.addEventListener('click',()=>load(true));ui.root.append(retry)}
  finally{loading=false}
 }
 async function addTracking(b){
@@ -1035,4 +1036,49 @@ function calendar(){
  box.append(list);return box;
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});else install();
+})();
+
+
+/* Radar Evolution — Etapa 4: diagnóstico administrativo sob demanda */
+;(()=>{
+'use strict';
+if(window.__radarEvolutionHealth)return;window.__radarEvolutionHealth=true;
+const $=(s,r=document)=>r.querySelector(s);
+const el=(tag,cls,text)=>{const e=document.createElement(tag);if(cls)e.className=cls;if(text!==undefined)e.textContent=String(text);return e};
+let loading=false,epoch=0;
+const logged=()=>!!$('#appShell')&&!$('#appShell').classList.contains('hidden');
+function install(){
+ const admin=$('#view-admin');if(!admin)return null;
+ let panel=$('#revHealth');if(panel)return panel;
+ panel=el('section','rev-health');panel.id='revHealth';
+ const head=el('div','rev-health-head'),left=el('div','');
+ left.append(el('strong','','Saúde da plataforma'),el('small','','Consulta técnica sob demanda • sem dados pessoais'));
+ const button=el('button','rev-action','Verificar agora');button.type='button';button.addEventListener('click',()=>check());
+ head.append(left,button);
+ const status=el('p','rev-health-status','Clique para consultar o estado atual dos serviços.');status.id='revHealthStatus';status.setAttribute('role','status');
+ panel.append(head,status);const intro=$('.section-intro',admin);intro?.insertAdjacentElement('afterend',panel);if(!intro)admin.prepend(panel);
+ return panel;
+}
+async function check(){
+ if(!logged()||$('#adminNav')?.classList.contains('hidden')||loading)return;
+ const panel=install(),button=panel.querySelector('button'),status=$('#revHealthStatus');
+ const rev=epoch;loading=true;button.disabled=true;status.textContent='Verificando serviço e banco de dados…';
+ const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),8000);
+ try{
+ const r=await fetch('/api/health',{credentials:'same-origin',cache:'no-store',signal:controller.signal,headers:{accept:'application/json'}});
+ const d=await r.json().catch(()=>({}));if(!logged()||rev!==epoch)return;
+ if(!r.ok||!d.ok){status.textContent='Serviço com indisponibilidade. Consulte os logs do Render.';status.dataset.ok='no';return}
+ status.dataset.ok='yes';
+ const database=d.database?.ok?'Banco conectado':'Banco requer atenção';
+ const pncp=d.pncp_documents?.circuit_open?'Consulta de documentos PNCP temporariamente limitada':'Consulta de documentos PNCP sem bloqueio informado';
+ status.textContent='Serviço operacional • '+database+' • '+pncp+' • Verificado às '+new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+ }catch(e){if(logged()&&rev===epoch){status.dataset.ok='no';status.textContent=e.name==='AbortError'?'Verificação expirou. Tente novamente.':'Falha ao consultar a saúde do serviço.'}}
+ finally{clearTimeout(timer);loading=false;button.disabled=false}
+}
+function boot(){
+ install();
+ document.addEventListener('click',e=>{if(e.target.closest('#mainNav [data-view="admin"]')){install();if(logged())check()}});
+ const shell=$('#appShell');if(shell)new MutationObserver(()=>{if(!logged()){epoch++;const status=$('#revHealthStatus');if(status){status.textContent='Entre como administrador para consultar o estado do serviço.';status.removeAttribute('data-ok')}}}).observe(shell,{attributes:true,attributeFilter:['class']});
+}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 })();
