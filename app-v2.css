@@ -1245,27 +1245,68 @@ html[data-theme="dark"] .live-terminal{
 }
 
 /* Radar de Licitações — busca, oportunidades e documentos */
-.radar-layout {
-  --radar-navy: #071638;
-  --radar-blue: #064bea;
-  --radar-blue-hover: #0741bd;
-  --radar-canvas: #f5f7fb;
-  --radar-paper: #fff;
-  --radar-text: #101c38;
-  --radar-muted: #475775;
-  --radar-line: #d0daea;
-  --radar-soft: #e2efff;
-  background: var(--radar-canvas);
-  color: var(--radar-text);
+html:root {
+  --bg:#f1f6ff;
+  --bg2:#e7f0ff;
+  --surface:#fff;
+  --surface2:#f4f8ff;
+  --surface3:#e7f0ff;
+  --text:#101e39;
+  --muted:#455879;
+  --line:#ccd9ee;
+  --line2:#9cb2d3;
+  --emerald:#1559d8;
+  --cyan:#1768df;
+  --purple:#245bca;
+  --electric:#1559d8;
+  --brand:#165adc;
+  --brand-strong:#1251d4;
+  --brand-soft:#e0edff;
+  --header:#fff;
+  --terminal:#fff;
+  --terminal2:#f4f8ff;
+  --terminalText:#101e39;
+  --terminalMuted:#455879;
 }
-html[data-theme="dark"] .radar-layout {
-  --radar-canvas: #0a1428;
-  --radar-paper: #101f38;
-  --radar-text: #edf4ff;
-  --radar-muted: #b8c9e2;
-  --radar-line: #3a5070;
-  --radar-soft: #1c365d;
+html:root[data-theme="dark"] {
+  --bg:#081226;
+  --bg2:#0c1932;
+  --surface:#101f3b;
+  --surface2:#14284a;
+  --surface3:#1c3458;
+  --text:#edf4ff;
+  --muted:#b9cbe8;
+  --line:#3b5072;
+  --line2:#577399;
+  --emerald:#91bcff;
+  --cyan:#8abaff;
+  --purple:#a5c4ff;
+  --electric:#91bcff;
+  --brand:#a2c5ff;
+  --brand-strong:#b3ceff;
+  --brand-soft:#203b65;
+  --header:#101f3b;
+  --terminal:#101f3b;
+  --terminal2:#14284a;
+  --terminalText:#edf4ff;
+  --terminalMuted:#b9cbe8;
 }
+:root {
+  --radar-navy: #071b44;
+  --radar-blue: #1458ed;
+  --radar-blue-hover: #0b43c7;
+  --radar-canvas: var(--bg);
+  --radar-paper: var(--surface);
+  --radar-text: var(--text);
+  --radar-muted: var(--muted);
+  --radar-line: var(--line);
+  --radar-soft: var(--brand-soft);
+  --radar-showcase: #0d2756;
+  --radar-showcase-text: #edf4ff;
+  --radar-showcase-muted: #b9cbe8;
+  --radar-showcase-accent: #86b9ff;
+}
+.radar-layout { background: var(--radar-canvas); color: var(--radar-text); }
 .radar-layout .page-title {
   color: var(--radar-text) !important;
   font-size: clamp(26px, 3vw, 42px) !important;
@@ -1835,8 +1876,6 @@ button.radar-chip:hover { border-color: #4384ff; }
 }
 #appShell.radar-layout {
   font-family: "Radar Inter", Inter, system-ui, sans-serif !important;
-  --radar-navy: #071638;
-  --radar-blue: #064bea;
 }
 #appShell.radar-layout :is(.page-title,.sidebar-brand strong,.main-nav b,#view-radar button,#view-radar input,#view-radar select,#view-radar a) {
   font-family: inherit !important;
@@ -2133,35 +2172,15 @@ html[data-theme="dark"] #appShell .radar-detail-card > .tr-quick-badge.high {
 }
 html[data-theme="dark"] #appShell .radar-detail-card .radar-analysis-actions > button { color: #b5ceff !important; }
 
-#authScreen, #appShell #ai-assistant {
-  --radar-access-blue: #064bea;
-  --radar-access-navy: #071638;
-  --emerald: #245fce;
-  --cyan: #3879ef;
-  --purple: #537de7;
-  --electric: #245fce;
-  --brand: #245fce;
-  --brand-strong: #071638;
-  --brand-soft: #e1edff;
-}
-html[data-theme="dark"] :is(#authScreen,#appShell #ai-assistant) {
-  --emerald: #8eb8ff;
-  --cyan: #92b8ff;
-  --purple: #a8c3ff;
-  --electric: #a8c3ff;
-  --brand: #a8c3ff;
-  --brand-soft: #1c365d;
-}
-#authScreen.auth-screen { background: #f5f7fb !important; }
-html[data-theme="dark"] #authScreen.auth-screen { background: #0a1428 !important; }
-#authScreen .auth-copy { background: #071638 !important; color: #fff !important; }
+#authScreen.auth-screen { background: var(--radar-canvas) !important; color: var(--radar-text); }
+#authScreen .auth-copy { background: var(--radar-navy) !important; color: var(--radar-showcase-text) !important; }
 #authScreen .auth-copy :is(.eyebrow,.auth-home-kicker) { color: #aecaff !important; }
 #authScreen .auth-grid { border-color: #a1b9e0 !important; }
 #authScreen .auth-card { background: var(--surface) !important; }
 #authScreen :is(#authSubmit,.auth-home-primary) {
-  background: var(--radar-access-blue) !important;
+  background: var(--radar-blue) !important;
   color: #fff !important;
-  border-color: var(--radar-access-blue) !important;
+  border-color: var(--radar-blue) !important;
   box-shadow: none !important;
 }
 #authScreen .auth-tabs button.active { background: var(--brand-soft) !important; color: var(--brand) !important; }
@@ -2238,12 +2257,12 @@ html[data-theme="dark"] #authScreen.auth-screen { background: #0a1428 !important
   pointer-events: none;
 }
 .radar-notice {
-  --notice-ink: #101c38;
-  --notice-muted: #475775;
-  --notice-border: #d0daea;
-  --notice-paper: #fff;
-  --notice-blue: #064bea;
-  --notice-soft: #e2efff;
+  --notice-ink: var(--radar-text);
+  --notice-muted: var(--radar-muted);
+  --notice-border: var(--radar-line);
+  --notice-paper: var(--radar-paper);
+  --notice-blue: var(--radar-blue);
+  --notice-soft: var(--radar-soft);
   display: grid;
   grid-template-columns: 34px minmax(0,1fr) 32px;
   align-items: center;
@@ -2258,14 +2277,7 @@ html[data-theme="dark"] #authScreen.auth-screen { background: #0a1428 !important
   font-family: "Radar Inter", Inter, system-ui, sans-serif;
   box-shadow: 0 10px 30px #07163829;
 }
-html[data-theme="dark"] .radar-notice {
-  --notice-ink: #edf4ff;
-  --notice-muted: #b8c9e2;
-  --notice-border: #3a5070;
-  --notice-paper: #101f38;
-  --notice-blue: #9fc3ff;
-  --notice-soft: #1c365d;
-}
+html[data-theme="dark"] .radar-notice { --notice-blue: var(--brand); }
 .radar-notice-icon,.radar-notice-close { display: grid; place-items: center; border-radius: 8px; aspect-ratio: 1; }
 .radar-notice-icon { background: var(--notice-soft); color: var(--notice-blue); }
 .radar-notice-icon svg { width: 19px; height: 19px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
@@ -2303,3 +2315,61 @@ html[data-theme="dark"] .radar-notice {
 #radarTheme svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; }
 #radarTheme svg[hidden] { display: none; }
 #logoutBtn { grid-column: 1 / -1; min-height: 36px; }
+
+/* Controle de tema público e acentos compartilhados */
+#radarPublicTheme {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  min-height: 40px;
+  margin-left: auto;
+  color: var(--brand);
+  background: var(--surface);
+  border: 1px solid var(--line2);
+  border-radius: 8px;
+}
+#radarPublicTheme:hover { background: var(--brand-soft); }
+#radarPublicTheme:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+#radarPublicTheme svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; }
+#radarPublicTheme svg[hidden] { display: none; }
+#authScreen :is(.customer-step,.customer-faq,.customer-transparency,.auth-home-trust,.auth-home-service-strip > div) {
+  border-color: var(--radar-line);
+}
+#authScreen :is(.auth-home-capability-hero,.auth-home-demo-window,.auth-home-product-preview) {
+  background: linear-gradient(145deg,var(--radar-navy),var(--radar-showcase));
+  color: var(--radar-showcase-text);
+}
+#authScreen .auth-home-demo-panel {
+  background: radial-gradient(circle at 92% 4%,#4a8bff2a,transparent 34%),var(--radar-navy);
+}
+#authScreen :is(.auth-home-footer,.auth-home-positioning,.auth-home-operation) { border-color: var(--radar-line); }
+#appShell .btn.primary, #appShell .ai-fab {
+  background: var(--radar-blue) !important;
+  border-color: var(--radar-blue) !important;
+  color: #fff !important;
+}
+#appShell {
+  --action-bg: var(--radar-blue);
+  --action-bg2: var(--radar-blue-hover);
+}
+#appShell .live-terminal {
+  --rlb-panel-bg: var(--terminal);
+  --rlb-panel-bg2: var(--terminal2);
+  --rlb-card-bg: var(--surface2);
+  --rlb-card-hover: var(--brand-soft);
+  --rlb-card-border: var(--line);
+  --rlb-ink: var(--terminalText);
+  --rlb-muted: var(--terminalMuted);
+  --rlb-teal: var(--brand);
+  --rlb-blue: var(--cyan);
+}
+#appShell .live-terminal #liveScope {
+  background: var(--surface);
+  color: var(--text);
+  border-color: var(--line2);
+}
+#appShell #ai-assistant .ai-msg.user { background: var(--radar-blue); color: #fff; }
+#appShell :is(.radar-primary,.btn.primary):hover:not(:disabled) {
+  background: var(--radar-blue-hover) !important;
+  color: #fff !important;
+}
