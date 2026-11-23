@@ -734,8 +734,17 @@ function install(){
  ui.status=el('p','rev-status','Dados personalizados da sua conta.');ui.status.setAttribute('role','status');heading.append(ui.status);
  ui.refresh=el('button','rev-action','Atualizar');ui.refresh.type='button';ui.refresh.addEventListener('click',()=>load(true));head.append(heading,ui.refresh);
  const grid=el('div','rev-grid');ui.values=[];
- for(const [label,subtitle] of [['Novas compatíveis','Detectadas hoje'],['Alta aderência','Recomendações'],['Em acompanhamento','Na operação'],['Prazos próximos','Nos próximos 7 dias']]){
-   const m=el('div','rev-stat'),value=el('strong','rev-value','—');m.append(el('span','rev-label',label),value,el('small','rev-sub',subtitle));grid.append(m);ui.values.push(value);
+ for(const [label,subtitle,action] of [
+   ['Novas compatíveis','Detectadas hoje','today'],
+   ['Alta aderência','Recomendações','high'],
+   ['Em acompanhamento','Na operação','operation'],
+   ['Prazos próximos','Nos próximos 7 dias','calendar']
+ ]){
+   const m=el('button','rev-stat'),value=el('strong','rev-value','—');
+   m.type='button';m.dataset.homeAction=action;
+   m.setAttribute('aria-label',label+' — abrir detalhes');
+   m.append(el('span','rev-label',label),value,el('small','rev-sub',subtitle),el('span','rev-kpi-arrow','↗'));
+   grid.append(m);ui.values.push(value);
  }
  const footer=el('div','rev-summary-footer');
  ui.next=el('span','','Acompanhe seus alertas para receber recomendações.');
