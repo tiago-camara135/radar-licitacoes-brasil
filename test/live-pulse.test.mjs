@@ -51,3 +51,16 @@ test('etapa 3: novas licitações vêm de comparação real entre snapshots, nun
  assert.match(css,/@media\(prefers-reduced-motion:reduce\)/);
  assert.match(html,/id="rlbHomeNewUpdates"[^>]+aria-live="polite"/);
 });
+
+
+test('etapa 4: urgência usa datas reais e aderência usa score existente',()=>{
+ assert.match(js,/remaining>=0&&remaining<=48\*3600000/);
+ assert.match(js,/Number\(x\.fit\?\.score\)>=85/);
+ assert.match(js,/card\.dataset\.priority=dueSoon\?'urgent':highFit\?'high-fit':'standard'/);
+ assert.match(js,/const meter=el\('progress','rlb-fit-meter'\)/);
+ assert.match(js,/meter\.value=Math\.round\(Math\.min\(100,Math\.max\(0,score\)\)\)/);
+ assert.match(js,/row\.dataset\.urgency=diff<=1\?'critical':diff<=3\?'soon':'normal'/);
+ assert.match(css,/#view-home \.rlb-priority-urgent/);
+ assert.match(css,/#view-home \.rlb-fit-meter::-webkit-progress-value/);
+ assert.match(css,/#view-home \.rlb-home-deadline\[data-urgency="critical"\]/);
+});
