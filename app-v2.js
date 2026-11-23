@@ -733,7 +733,7 @@ if(window.__radarEvolutionSummary)return;window.__radarEvolutionSummary=true;
 const $=(s,r=document)=>r.querySelector(s);
 const el=(tag,cls,text)=>{const a=document.createElement(tag);if(cls)a.className=cls;if(text!==undefined)a.textContent=String(text);return a};
 const number=v=>Number.isFinite(Number(v))&&v!==undefined&&v!==null?Number(v).toLocaleString('pt-BR'):'—';
-let busy=false,lastLoad=0,lastIdentity='',epoch=0;
+let busy=false,lastLoad=0,lastIdentity='',epoch=0,queuedForce=false;
 const ui={};
 function logged(){return !!$('#appShell')&&!$('#appShell').classList.contains('hidden')}
 function identity(){return String($('#radarUserName')?.textContent||'').trim()}
@@ -762,7 +762,7 @@ function install(){
  const go=el('button','rev-action','Gerenciar alertas');go.type='button';go.addEventListener('click',()=>$('#mainNav [data-view="alerts"]')?.click());
  footer.append(ui.next,go);panel.append(head,grid,footer);const statsSlot=$('#rlbHomeKpis');if(statsSlot)statsSlot.append(panel);else view.insertBefore(panel,$('#radarSearchForm')||view.firstChild);
  const shell=$('#appShell');
- if(shell)new MutationObserver(()=>{if(!logged()){epoch++;lastLoad=0;lastIdentity='';ui.values.forEach(x=>x.textContent='—');ui.status.textContent='Entre na conta para consultar os indicadores.'}else load(false)}).observe(shell,{attributes:true,attributeFilter:['class']});
+ if(shell)new MutationObserver(()=>{if(!logged()){epoch++;queuedForce=false;lastLoad=0;lastIdentity='';ui.values.forEach(x=>x.textContent='—');ui.status.textContent='Entre na conta para consultar os indicadores.'}else load(false)}).observe(shell,{attributes:true,attributeFilter:['class']});
  document.addEventListener('click',e=>{if(e.target.closest('#mainNav [data-view="radar"], #mainNav [data-view="home"]'))load(false)});
  document.addEventListener('visibilitychange',()=>{if(!document.hidden&&Date.now()-lastLoad>180000)load(false)});
   document.addEventListener('radar:overview-refresh-request',()=>{if(logged())load(true)});
@@ -780,7 +780,8 @@ function install(){
  if(logged())load(false);
 }
 async function load(force){
- if(!logged()||busy)return;
+ if(!logged())return;
+ if(busy){if(force)queuedForce=true;return;}
  const who=identity();if(!force&&lastIdentity===who&&Date.now()-lastLoad<180000)return;
  const requestEpoch=epoch;busy=true;ui.refresh.disabled=true;ui.refresh.textContent='Atualizando…';ui.status.textContent='Consultando indicadores…';
  const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),12000);
@@ -788,19 +789,21 @@ async function load(force){
    const r=await fetch('/api/dashboard/overview',{credentials:'same-origin',cache:'no-store',signal:controller.signal,headers:{accept:'application/json'}});
    if(!r.ok)throw Error(r.status===401?'Sessão expirada. Entre novamente.':'Não foi possível consultar os indicadores.');
    const d=await r.json(),m=d.metrics||{};if(!logged()||requestEpoch!==epoch)return;
+   if(!Array.isArray(d.recommendations))throw Error('Consulta de recomendações incompleta.');
    ['new_matches_today','recommended_high','tracked_active','upcoming_7d'].forEach((k,i)=>ui.values[i].textContent=number(m[k]));
    const priorities=Array.isArray(d.priorities)?d.priorities:[];
    const critical=priorities.filter(x=>x&&['high','critical'].includes(x.tone)).length;
    ui.next.textContent=critical?critical+' prioridade(s) para revisar.':'Nenhuma prioridade crítica identificada nos dados cadastrados.';
    ui.status.textContent='Atualizado às '+new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})+' • Dados da sua conta';
    lastIdentity=who;lastLoad=Date.now();
+   if(force)document.dispatchEvent(new CustomEvent('radar:recommendations-cycle'));
    document.dispatchEvent(new CustomEvent('radar:overview',{detail:d}));
  }catch(e){
    if(!logged()||requestEpoch!==epoch)return;
    ui.status.textContent=e.name==='AbortError'?'A consulta demorou. Tente novamente.':e.message;
    document.dispatchEvent(new CustomEvent('radar:overview-error',{detail:{message:ui.status.textContent}}));
    ui.next.textContent='As demais funcionalidades do Radar continuam disponíveis.';
- }finally{clearTimeout(timeout);busy=false;ui.refresh.disabled=false;ui.refresh.textContent='Atualizar'}
+ }finally{clearTimeout(timeout);busy=false;ui.refresh.disabled=false;ui.refresh.textContent='Atualizar';if(queuedForce){queuedForce=false;if(logged()&&requestEpoch===epoch)void load(true)}}
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});else install();
 })();
@@ -817,7 +820,8 @@ const safeUrl=raw=>{try{const u=new URL(raw);return ['http:','https:'].includes(
 const formatted=x=>{const d=new Date(x);return Number.isNaN(d.getTime())?'Data não informada':d.toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'})};
 let rows=[],filter='all',open=false,loading=false,lastProfile=0,epoch=0;
 let recFilter='all',recCache=[],recInitialized=false,renderedRecSignature='',recPulse=new Map();
-let rotateRecommendations=false,cycleSelection=null;
+let rotateRecommendations=false,cycleSelection=null,rotationCycle=0;
+const rotationHistory=new Map();
 const recKey=x=>[x?.org_cnpj,x?.year,x?.sequence].map(String).join('-');
 const recVersion=x=>JSON.stringify([x?.object_text,x?.closes_at,Number(x?.fit?.score),x?.modality_name]);
 const ui={};
@@ -869,7 +873,7 @@ function install(){
   });
   document.addEventListener('radar:home-rec-filter',event=>setRecommendationFilter(event.detail?.filter));
   const shell=$('#appShell');
-  new MutationObserver(()=>{if(!logged()){epoch++;setOpen(false);rows=[];lastProfile=0;recCache=[];rotateRecommendations=false;cycleSelection=null;recFilter='all';recInitialized=false;renderedRecSignature='';recPulse.clear();recommendationStatus('');ui.count.textContent='—';$('#revRecommendations')?.remove()}else profile()}).observe(shell,{attributes:true,attributeFilter:['class']});
+  new MutationObserver(()=>{if(!logged()){epoch++;setOpen(false);rows=[];lastProfile=0;recCache=[];rotateRecommendations=false;cycleSelection=null;rotationHistory.clear();rotationCycle=0;recFilter='all';recInitialized=false;renderedRecSignature='';recPulse.clear();recommendationStatus('');ui.count.textContent='—';$('#revRecommendations')?.remove()}else profile()}).observe(shell,{attributes:true,attributeFilter:['class']});
   document.addEventListener('visibilitychange',()=>{if(!document.hidden&&logged()&&Date.now()-lastProfile>90000)profile()});
   if(logged())profile();
 }
@@ -922,7 +926,7 @@ async function markAll(){
 }
 function setRecommendationFilter(value){
   if(!['all','high','soon','today'].includes(value))return;
-  if(recFilter!==value)cycleSelection=null;
+  if(recFilter!==value){cycleSelection=null;rotationHistory.clear();rotationCycle=0;}
   recFilter=value;
   renderRecommendationItems();
 }
@@ -933,7 +937,8 @@ function recommendationStatus(message){
   status.textContent=message;
 }
 function recommendations(d){
-  const incoming=Array.isArray(d?.recommendations)?d.recommendations:[];
+  if(!Array.isArray(d?.recommendations)){rotateRecommendations=false;recommendationStatus('Consulta incompleta. A última seleção foi mantida.');return;}
+  const incoming=[...new Map(d.recommendations.map(x=>[recKey(x),x])).values()];
   const before=new Map(recCache.map(x=>[recKey(x),recVersion(x)]));
   let added=0,changed=0;
   recPulse.clear();
@@ -980,22 +985,22 @@ function renderRecommendationItems(){
   const previous=new Set(cycleSelection||[]);
   let recs=eligible.slice(0,3);
   if(rotateRecommendations||recPulse.size){
-    const fresh=eligible.filter(x=>recPulse.has(recKey(x)));
-    const last=eligible.findIndex(x=>recKey(x)===cycleSelection?.at(-1));
-    const angled=[...eligible.slice(last+1),...eligible.slice(0,last+1)];
-    const others=angled.filter(x=>!recPulse.has(recKey(x)));
-    // Move previously displayed records behind the other eligible records on a completed consultation.
-    const alternatives=others.filter(x=>!previous.has(recKey(x)));
-    const current=others.filter(x=>previous.has(recKey(x)));
-    if(fresh.length||eligible.length>3)recs=[...fresh,...alternatives,...current].slice(0,3);
-    recommendationStatus(fresh.length?'':'Nenhuma nova oportunidade compatível nesta consulta.');
+    const fresh=eligible.filter(x=>recPulse.get(recKey(x))==='new');
+    const changed=eligible.filter(x=>recPulse.get(recKey(x))==='changed');
+    const others=eligible.filter(x=>!recPulse.has(recKey(x))).sort((a,b)=>
+      Number(previous.has(recKey(a)))-Number(previous.has(recKey(b)))||
+      (rotationHistory.get(recKey(a))||0)-(rotationHistory.get(recKey(b))||0));
+    if(fresh.length||changed.length||eligible.length>3)recs=[...fresh,...changed,...others].slice(0,3);
+    const rotated=recs.some(x=>!previous.has(recKey(x)));
+    recommendationStatus(fresh.length?'Novas oportunidades compatíveis encontradas.':changed.length?'Oportunidades atualizadas na fonte.':rotated&&previous.size?'Exibindo outras oportunidades compatíveis já monitoradas.':'Nenhuma outra oportunidade compatível disponível nesta consulta.');
   }else if(previous.size){
     const byKey=new Map(eligible.map(x=>[recKey(x),x]));
     const retained=cycleSelection.map(key=>byKey.get(key)).filter(Boolean);
     recs=[...retained,...eligible.filter(x=>!previous.has(recKey(x)))].slice(0,3);
-    recommendationStatus('');
   }
   cycleSelection=recs.map(recKey);
+  if(rotateRecommendations||recPulse.size||!previous.size){rotationCycle++;for(const key of cycleSelection)rotationHistory.set(key,rotationCycle);}
+  if(rotationHistory.size>600){const valid=new Set(recCache.map(recKey));for(const key of rotationHistory.keys())if(!valid.has(key))rotationHistory.delete(key);}
   const group=$('#rlbHomeRecommendationFilters');
   if(group){
     let today=group.querySelector('[data-home-rec-filter="today"]');
@@ -1367,6 +1372,7 @@ function updateLiveClock(){
   const remaining=$('#rlbHomeNextUpdate');
   if(!remaining)return;
   if(!logged()){remaining.textContent='Entre na conta para sincronizar';return}
+  if(refreshRequestPending){remaining.textContent='Consultando agora…';return}
   if(document.hidden){remaining.textContent='Pausado enquanto a aba está oculta';return}
   const seconds=Math.max(0,Math.ceil((nextDashboardRefresh-Date.now())/1000));
   const m=String(Math.floor(seconds/60)),sec=String(seconds%60).padStart(2,'0');
@@ -1380,16 +1386,17 @@ function requestDashboardRefresh(){
   const button=$('#rlbHomeRefresh');
   if(button){button.disabled=true;button.setAttribute('aria-busy','true')}
   liveLabel('Consultando recomendações e prazos…','loading');
-  document.dispatchEvent(new CustomEvent('radar:recommendations-cycle'));
   document.dispatchEvent(new CustomEvent('radar:overview-refresh-request'));
   document.dispatchEvent(new CustomEvent('radar:live-refresh-request'));
   updateLiveClock();
   // Um endpoint lento nunca deve bloquear indefinidamente a próxima consulta.
+  const attempt=lastDashboardRefreshAttempt,requestGeneration=generation;
   setTimeout(()=>{
-    if(!refreshRequestPending||!logged())return;
+    if(!refreshRequestPending||!logged()||generation!==requestGeneration||lastDashboardRefreshAttempt!==attempt)return;
     refreshRequestPending=false;
     if(button){button.disabled=false;button.removeAttribute('aria-busy')}
-  },15000);
+    liveLabel('A consulta demorou. Tente atualizar novamente.','error');
+  },27000);
 }
 function syncDashboardRefreshClock(){
   if(!logged()||document.hidden)return;
@@ -1589,7 +1596,7 @@ function clearPrivateData(){
   const announcement=$('#rlbHomeNewUpdates');
   if(announcement){announcement.hidden=true;announcement.textContent='';}
   liveLabel('Entre na conta para consultar o painel','ready');
-  if($('#rlbHomeRefresh'))$('#rlbHomeRefresh').disabled=true;
+  if($('#rlbHomeRefresh')){$('#rlbHomeRefresh').disabled=true;$('#rlbHomeRefresh').removeAttribute('aria-busy')}
   if($('#rlbHomeLastUpdate'))$('#rlbHomeLastUpdate').textContent='Aguardando sincronização';
   if($('#rlbHomeName'))$('#rlbHomeName').textContent='bem-vindo';
   $('#rlbHomeDeadlines')?.replaceChildren(cardEmpty('Entre na conta para consultar seus prazos.'));
@@ -1648,7 +1655,7 @@ function boot(){
     if(!hasAuthenticatedSnapshot){hasAuthenticatedSnapshot=true;nextDashboardRefresh=Date.now()+DASHBOARD_REFRESH_MS}
     refreshRequestPending=false;
     if($('#rlbHomeRefresh')){$('#rlbHomeRefresh').disabled=false;$('#rlbHomeRefresh').removeAttribute('aria-busy')}
-    if($('#rlbHomeLastUpdate'))$('#rlbHomeLastUpdate').textContent='Dados consultados às '+liveTime(new Date().toISOString());
+    if($('#rlbHomeLastUpdate'))$('#rlbHomeLastUpdate').textContent='Dados consultados às '+liveTime(overview.generated_at||new Date().toISOString());
     liveLabel('Recomendações e prazos verificados','ready');
     updateLiveClock();
     renderDeadlines(overview);
@@ -1659,6 +1666,7 @@ function boot(){
     refreshRequestPending=false;
     if($('#rlbHomeRefresh')){$('#rlbHomeRefresh').disabled=false;$('#rlbHomeRefresh').removeAttribute('aria-busy')}
     liveLabel('Falha ao consultar recomendações. Tente atualizar.','error');
+    updateLiveClock();
     if(overview)return;
     const msg='Não foi possível consultar a agenda. Use Atualizar para tentar novamente.';
     $('#rlbHomeDeadlines')?.replaceChildren(cardEmpty(msg));
