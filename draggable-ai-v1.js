@@ -235,8 +235,12 @@ function init(){
   closeBtn=assistant?.querySelector('.ai-close')||null;
   if(!fab||!assistant||!win||!head)return;
 
-  const saved=readJson(FAB_KEY);
-  requestAnimationFrame(()=>applyFabPosition(saved||defaultFabPosition(),false));
+  new ResizeObserver(()=>{
+    const r=fab.getBoundingClientRect();
+    if(!r.width||!r.height)return;
+    const current=fab.style.left ? {x:r.left,y:r.top} : null;
+    applyFabPosition(current||readJson(FAB_KEY)||defaultFabPosition(),false);
+  }).observe(fab);
   installFabDrag();
   installWindowDrag();
   closeBtn?.addEventListener('click',e=>{e.preventDefault();closeAssistant()});
@@ -244,7 +248,7 @@ function init(){
   document.addEventListener('keydown',e=>{if(e.key==='Escape'&&open)closeAssistant()});
   addEventListener('resize',()=>{
     const r=fab.getBoundingClientRect();
-    applyFabPosition({x:r.left,y:r.top},false);
+    if(r.width&&r.height)applyFabPosition({x:r.left,y:r.top},false);
     if(open){
       sizeWindow();
       const wr=win.getBoundingClientRect();
