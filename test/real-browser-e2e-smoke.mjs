@@ -234,7 +234,7 @@ try{
  const meter=highlighted.locator('progress.rlb-fit-meter');
  assert.equal(await meter.count(),1,'Aderência has an accessible progress meter');
  assert.equal(await meter.getAttribute('aria-label'),'Aderência estimada pelos critérios dos alertas');
- assert.ok(Number(await meter.inputValue())>=0,'Meter must represent a real score, not a placeholder');
+ assert.ok(Number(await meter.evaluate(el=>el.value))>=0,'Meter must represent a real score, not a placeholder');
  await until(page,()=>document.querySelector('#rlbHomeDeadlines .rlb-home-deadline[data-urgency="critical"]')?.textContent?.includes('Prazo novo QA temporário'),8000);
  assert.ok((await page.locator('#rlbHomeNewUpdates').textContent()).includes('prazo(s) incluído(s)'));
  note('Real deadline urgency, fit meter and new agenda highlight use data from the temporary test event OK');
