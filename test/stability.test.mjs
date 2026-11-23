@@ -53,11 +53,9 @@ test('search is active-only, local-first and refreshes official PNCP open propos
 
 test('search UI defaults to active opportunities and does not offer expired results mode',()=>{
   const html=read('app-v2.html');
-  const ui=read('search-results-v2.js');
-  assert.match(html,/value="0" selected>Todas as ativas/);
-  assert.match(html,/Somente oportunidades com prazo vigente/);
+  assert.match(html,/id="radarClosingDays"[^>]*><option value="0">Prazos vigentes/);
+  assert.match(html,/Próximos 7 dias/);
   assert.equal(html.includes('id="searchOpenOnly"'),false);
-  assert.match(ui,/não exibe processos cujo prazo já terminou/);
 });
 
 test('source transparency distinguishes PNCP from external platform links',()=>{
@@ -67,7 +65,7 @@ test('source transparency distinguishes PNCP from external platform links',()=>{
   const server=read('production-v17.mjs');
   assert.match(html,/source-transparency-v1\.css\?v=2114/);
   assert.match(html,/source-transparency-v1\.js\?v=2115/);
-  assert.match(html,/app-v2\.js\?v=20261122-live-source-2/);
+  assert.match(html,/app-v2\.js\?v=20261122-radar-dashboard-1/);
   assert.match(source,/Fonte oficial: PNCP/);
   assert.match(source,/Ir para plataforma ↗/);
   assert.match(source,/Ver no PNCP ↗/);

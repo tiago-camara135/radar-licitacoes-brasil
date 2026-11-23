@@ -1,5 +1,5 @@
 import { Pool } from 'pg';
-import { fetchPncpOpenSearch, normalizeSearchFilters, applySearchFilters, resultKey, pncpUrl, originUrl, municipalityOf, closingOf, pncpClientHealth } from './pncp-client-v3.mjs';
+import { fetchPncpOpenSearch, normalizeSearchFilters, applySearchFilters, resultKey, pncpUrl, originUrl, municipalityOf, closingOf, pncpClientHealth, radarSearchTerms } from './pncp-client-v3.mjs';
 
 const PORT=Number(process.env.PORT||10000);
 const DATABASE_URL=process.env.DATABASE_URL||'';
@@ -41,6 +41,7 @@ function send(res,status,data){
 function filtersFromUrl(url){return normalizeSearchFilters({
   keyword:url.searchParams.get('keyword')||'',uf:url.searchParams.get('uf')||'',municipality:url.searchParams.get('municipality')||'',municipalityIbge:url.searchParams.get('municipalityIbge')||'',
   modality:url.searchParams.get('modalidade')||'',org:url.searchParams.get('org')||'',cnpj:url.searchParams.get('cnpj')||'',minValue:url.searchParams.get('minValue'),maxValue:url.searchParams.get('maxValue'),
+  workspace:url.searchParams.get('workspace')==='1',states:url.searchParams.get('states'),closingDays:url.searchParams.get('closingDays'),
   openOnly:true,days:url.searchParams.has('days')?url.searchParams.get('days'):'0',order:url.searchParams.get('order')||'newest'
 })}
 function sourcePlatform(raw={}){
@@ -61,6 +62,17 @@ async function localSearch(filters,limit=5000){
 
   if(f.days>0){where.push(`published_at >= NOW() - ($${n++}::int * INTERVAL '1 day')`);params.push(f.days)}
   if(f.uf)add('uf=?',f.uf);
+  if(f.states.length){where.push(`uf = ANY($${n++}::text[])`);params.push(f.states)}
+  if(f.closingDays){where.push(`closes_at <= NOW() + ($${n++}::int * INTERVAL '1 day')`);params.push(f.closingDays)}
+  if(f.workspace){
+    const searchable = `translate(lower(concat_ws(' ', object_text, org_name, unit_name, municipality,
+      raw->>'informacaoComplementar', raw->>'numeroCompra', raw->>'numeroProcesso', pncp_id,
+      (raw->>'numeroCompra') || '/' || (raw->>'anoCompra'))),
+      'áàâãäéèêëíìîïóòôõöúùûüç', 'aaaaaeeeeiiiiooooouuuuc')`;
+    for(const term of radarSearchTerms(f.keyword)) add(`strpos(${searchable}, ?) > 0`,term);
+    if(f.municipality)add("strpos(translate(lower(COALESCE(municipality,'')), 'áàâãäéèêëíìîïóòôõöúùûüç', 'aaaaaeeeeiiiiooooouuuuc'), ?) > 0",f.municipality.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase());
+  }
+
   if(f.modalities.length){where.push(`modality_code = ANY($${n++}::int[])`);params.push(f.modalities)}
   if(f.cnpj.length===14)add('org_cnpj=?',f.cnpj);
   if(f.municipalityIbge.length===7)add("COALESCE(raw->'unidadeOrgao'->>'codigoIbge','')=?",f.municipalityIbge);
