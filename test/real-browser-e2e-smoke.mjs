@@ -163,7 +163,7 @@ try{
  note('Create alert via actual UI OK');
 
  const closes=new Date(Date.now()+5*86400000).toISOString();
- const raw={numeroControlePNCP:pncpId,anoCompra:year,sequencialCompra:sequence,modalidadeId:6,modalidadeNome:'Pregão - Eletrônico',objetoCompra:object,orgaoEntidade:{cnpj,razaoSocial:'Prefeitura QA'},unidadeOrgao:{municipioNome:'Natal',ufSigla:'RN'},dataPublicacaoPncp:new Date().toISOString(),dataEncerramentoProposta:closes,valorTotalEstimado:140000};
+ const raw={numeroControlePNCP:pncpId,anoCompra:year,sequencialCompra:sequence,modalidadeId:6,modalidadeNome:'Pregão - Eletrônico',objetoCompra:object,orgaoEntidade:{cnpj,razaoSocial:'Prefeitura QA'},unidadeOrgao:{municipioNome:'Natal',ufSigla:'RN'},dataPublicacaoPncp:new Date().toISOString(),dataEncerramentoProposta:closes.slice(0,-1),valorTotalEstimado:140000};
  await pool.query("INSERT INTO monitored_procurements(pncp_id,org_cnpj,year,sequence,modality_code,modality_name,object_text,org_name,municipality,uf,estimated_value,published_at,closes_at,pncp_url,raw,detected_at,last_seen_at) VALUES($1,$2,$3,$4,6,'Pregão - Eletrônico',$5,'Prefeitura QA','Natal','RN',140000,NOW(),$6,$7,$8::jsonb,NOW(),NOW())",[pncpId,cnpj,year,sequence,object,closes,'https://pncp.gov.br/app/editais/'+cnpj+'/'+year+'/'+sequence,JSON.stringify(raw)]);
  const notificationPayload={object,org:'Prefeitura QA',municipality:'Natal',uf:'RN',pncp_url:'https://pncp.gov.br/app/editais/'+cnpj+'/'+year+'/'+sequence};
  await pool.query("INSERT INTO notification_deliveries(user_id,alert_id,pncp_id,channel,status,payload,created_at,sent_at) VALUES($1,$2,$3,'onsite','sent',$4::jsonb,NOW(),NOW())",[userId,alertId,pncpId,JSON.stringify(notificationPayload)]);
@@ -213,6 +213,9 @@ try{
    if(!r.ok)throw Error('QA snapshot not available: '+r.status);
    return r.json();
  });
+ const legacyRecommendation=originalOverview.recommendations.find(item=>item.pncp_id===pncpId);
+ assert.equal(new Date(legacyRecommendation.closes_at).getTime(), new Date(closes).getTime()+3*3600000,
+   'Legacy PNCP deadline without an offset must be read in Brasília time');
  await page.evaluate(data=>{
    const first=data.recommendations?.[0];
    if(!first)throw Error('Need real seeded recommendation for pulse test');

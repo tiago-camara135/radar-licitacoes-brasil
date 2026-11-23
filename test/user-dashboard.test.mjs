@@ -56,7 +56,7 @@ test('geographic scope remains available in preserved backend',()=>{
 
 test('recommendation and tracking backend remains deterministic and user-scoped',()=>{
   const backend=read('user-dashboard-v1.mjs');
-  assert.match(backend,/m\.closes_at>=NOW\(\)/);
+  assert.match(backend,/WHERE \$\{deadlineSql\}>=NOW\(\)/);
   assert.match(backend,/m\.object_text ILIKE '%'\|\|a\.keyword\|\|'%'/);
   assert.match(backend,/UPPER\(m\.uf\)=UPPER\(a\.uf\)/);
   assert.match(backend,/\$2::text\[\] IS NULL OR UPPER\(m\.uf\)=ANY\(\$2::text\[\]\)/);

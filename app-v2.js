@@ -1,3 +1,7 @@
+// Proposal dates without an explicit offset come from the PNCP in Brasília time.
+const radarPncpDate=value=>typeof value==='string'&&/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?$/.test(value)
+  ? value+'-03:00'
+  : value;
 (()=>{
 'use strict';
 const $=(s,r=document)=>r.querySelector(s);const $$=(s,r=document)=>Array.from(r.querySelectorAll(s));
@@ -222,11 +226,11 @@ function radarItem(item) {
   const path = official && new URL(official).hostname === 'pncp.gov.br' ? new URL(official).pathname : '';
   const ids = path.match(/^\/app\/editais\/(\d{14})\/(\d{4})\/([1-9]\d{0,8})\/?$/);
   const key = ids ? ids.slice(1).join('-') : String(item.numeroControlePNCP || '');
-  const closing = item.dataEncerramentoProposta || item.dataFimRecebimentoProposta || '';
+  const closing = radarPncpDate(item._closesAt || item.dataEncerramentoProposta || item.dataFimRecebimentoProposta || '');
   return {
     key, title: item.objetoCompra || 'Objeto não informado', org: org(item), modality: mod(item),
     place: [mun(item), uf(item)].filter(Boolean).join('/'), number: item.numeroCompra && item.anoCompra ? [item.numeroCompra, item.anoCompra].join('/') : item.numeroCompra || item.numeroControlePNCP || '',
-    published: item.dataPublicacaoPncp || '', opening: item.dataAberturaProposta || item.dataInicioRecebimentoProposta || '', closing,
+    published: item.dataPublicacaoPncp || '', opening: radarPncpDate(item.dataAberturaProposta || item.dataInicioRecebimentoProposta || ''), closing,
     status: item.situacaoCompraNome || (closing ? 'Prazo informado pelo PNCP' : 'Situação não informada'),
     value: item.valorTotalEstimado == null ? '' : brl(item.valorTotalEstimado),
     official, origin: dashboardUrl(item._originUrl || item.linkSistemaOrigem || item.linkProcessoEletronico)
@@ -1302,7 +1306,7 @@ const agendaKey=x=>String(x?.pncp_key||[x?.type,x?.date,x?.title].join('|'));
 const agendaVersion=x=>JSON.stringify([x?.date,x?.title,x?.subtitle,x?.status]);
 const tenderKey=x=>String(x?.numeroControlePNCP||x?._pncpId||
   [x?.orgaoEntidade?.cnpj,x?.anoCompra,x?.sequencialCompra].filter(Boolean).join('-'));
-const tenderVersion=x=>JSON.stringify([x?.objetoCompra,x?.dataEncerramentoProposta,x?.dataFimRecebimentoProposta,x?.modalidadeNome]);
+const tenderVersion=x=>JSON.stringify([x?.objetoCompra,x?._closesAt,x?.dataEncerramentoProposta,x?.dataFimRecebimentoProposta,x?.modalidadeNome]);
 function liveLabel(text,state){
   const label=$('#rlbHomeLiveLabel'),bar=$('#rlbHomeLiveBar');
   if(label)label.textContent=text;
@@ -1490,7 +1494,7 @@ function renderRecent(rows){
   const now=Date.now();
   const items=liveCache.filter(item=>{
     if(feedFilter!=='open')return true;
-    const closing=dateOf(item.dataEncerramentoProposta||item.dataFimRecebimentoProposta);
+    const closing=dateOf(radarPncpDate(item._closesAt||item.dataEncerramentoProposta||item.dataFimRecebimentoProposta));
     return closing&&closing.getTime()>=now;
   }).slice(0,4);
   const signature=JSON.stringify([feedFilter,items.map(x=>[tenderKey(x),tenderVersion(x)])]);
@@ -1515,7 +1519,7 @@ function renderRecent(rows){
       obj.append(label);setTimeout(()=>label.remove(),10000)}
     const location=element('div','',clean([tender.unidadeOrgao?.municipioNome||tender.unidadeOrgao?.nomeMunicipio,tender.unidadeOrgao?.ufSigla].filter(Boolean).join('/')||'Não informado',100));
     const modality=element('div','rlb-home-table-modality',clean(tender.modalidadeNome||'Não informada',100));
-    const closing=dateOf(tender.dataEncerramentoProposta||tender.dataFimRecebimentoProposta);
+    const closing=dateOf(radarPncpDate(tender._closesAt||tender.dataEncerramentoProposta||tender.dataFimRecebimentoProposta));
     const deadline=element('div','rlb-home-table-deadline',closing?dateTimeFmt.format(closing):'Não informado');
     const link=element('div','rlb-home-table-link');
     let href=safeUrl(tender._pncpUrl);
@@ -1667,7 +1671,7 @@ const organization=x=>getText(x?.orgaoEntidade?.razaoSocial||'Órgão público')
 const objectText=x=>getText(x?.objetoCompra||'Nova oportunidade disponível no Radar de Licitações.');
 function itemId(x){return getText(x?.numeroControlePNCP||x?._pncpId||[x?.orgaoEntidade?.cnpj,x?.anoCompra,x?.sequencialCompra,x?._modalidadeConsultada||x?.modalidadeId].filter(Boolean).join('-'))}
 function pncpUrl(x){if(x?._pncpUrl)return x._pncpUrl;const c=String(x?.orgaoEntidade?.cnpj||'').replace(/\D/g,''),y=Number(x?.anoCompra),s=Number(x?.sequencialCompra);return c.length===14&&Number.isInteger(y)&&Number.isInteger(s)?`https://pncp.gov.br/app/editais/${c}/${y}/${s}`:''}
-function isAvailable(x){const raw=x?.dataEncerramentoProposta||x?.dataFimRecebimentoProposta||x?._closesAt;if(!raw)return true;const d=new Date(raw);return Number.isNaN(d.getTime())||d.getTime()>=Date.now()}
+function isAvailable(x){const raw=radarPncpDate(x?._closesAt||x?.dataEncerramentoProposta||x?.dataFimRecebimentoProposta);if(!raw)return true;const d=new Date(raw);return Number.isNaN(d.getTime())||d.getTime()>=Date.now()}
 function storageKey(userId){return `rlb-national-notifications-seen-v1:${userId}`}
 function readSeen(userId){try{const a=JSON.parse(localStorage.getItem(storageKey(userId))||'[]');return new Set(Array.isArray(a)?a:[])}catch{return new Set()}}
 function saveSeen(userId,seen){try{localStorage.setItem(storageKey(userId),JSON.stringify([...seen].slice(-MAX_SEEN)))}catch{}}
