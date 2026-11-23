@@ -3970,3 +3970,80 @@ html[data-theme="dark"] #view-home {
     box-sizing: border-box;
   }
 }
+
+@media (min-width: 1160px) {
+  #appShell.radar-layout:not(.hidden):has(#view-home.active) {
+    grid-template-columns: 64px minmax(0,1fr);
+    grid-template-rows: 64px minmax(0,1fr);
+  }
+  #appShell.radar-layout:has(#view-home.active) .sidebar {
+    grid-area: 1 / 1 / 2 / -1;
+    height: 64px !important;
+    overflow: visible !important;
+    z-index: 12;
+    background: #f1f6fd !important;
+    border-bottom: 1px solid #cad9ec !important;
+  }
+  html[data-theme="dark"] #appShell.radar-layout:has(#view-home.active) .sidebar {
+    background: #101e34 !important;
+    border-color: #364b68 !important;
+  }
+  #appShell.radar-layout:has(#view-home.active) .sidebar-inner {
+    width: min(100%,1480px) !important;
+    height: 64px !important;
+    min-height: 0 !important;
+    margin-inline: auto !important;
+    padding: 0 18px !important;
+    gap: 16px !important;
+    flex-flow: row nowrap !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+  }
+  #appShell.radar-layout:has(#view-home.active) .sidebar-brand strong {
+    color: var(--radar-text) !important;
+    font-size: 17px !important;
+    white-space: nowrap !important;
+  }
+  #appShell.radar-layout:has(#view-home.active) .sidebar-brand::after {
+    content: 'Visão Geral';
+    border-left: 1px solid var(--radar-line);
+    margin-left: 8px;
+    padding-left: 15px;
+    color: var(--radar-text);
+    white-space: nowrap;
+  }
+  #appShell.radar-layout:has(#view-home.active) #radarAccountControls {
+    display: flex !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    align-items: center;
+  }
+  #appShell.radar-layout:has(#view-home.active) :is(#radarTheme,#logoutBtn,#radarAccount summary) {
+    color: var(--radar-text) !important;
+    background: var(--radar-paper) !important;
+    border-color: var(--radar-line) !important;
+    width: auto;
+  }
+  #appShell.radar-layout:has(#view-home.active) #radarTheme { width: 38px; }
+  #appShell.radar-layout:has(#view-home.active) #mainNav {
+    flex-wrap: nowrap !important;
+    overflow-x: hidden !important;
+    scrollbar-width: thin;
+  }
+  #appShell.radar-layout:has(#view-home.active) #mainNav button:not(.active) {
+    color: var(--radar-text) !important;
+  }
+  #appShell.radar-layout:has(#view-home.active) #mainNav button:not(.active):hover {
+    background: var(--radar-soft) !important;
+  }
+  #appShell.radar-layout:has(#view-home.active) #radar-home {
+    grid-area: 2 / 2;
+    width: min(1360px,calc(100% - 22px)) !important;
+    padding-left: 0 !important;
+  }
+  #appShell.radar-layout .main:has(#view-home.active) .topbar {
+    min-height: 32px !important;
+    padding: 0 !important;
+  }
+}
