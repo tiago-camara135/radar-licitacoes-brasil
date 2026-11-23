@@ -143,8 +143,8 @@ try{
  note('Personal documents upload and list OK');
 
  await page.locator('.ai-fab').click();
- await until(page,()=>location.hash==='#ai-assistant');
- assert.ok(await page.locator('#aiPrompt').isVisible());
+ await page.locator('#ai-assistant.ai-widget-open').waitFor({state:'visible',timeout});
+ assert.ok(await page.locator('#aiPrompt').isVisible(),'AI floating composer must open');
  note('AI-RLB launcher and composer OK (no paid API request)');
 
  await page.setViewportSize({width:390,height:844});
