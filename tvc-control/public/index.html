@@ -7,7 +7,7 @@
 <meta name="description" content="TVC Control — controle financeiro pessoal com clareza e inteligência.">
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="icon" href="/icon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/styles.css?v=15">
+<link rel="stylesheet" href="/styles.css?v=16">
 <title>TVC Control | Gestão financeira</title>
 </head>
 <body>
@@ -84,10 +84,11 @@
         <div><h2 id="welcome-title">Olá! 👋</h2><p>Seu panorama financeiro em um só lugar. Acompanhe saldos, compromissos e próximos vencimentos.</p></div>
         <div class="sync-indicator"><i></i> Dados sincronizados</div>
       </div>
+      <div class="quick-actions" aria-label="Ações rápidas"><span class="quick-label">ACESSOS RÁPIDOS</span><button type="button" class="quick-action" data-create="transaction"><span class="quick-action-icon income">＋</span><span><b>Novo lançamento</b><small>Receita ou despesa</small></span></button><button type="button" class="quick-action" data-create="reminder"><span class="quick-action-icon reminder">◷</span><span><b>Agendar pagamento</b><small>Calendário financeiro</small></span></button><button type="button" class="quick-action" data-go="accounts"><span class="quick-action-icon accounts">▣</span><span><b>Minhas contas</b><small>Saldos e projeções</small></span></button><button type="button" class="quick-action" data-go="reports"><span class="quick-action-icon reports">▥</span><span><b>Relatórios</b><small>Analise os resultados</small></span></button></div>
       <div class="stats-grid">
         <article class="stat-card stat-main"><div class="stat-top"><span>Saldo atual</span><span class="stat-icon">▣</span></div><div class="stat-value" id="stat-balance">R$ 0,00</div><div class="stat-foot" id="stat-balance-note"><span class="trend neutral">●</span> Saldo real das suas contas</div><div class="stat-glow"></div></article>
-        <article class="stat-card"><div class="stat-top"><span>Receitas do mês</span><span class="stat-icon green">↓</span></div><div class="stat-value positive" id="stat-income">R$ 0,00</div><div class="stat-foot">Recebidas + a receber no período</div></article>
-        <article class="stat-card"><div class="stat-top"><span>Despesas do mês</span><span class="stat-icon red">↗</span></div><div class="stat-value negative" id="stat-expense">R$ 0,00</div><div class="stat-foot">Pagas, pendentes e lembretes do mês</div></article>
+        <article class="stat-card"><div class="stat-top"><span>Receitas do mês</span><span class="stat-icon green">↓</span></div><div class="stat-value positive" id="stat-income">R$ 0,00</div><div class="stat-foot" id="stat-income-trend">Recebidas + a receber no período</div></article>
+        <article class="stat-card"><div class="stat-top"><span>Despesas do mês</span><span class="stat-icon red">↗</span></div><div class="stat-value negative" id="stat-expense">R$ 0,00</div><div class="stat-foot" id="stat-expense-trend">Pagas, pendentes e lembretes do mês</div></article>
         <article class="stat-card stat-projected"><div class="stat-top"><span>Saldo projetado</span><span class="stat-icon amber">◎</span></div><div class="stat-value" id="stat-pending">R$ 0,00</div><div class="stat-foot" id="stat-pending-note">Após compromissos e despesas previstas</div></article>
       </div>
 
@@ -105,7 +106,7 @@
             <section class="commitment-section"><div class="subsection-heading"><b>Despesas fixas previstas</b><button class="link-button" data-go="recurring">Ver recorrências →</button></div><div id="fixed-expenses-preview" class="fixed-expenses-list"><div class="empty-state">Suas despesas fixas aparecerão aqui.</div></div></section>
           </div>
         </article>
-        <article class="panel chart-panel"><div class="panel-heading"><div><h3>Fluxo financeiro</h3><p>Movimentações realizadas e compromissos previstos nos últimos seis meses</p></div><span class="panel-tag">ATUALIZA AO SALVAR</span></div><div id="cashflow-chart" class="chart-area"><div class="empty-state">Seu fluxo financeiro será atualizado conforme você registrar receitas, despesas e compromissos.</div></div><div class="chart-legend"><span><i class="legend-dot income-dot"></i>Receitas realizadas</span><span><i class="legend-dot income-forecast-dot"></i>Receitas previstas</span><span><i class="legend-dot expense-dot"></i>Despesas realizadas</span><span><i class="legend-dot expense-forecast-dot"></i>Despesas previstas</span></div></article>
+        <article class="panel chart-panel"><div class="panel-heading"><div><h3>Fluxo financeiro</h3><p>Movimentações realizadas e compromissos previstos nos últimos seis meses</p></div><div class="chart-controls"><span class="panel-tag">ATUALIZA AO SALVAR</span><div class="chart-mode" role="group" aria-label="Exibir valores do fluxo de caixa"><button type="button" class="chart-mode-button active" data-chart-mode="all" aria-pressed="true">Todos</button><button type="button" class="chart-mode-button" data-chart-mode="actual" aria-pressed="false">Realizados</button><button type="button" class="chart-mode-button" data-chart-mode="forecast" aria-pressed="false">Previstos</button></div></div></div><div id="cashflow-chart" class="chart-area"><div class="empty-state">Seu fluxo financeiro será atualizado conforme você registrar receitas, despesas e compromissos.</div></div><p class="chart-interaction-note"><span aria-hidden="true">↗</span> Selecione um mês no gráfico para conferir os lançamentos.</p><div class="chart-legend"><span><i class="legend-dot income-dot"></i>Receitas realizadas</span><span><i class="legend-dot income-forecast-dot"></i>Receitas previstas</span><span><i class="legend-dot expense-dot"></i>Despesas realizadas</span><span><i class="legend-dot expense-forecast-dot"></i>Despesas previstas</span></div></article>
       </div>
 
       <div class="dashboard-bottom-grid">
@@ -204,5 +205,5 @@
 
 <div id="modal" class="modal" hidden><div class="modal-backdrop" data-close-modal></div><section class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modal-title"><div class="modal-head"><div><div class="eyebrow">TVC CONTROL</div><h2 id="modal-title">Novo lançamento</h2></div><button class="icon-button" data-close-modal aria-label="Fechar">×</button></div><form id="modal-form" class="form-stack"><div id="modal-fields" class="modal-fields"></div><div class="modal-actions"><button class="btn btn-secondary" type="button" data-close-modal>Cancelar</button><button class="btn btn-primary" id="modal-submit" type="submit">Salvar</button></div></form></section></div>
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
-<script src="/app.js?v=15" defer></script>
+<script src="/app.js?v=16" defer></script>
 </body></html>

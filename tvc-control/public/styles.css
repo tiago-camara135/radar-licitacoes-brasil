@@ -452,3 +452,31 @@ button{color:inherit}
 .sync-indicator.sync-failed{background:#fff5e8;color:#a5661d;border-color:#f0d9ad}
 .sync-indicator.sync-failed i{background:#e5a53f;box-shadow:0 0 0 3px #e5a53f25}
 @media(max-width:680px){.data-error-banner{flex-wrap:wrap;font-size:11px}.data-error-banner button{margin-left:35px}}
+
+/* TVC Control 2.0 — interação e hierarquia premium */
+.topbar{position:sticky;top:0;z-index:8;padding:8px 0 12px;margin-top:-8px;background:linear-gradient(180deg,rgba(245,249,255,.98),rgba(245,249,255,.88));backdrop-filter:blur(18px)}
+.quick-actions{display:flex;align-items:stretch;gap:10px;margin:0 0 16px;min-width:0}
+.quick-label{align-self:center;max-width:58px;flex:0 0 58px;color:#8391a6;font-size:9px;font-weight:800;letter-spacing:1.05px;line-height:1.5}
+.quick-action{flex:1;min-width:0;display:flex;align-items:center;gap:10px;padding:11px 12px;border:1px solid #e2eaf5;background:#fff;border-radius:13px;box-shadow:0 6px 18px rgba(25,66,130,.045);text-align:left;cursor:pointer;transition:transform .2s,border-color .2s,box-shadow .2s}
+.quick-action:hover{border-color:#c6dcfc;transform:translateY(-2px);box-shadow:0 10px 24px rgba(25,75,150,.10)}
+.quick-action-icon{width:35px;height:35px;border-radius:10px;display:grid;place-items:center;flex:none;font-size:18px;font-weight:750;background:#e9f2ff;color:#2168d4}
+.quick-action-icon.income{background:#e7f7ef;color:#169260}
+.quick-action-icon.reminder{background:#fff3e5;color:#b87826}
+.quick-action-icon.accounts{background:#eaf2ff;color:#1769ed}
+.quick-action-icon.reports{background:#f1ebff;color:#7657c7}
+.quick-action b{display:block;color:#26344d;font-size:10px;line-height:1.45}
+.quick-action small{display:block;margin-top:3px;color:#7d8aa0;font-size:8px}
+.panel-heading .chart-controls{display:flex;align-items:center;gap:9px;flex-wrap:wrap;justify-content:flex-end}
+.chart-mode{display:flex;align-items:center;gap:3px;padding:3px;border:1px solid #e3eaf5;border-radius:10px;background:#f5f8fc}
+.chart-mode-button{padding:6px 8px;border:0;border-radius:7px;background:transparent;color:#71819a;font-size:9px;font-weight:750;cursor:pointer}
+.chart-mode-button.active{background:#fff;color:#1769ed;box-shadow:0 2px 8px rgba(29,73,131,.09)}
+.chart-month{appearance:none;border:0;background:transparent;padding:0 0 2px;cursor:pointer;color:inherit;transition:background .18s,transform .18s;border-radius:8px}
+.chart-month:hover{background:rgba(23,105,237,.045);transform:translateY(-3px)}
+.chart-month:focus-visible,.chart-mode-button:focus-visible,.quick-action:focus-visible,.nav-link:focus-visible{outline:2px solid #1769ed;outline-offset:3px}
+.chart-month:hover .chart-month-label{color:#1769ed;font-weight:800}
+.chart-interaction-note{color:#8392a9;font-size:9px;margin:24px 0 -16px}
+.chart-interaction-note span{font-weight:900;color:#1769ed}
+.stat-card:hover{border-color:#d5e3f5}
+@media(max-width:1250px){.quick-actions{flex-wrap:wrap}.quick-label{display:none}.quick-action{flex:1 1 calc(50% - 8px)}}
+@media(max-width:680px){.topbar{position:relative;z-index:2;background:transparent;backdrop-filter:none;padding:0;margin:0 0 12px}.quick-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-bottom:12px}.quick-action{gap:7px;padding:9px;border-radius:11px}.quick-action-icon{height:30px;width:30px;border-radius:9px;font-size:15px}.quick-action b{font-size:9px}.quick-action small{font-size:7px}.chart-controls{width:100%;justify-content:flex-start!important}.chart-mode-button{font-size:8px}.chart-interaction-note{font-size:8px}}
+@media(prefers-reduced-motion:reduce){.quick-action,.chart-month,.chart-bar-stack,.cashflow-segment,.btn,.nav-link{transition:none!important}.quick-action:hover,.chart-month:hover,.btn-primary:hover{transform:none}}

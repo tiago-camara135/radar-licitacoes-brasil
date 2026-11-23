@@ -1,5 +1,5 @@
-const CACHE="tvc-control-shell-v16";
-const SHELL=["/","/index.html","/styles.css?v=15","/app.js?v=15","/manifest.webmanifest","/icon.svg"];
+const CACHE="tvc-control-shell-v17";
+const SHELL=["/","/index.html","/styles.css?v=16","/app.js?v=16","/manifest.webmanifest","/icon.svg"];
 self.addEventListener("install",event=>event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(SHELL))));
 self.addEventListener("activate",event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k))))));
 self.addEventListener("fetch",event=>{
