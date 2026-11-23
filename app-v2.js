@@ -15,7 +15,7 @@ function toast(msg,error=false){const e=$('#toast');if(!e)return;e.textContent=m
 async function api(path,opt={}){const {timeoutMs=15000,signal,...request}=opt,controller=new AbortController(),timer=setTimeout(()=>controller.abort(),timeoutMs),relay=()=>controller.abort();if(signal){if(signal.aborted)controller.abort();else signal.addEventListener('abort',relay,{once:true})}try{const r=await fetch(path,{credentials:'same-origin',cache:'no-store',...request,signal:controller.signal,headers:{accept:'application/json',...(request.body?{'content-type':'application/json'}:{}),...(request.headers||{})}});const d=await r.json().catch(()=>({}));if(!r.ok)throw Object.assign(new Error(d.error||`Erro ${r.status}`),{status:r.status,data:d});return d}catch(e){if(controller.signal.aborted&&!signal?.aborted)throw Object.assign(new Error('A solicitação demorou mais que o esperado. Tente novamente.'),{code:'request_timeout'});throw e}finally{clearTimeout(timer);signal?.removeEventListener('abort',relay)}}
 function fillSelects(){for(const id of ['searchUf','alertUf']){const e=$('#'+id);if(e&&!e.dataset.ready){UFS.forEach(v=>e.insertAdjacentHTML('beforeend',`<option value="${v}">${v}</option>`));e.dataset.ready='1'}}for(const id of ['searchModality','alertModality']){const e=$('#'+id);if(e&&!e.dataset.ready){MOD.forEach(([v,n])=>e.insertAdjacentHTML('beforeend',`<option value="${v}">${esc(n)}</option>`));e.dataset.ready='1'}}}
 function initTheme() {
-  const button = $('#radarTheme');
+  const buttons = $$('#radarTheme, #radarPublicTheme');
   const systemTheme = matchMedia('(prefers-color-scheme: dark)');
   let preference;
   try { preference = localStorage.getItem('rlb-theme-v2'); } catch {}
@@ -23,16 +23,19 @@ function initTheme() {
     const dark = preference === 'dark' || (preference !== 'light' && systemTheme.matches);
     document.documentElement.dataset.theme = dark ? 'dark' : 'light';
     const label = dark ? 'Ativar tema claro' : 'Ativar tema escuro';
-    button.setAttribute('aria-label', label);
-    button.title = label;
-    $('[data-theme-sun]', button).toggleAttribute('hidden', !dark);
-    $('[data-theme-moon]', button).toggleAttribute('hidden', dark);
+    buttons.forEach(button => {
+      button.setAttribute('aria-label', label);
+      button.title = label;
+      $('[data-theme-sun]', button).toggleAttribute('hidden', !dark);
+      $('[data-theme-moon]', button).toggleAttribute('hidden', dark);
+    });
   };
-  button.addEventListener('click', () => {
+  const toggleTheme = () => {
     preference = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
     try { localStorage.setItem('rlb-theme-v2', preference); } catch {}
     render();
-  });
+  };
+  buttons.forEach(button => button.addEventListener('click', toggleTheme));
   systemTheme.addEventListener('change', render);
   render();
 }
