@@ -183,6 +183,32 @@ app.get("/api/accounts",requireAuth,asyncRoute(async(req,res)=>{
   });
   res.json({accounts});
 }));
+
+app.post("/api/accounts",requireAuth,asyncRoute(async(req,res)=>{
+  const b=req.body||{},name=typeof b.name==="string"?b.name.trim():"",accountType=typeof b.accountType==="string"?b.accountType.trim():"",institution=typeof b.institution==="string"?b.institution.trim().slice(0,80):"",openingBalance=Number(b.openingBalance??0);
+  if(name.length<2||name.length>60||accountType.length<2||accountType.length>40||!Number.isFinite(openingBalance)||openingBalance<0||openingBalance>999999999)return res.status(400).json({error:"Informe um nome, tipo e saldo inicial válidos para a conta."});
+  const r=await pool.query("INSERT INTO public.accounts(user_id,name,account_type,institution,opening_balance,color) VALUES($1,$2,$3,$4,$5,$6) RETURNING id,name,account_type,institution,opening_balance,color,is_active",[req.user.id,name,accountType,institution||null,openingBalance,"#1769ed"]);
+  res.status(201).json({account:r.rows[0]});
+}));
+app.patch("/api/accounts/:id",requireAuth,asyncRoute(async(req,res)=>{
+  const b=req.body||{},name=typeof b.name==="string"?b.name.trim():"",accountType=typeof b.accountType==="string"?b.accountType.trim():"",institution=typeof b.institution==="string"?b.institution.trim().slice(0,80):"",openingBalance=Number(b.openingBalance);
+  if(name.length<2||name.length>60||accountType.length<2||accountType.length>40||!Number.isFinite(openingBalance)||openingBalance<0||openingBalance>999999999)return res.status(400).json({error:"Informe um nome, tipo e saldo inicial válidos para a conta."});
+  const r=await pool.query("UPDATE public.accounts SET name=$3,account_type=$4,institution=$5,opening_balance=$6 WHERE id=$1 AND user_id=$2 AND is_active=true RETURNING id,name,account_type,institution,opening_balance,color,is_active",[req.params.id,req.user.id,name,accountType,institution||null,openingBalance]);
+  if(!r.rowCount)return res.status(404).json({error:"Conta não encontrada ou inativa."});
+  res.json({account:r.rows[0]});
+}));
+app.delete("/api/accounts/:id",requireAuth,asyncRoute(async(req,res)=>{
+  const client=await pool.connect();
+  try{
+    await client.query("BEGIN");
+    const found=await client.query("SELECT id FROM public.accounts WHERE id=$1 AND user_id=$2 AND is_active=true FOR UPDATE",[req.params.id,req.user.id]);
+    if(!found.rowCount){await client.query("ROLLBACK");return res.status(404).json({error:"Conta não encontrada ou já desativada."});}
+    const linked=await client.query("SELECT (SELECT COUNT(*) FROM public.transactions WHERE user_id=$2 AND (account_id=$1 OR transfer_to_account_id=$1))+(SELECT COUNT(*) FROM public.recurring_rules WHERE user_id=$2 AND account_id=$1 AND is_active=true)+(SELECT COUNT(*) FROM public.calendar_reminders WHERE user_id=$2 AND account_id=$1 AND status='pending') AS total",[req.params.id,req.user.id]);
+    if(Number(linked.rows[0].total)>0){await client.query("ROLLBACK");return res.status(409).json({error:"Esta conta possui lançamentos, recorrências ou lembretes vinculados. Para preservar seu histórico financeiro, ela não pode ser removida."});}
+    await client.query("UPDATE public.accounts SET is_active=false WHERE id=$1 AND user_id=$2",[req.params.id,req.user.id]);
+    await client.query("COMMIT");res.json({ok:true,archived:true});
+  }catch(err){await client.query("ROLLBACK");throw err;}finally{client.release();}
+}));
 app.get("/api/transactions",requireAuth,asyncRoute(async(req,res)=>{
   const values=[req.user.id];let filter="";
   if(req.query.month&&/^\d{4}-\d{2}$/.test(req.query.month)){const bounds=monthBounds(req.query.month);values.push(bounds[0],bounds[1]);filter=" AND t.occurred_on >= $2::date AND t.occurred_on < $3::date";}
@@ -196,8 +222,9 @@ app.get("/api/transactions",requireAuth,asyncRoute(async(req,res)=>{
 app.post("/api/transactions",requireAuth,asyncRoute(async(req,res)=>{
   const b=req.body||{},kind=b.kind,description=typeof b.description==="string"?b.description.trim():"",amount=Number(b.amount),occurred=b.occurredOn,status=b.status||"paid";
   if(!["income","expense","transfer"].includes(kind)||description.length<2||description.length>120||!Number.isFinite(amount)||amount<=0||amount>999999999||!validDate(occurred)||!["paid","pending","overdue","cancelled"].includes(status))return res.status(400).json({error:"Confira descrição, tipo, valor, data e situação do lançamento."});
-  if(status==="paid"&&kind==="income"&&!b.accountId)return res.status(400).json({error:"Selecione a conta em que o recebimento entrou para atualizar o saldo."});
-  if(status==="paid"&&kind==="expense"&&!b.accountId&&!b.cardId)return res.status(400).json({error:"Selecione a conta de saída para descontar esta despesa do saldo, ou informe o cartão utilizado."});
+  if(kind==="income"&&!b.accountId)return res.status(400).json({error:"Selecione a conta em que o recebimento entrou ou será recebido para atualizar o saldo real/projetado."});
+  if(kind==="expense"&&(status==="paid"||!b.cardId)&&!b.accountId)return res.status(400).json({error:"Selecione a conta vinculada à despesa. Compras no cartão devem ficar pendentes até a quitação."});
+  if(kind==="expense"&&status!=="paid"&&b.cardId&&b.accountId)return res.status(400).json({error:"Para uma compra no cartão, deixe a conta bancária em branco. Vincule a conta quando registrar a quitação."});
   if(b.accountId&&!(await activeAccountOwned(b.accountId,req.user.id)))return res.status(400).json({error:"Conta não encontrada ou inativa. Selecione uma conta ativa."});
   if(b.categoryId&&!(await owned("public.categories",b.categoryId,req.user.id)))return res.status(400).json({error:"Categoria não encontrada."});
   if(b.cardId&&!(await owned("public.cards",b.cardId,req.user.id)))return res.status(400).json({error:"Cartão não encontrado."});
@@ -223,8 +250,9 @@ app.patch("/api/transactions/:id",requireAuth,asyncRoute(async(req,res)=>{
   if(!["income","expense","transfer"].includes(kind)||description.length<2||description.length>120||!Number.isFinite(amount)||amount<=0||amount>999999999||!validDate(occurred)||!["paid","pending","overdue","cancelled"].includes(status))return res.status(400).json({error:"Confira descrição, tipo, valor, data e situação do lançamento."});
   if(dueOn&&!validDate(dueOn))return res.status(400).json({error:"Informe uma data de vencimento válida."});
   const accountId=b.accountId||null,categoryId=kind==="transfer"?null:(b.categoryId||null),cardId=kind==="expense"?(b.cardId||null):null,transferToAccountId=kind==="transfer"?(b.transferToAccountId||null):null;
-  if(status==="paid"&&kind==="income"&&!accountId)return res.status(400).json({error:"Selecione a conta em que o recebimento entrou para atualizar o saldo."});
-  if(status==="paid"&&kind==="expense"&&!accountId&&!cardId)return res.status(400).json({error:"Selecione a conta de saída para descontar esta despesa do saldo, ou informe o cartão utilizado."});
+  if(kind==="income"&&!accountId)return res.status(400).json({error:"Selecione a conta em que o recebimento entrou ou será recebido para atualizar o saldo real/projetado."});
+  if(kind==="expense"&&(status==="paid"||!cardId)&&!accountId)return res.status(400).json({error:"Selecione a conta vinculada à despesa. Compras no cartão devem ficar pendentes até a quitação."});
+  if(kind==="expense"&&status!=="paid"&&cardId&&accountId)return res.status(400).json({error:"Para uma compra no cartão, deixe a conta bancária em branco. Vincule a conta quando registrar a quitação."});
   if(accountId&&!(await activeAccountOwned(accountId,req.user.id)))return res.status(400).json({error:"Conta não encontrada ou inativa. Selecione uma conta ativa."});
   if(categoryId&&!(await owned("public.categories",categoryId,req.user.id)))return res.status(400).json({error:"Categoria não encontrada."});
   if(cardId&&!(await owned("public.cards",cardId,req.user.id)))return res.status(400).json({error:"Cartão não encontrado."});
@@ -242,12 +270,12 @@ app.patch("/api/transactions/:id/status",requireAuth,asyncRoute(async(req,res)=>
   const status=req.body&&req.body.status;if(!["paid","pending","overdue","cancelled"].includes(status))return res.status(400).json({error:"Situação inválida."});
   const found=await pool.query("SELECT kind,account_id,card_id,transfer_to_account_id FROM public.transactions WHERE id=$1 AND user_id=$2",[req.params.id,req.user.id]);
   if(!found.rowCount)return res.status(404).json({error:"Lançamento não encontrado."});
-  const transaction=found.rows[0];
-  if(status==="paid"&&transaction.kind==="income"&&!transaction.account_id)return res.status(400).json({error:"Edite o lançamento e selecione a conta em que o recebimento entrou para atualizar o saldo."});
-  if(status==="paid"&&transaction.kind==="expense"&&!transaction.account_id&&!transaction.card_id)return res.status(400).json({error:"Edite o lançamento e selecione a conta de saída para descontar a despesa do saldo."});
-  if(status==="paid"&&transaction.account_id&&!(await activeAccountOwned(transaction.account_id,req.user.id)))return res.status(400).json({error:"A conta vinculada está inativa. Edite o lançamento e selecione uma conta ativa."});
+  const transaction=found.rows[0],accountId=req.body&&req.body.accountId||transaction.account_id||null;
+  if(status==="paid"&&transaction.kind==="income"&&!accountId)return res.status(400).json({error:"Edite o lançamento e selecione a conta em que o recebimento entrou para atualizar o saldo."});
+  if(status==="paid"&&transaction.kind==="expense"&&!accountId)return res.status(400).json({error:"Para dar baixa e atualizar o saldo, edite o lançamento e selecione a conta de onde o pagamento saiu."});
+  if(status==="paid"&&accountId&&!(await activeAccountOwned(accountId,req.user.id)))return res.status(400).json({error:"A conta vinculada está inativa. Edite o lançamento e selecione uma conta ativa."});
   if(status==="paid"&&transaction.kind==="transfer"&&transaction.transfer_to_account_id&&!(await activeAccountOwned(transaction.transfer_to_account_id,req.user.id)))return res.status(400).json({error:"A conta de destino está inativa. Edite a transferência e selecione uma conta ativa."});
-  const r=await pool.query("UPDATE public.transactions SET status=$3,updated_at=now() WHERE id=$1 AND user_id=$2 RETURNING id,status",[req.params.id,req.user.id,status]);
+  const r=await pool.query("UPDATE public.transactions SET status=$3,account_id=CASE WHEN $4::uuid IS NULL THEN account_id ELSE $4::uuid END,updated_at=now() WHERE id=$1 AND user_id=$2 RETURNING id,status,account_id",[req.params.id,req.user.id,status,accountId]);
   res.json({transaction:r.rows[0]});
 }));
 
