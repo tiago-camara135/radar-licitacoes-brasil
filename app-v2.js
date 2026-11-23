@@ -776,3 +776,118 @@ async function load(force){
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});else install();
 })();
+
+
+/* Radar Evolution — Etapa 2: central de alertas e aderência fundamentada */
+;(()=>{
+'use strict';
+if(window.__radarEvolutionAlerts)return;window.__radarEvolutionAlerts=true;
+const $=(s,r=document)=>r.querySelector(s);
+const el=(tag,cls,txt)=>{const v=document.createElement(tag);if(cls)v.className=cls;if(txt!==undefined)v.textContent=String(txt);return v};
+const logged=()=>!!$('#appShell')&&!$('#appShell').classList.contains('hidden');
+const safeUrl=raw=>{try{const u=new URL(raw);return ['http:','https:'].includes(u.protocol)&&!u.username&&!u.password?u.href:''}catch{return''}};
+const formatted=x=>{const d=new Date(x);return Number.isNaN(d.getTime())?'Data não informada':d.toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'})};
+let rows=[],filter='all',open=false,loading=false,lastProfile=0;
+const ui={};
+function install(){
+  const bar=$('#appShell .topbar');if(!bar)return;
+  ui.wrap=el('div','rev-n-wrap');
+  ui.bell=el('button','rev-n-bell','Notificações');ui.bell.type='button';ui.bell.setAttribute('aria-controls','revNotifPanel');ui.bell.setAttribute('aria-expanded','false');
+  ui.count=el('span','rev-n-count','—');ui.count.setAttribute('aria-label','Contagem de notificações não lidas');ui.bell.append(ui.count);
+  ui.panel=el('section','rev-n-panel');ui.panel.id='revNotifPanel';ui.panel.hidden=true;ui.panel.setAttribute('aria-label','Central de notificações');
+  const head=el('div','rev-n-head'),title=el('div','');
+  title.append(el('strong','','Central de notificações'),el('small','','Histórico dos alertas da sua conta'));
+  ui.close=el('button','rev-n-close','×');ui.close.type='button';ui.close.setAttribute('aria-label','Fechar notificações');
+  head.append(title,ui.close);
+  const controls=el('div','rev-n-controls');
+  ui.all=el('button','rev-n-filter active','Todos');ui.all.type='button';
+  ui.unread=el('button','rev-n-filter','Não lidos');ui.unread.type='button';
+  ui.mark=el('button','rev-n-mark','Marcar todas como lidas');ui.mark.type='button';
+  controls.append(ui.all,ui.unread,ui.mark);
+  ui.list=el('div','rev-n-list');ui.message=el('p','rev-n-message','Carregando…');ui.message.setAttribute('role','status');
+  ui.panel.append(head,controls,ui.message,ui.list);ui.wrap.append(ui.bell,ui.panel);bar.append(ui.wrap);
+  ui.bell.addEventListener('click',()=>setOpen(!open));
+  ui.close.addEventListener('click',()=>setOpen(false));
+  ui.all.addEventListener('click',()=>{filter='all';render()});
+  ui.unread.addEventListener('click',()=>{filter='unread';render()});
+  ui.mark.addEventListener('click',markAll);
+  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&open){setOpen(false);ui.bell.focus()}});
+  document.addEventListener('pointerdown',e=>{if(open&&!ui.wrap.contains(e.target))setOpen(false)});
+  document.addEventListener('radar:overview',e=>recommendations(e.detail));
+  const shell=$('#appShell');
+  new MutationObserver(()=>{if(!logged()){setOpen(false);rows=[];lastProfile=0;ui.count.textContent='—'}else profile()}).observe(shell,{attributes:true,attributeFilter:['class']});
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden&&logged()&&Date.now()-lastProfile>90000)profile()});
+  if(logged())profile();
+}
+function setOpen(next){open=Boolean(next);ui.panel.hidden=!open;ui.bell.setAttribute('aria-expanded',String(open));if(open)load()}
+async function profile(){
+  if(!logged())return;
+  try{const controller=new AbortController(),t=setTimeout(()=>controller.abort(),12000);
+    try{const r=await fetch('/api/notifications/profile',{credentials:'same-origin',cache:'no-store',signal:controller.signal});
+      if(!r.ok)throw Error('Sem contagem');const d=await r.json();const n=Math.max(0,Number(d.unread_count||0));
+      ui.count.textContent=n>99?'99+':String(n);lastProfile=Date.now();
+    }finally{clearTimeout(t)}
+  }catch{ui.count.textContent='—'}
+}
+async function load(){
+  if(!logged()||loading)return;loading=true;ui.message.textContent='Carregando notificações…';
+  const controller=new AbortController(),t=setTimeout(()=>controller.abort(),12000);
+  try{
+    const r=await fetch('/api/notifications/deliveries?limit=100',{credentials:'same-origin',cache:'no-store',signal:controller.signal,headers:{accept:'application/json'}});
+    if(!r.ok)throw Error(r.status===401?'Acesse sua conta para consultar os alertas.':'Falha ao consultar notificações.');
+    const d=await r.json();rows=(Array.isArray(d.items)?d.items:[]).filter(x=>x.channel==='onsite');
+    render();await profile();
+  }catch(e){ui.list.replaceChildren();ui.message.textContent=e.name==='AbortError'?'A consulta demorou. Tente novamente.':e.message;
+    const retry=el('button','rev-n-filter','Tentar novamente');retry.type='button';retry.addEventListener('click',load);ui.list.append(retry)
+  }finally{clearTimeout(t);loading=false}
+}
+function render(){
+  ui.all.classList.toggle('active',filter==='all');ui.unread.classList.toggle('active',filter==='unread');
+  ui.list.replaceChildren();
+  const visible=rows.filter(x=>filter!=='unread'||!x.read_at);
+  ui.message.textContent=visible.length?'Exibindo '+visible.length+' notificação(ões) recentes.':'Nenhum alerta '+(filter==='unread'?'não lido.':'registrado neste histórico.');
+  for(const item of visible){
+    const payload=item.payload||{},card=el('article','rev-n-item'+(item.read_at?'':' unread'));
+    const flag=el('span','rev-n-flag',item.read_at?'Lida':'Não lida');
+    const name=el('strong','',payload.object||'Nova oportunidade relacionada ao seu alerta');
+    const org=el('small','',String(payload.org||'Órgão não informado')+' • '+String(payload.municipality||'Brasil')+(payload.uf?'/'+payload.uf:''));
+    const line=el('div','rev-n-line'),stamp=el('time','',formatted(item.created_at));
+    line.append(stamp);
+    const url=safeUrl(payload.pncp_url)||safeUrl(payload.origin_url);
+    if(url){const a=el('a','','Ver edital');a.href=url;a.target='_blank';a.rel='noopener noreferrer';line.append(a)}
+    card.append(flag,name,org,line);ui.list.append(card);
+  }
+}
+async function markAll(){
+  if(!logged()||loading)return;ui.mark.disabled=true;
+  try{const controller=new AbortController(),t=setTimeout(()=>controller.abort(),12000);
+    try{const r=await fetch('/api/notifications/read-all',{method:'POST',credentials:'same-origin',cache:'no-store',signal:controller.signal,headers:{'content-type':'application/json'},body:'{}'});
+      if(!r.ok)throw Error('Falha ao marcar notificações.');await load()
+    }finally{clearTimeout(t)}
+  }catch(e){ui.message.textContent=e.message}finally{ui.mark.disabled=false}
+}
+function recommendations(d){
+  const panel=$('#revSummary');if(!panel)return;
+  let target=$('#revRecommendations');
+  if(!target){target=el('div','rev-recommendations');target.id='revRecommendations';const foot=$('.rev-summary-footer',panel);panel.insertBefore(target,foot||null)}
+  const recs=Array.isArray(d?.recommendations)?d.recommendations.slice(0,3):[];
+  target.replaceChildren();
+  const head=el('div','rev-recs-head'),title=el('strong','','Recomendadas para seus alertas'),note=el('small','','Aderência estimada aos critérios; não representa chance de vencer.');
+  head.append(title,note);target.append(head);
+  if(!recs.length){target.append(el('p','rev-recs-empty','Configure alertas com palavras-chave para receber recomendações.'));return}
+  const list=el('div','rev-recs-list');target.append(list);
+  for(const x of recs){
+    const card=el('article','rev-rec'),info=el('div','rev-rec-main');
+    info.append(el('strong','',x.object_text||'Oportunidade sem descrição'),el('small','',[x.modality_name,x.municipality,x.uf].filter(Boolean).join(' • ')));
+    const why=Array.isArray(x.fit?.reasons)?x.fit.reasons.slice(0,2):[];
+    if(why.length)info.append(el('small','rev-rec-why',why.join(' · ')));
+    const side=el('div','rev-rec-side');
+    const score=Number(x.fit?.score);
+    side.append(el('b','',Number.isFinite(score)?Math.round(Math.min(100,Math.max(0,score)))+'%':'—'),el('small','','aderência'));
+    const url=safeUrl(x.pncp_url);
+    if(url){const a=el('a','','Abrir PNCP');a.href=url;a.target='_blank';a.rel='noopener noreferrer';side.append(a)}
+    card.append(info,side);list.append(card);
+  }
+}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});else install();
+})();
