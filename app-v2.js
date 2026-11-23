@@ -82,9 +82,9 @@ function show(v){
   const previous=state.view,changed=previous!==v;
   state.view=v;
   setRadarMenu(false);
-  $('.view').forEach(view=>view.classList.remove('active','rlb-view-enter'));
+  document.querySelectorAll('.view').forEach(view=>view.classList.remove('active','rlb-view-enter'));
   target.classList.add('active');
-  $('#mainNav [data-view]').forEach(button=>{
+  document.querySelectorAll('#mainNav [data-view]').forEach(button=>{
     const active=button.dataset.view===v;
     button.classList.toggle('active',active);
     if(active)button.setAttribute('aria-current','page');
