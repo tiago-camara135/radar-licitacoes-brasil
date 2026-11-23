@@ -20,7 +20,7 @@ test('simbolo oficial minimalista de radar e aplicado como identidade da marca',
   assert.match(svg,/ondas concentricas e feixe de varredura/);
   assert.doesNotMatch(svg,/Documento com radar/);
   assert.match(html,/rel="icon" type="image\/svg\+xml" href="data:image\/svg\+xml;base64,/);
-  assert.match(html,/app-v2\.css\?v=20261122-radar-interface-2/);
+  assert.match(html,/app-v2\.css\?v=20261122-radar-opportunities-3/);
 });
 
 test('marca interna preserva dimensoes responsivas do header modelo 1',()=>{

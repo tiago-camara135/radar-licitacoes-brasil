@@ -1698,3 +1698,130 @@ button.radar-chip:hover { border-color: #4384ff; }
   .radar-filter-bar #radarChips { flex-basis: 100%; }
   .radar-workspace aside { scroll-margin-top: 70px; }
 }
+
+/* Lista paginada e leitura de oportunidades */
+.radar-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+#radarSearchForm {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  margin-bottom: 14px;
+}
+#radarSearchForm .radar-search-bar { grid-template-columns: minmax(0,1fr) auto auto; }
+#radarFilters {
+  padding: 12px;
+  background: var(--radar-paper);
+  border: 1px solid var(--radar-line);
+  border-radius: 10px;
+}
+#radarFilters .radar-quick-filters { grid-template-columns: repeat(3,minmax(0,1fr)); }
+#radarFilters .radar-filters { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 10px; margin-top: 10px; }
+#radarSearchForm .radar-chip { border-radius: 99px; }
+#radarListPanel { overflow: hidden; }
+#radarListPanel .radar-panel-head { align-items: center; }
+.radar-opportunity-list { margin: 0; padding: 0 10px; list-style: none; }
+.radar-opportunity-list li + li { border-top: 1px solid var(--radar-line); }
+.radar-opportunity {
+  width: 100%;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 36px minmax(0,1fr) minmax(95px,auto);
+  align-items: center;
+  gap: 10px;
+  min-height: 65px;
+  padding: 9px 10px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--radar-text);
+  text-align: left;
+}
+.radar-opportunity:hover, .radar-opportunity.radar-selected { background: var(--radar-soft); }
+.radar-opportunity.radar-selected { box-shadow: inset 3px 0 #4384ff; }
+.radar-opportunity:focus-visible { outline-offset: -2px !important; }
+.radar-opportunity-icon {
+  background: var(--radar-soft);
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+}
+.radar-opportunity-icon svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.radar-opportunity-copy { min-width: 0; }
+.radar-opportunity-copy strong {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  line-height: 1.3;
+  font-size: 14px;
+}
+.radar-opportunity-copy small { display: block; margin-top: 4px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; color: var(--radar-muted); }
+.radar-opportunity-deadline { text-align: right; font-size: 12px; }
+.radar-opportunity-deadline small { display: table; margin: 4px 0 0 auto; border-radius: 99px; padding: 3px 7px; background: #ffe5b0; color: #593903; font-weight: 750; }
+.radar-opportunity-chevron { display: none; }
+.radar-pagination, .radar-detail-navigation {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 7px;
+  padding: 10px;
+  border-top: 1px solid var(--radar-line);
+}
+.radar-pagination { margin-top: 8px; }
+.radar-pagination span { margin-right: auto; font-size: 13px; font-weight: 650; }
+.radar-pagination button:disabled, .radar-detail-navigation button:disabled { opacity: .5; cursor: default; }
+.radar-detail-navigation { order: 2; padding: 8px 0 0; justify-content: space-between; }
+@media (min-width: 761px) {
+  #radarWorkspace { grid-template-columns: minmax(0,1.3fr) minmax(0,1fr); }
+  #radarDetail { position: sticky; top: 76px; max-height: calc(100dvh - 86px); overflow-y: auto; }
+  #radarDetail .radar-back { display: none; }
+}
+@media (min-width: 1101px) {
+  #radarDetail { top: 12px; max-height: calc(100dvh - 24px); }
+}
+@media (max-width: 760px) {
+  #appShell.radar-layout .platform-strip { display: none; }
+  #appShell.radar-layout .sidebar { background: var(--radar-navy) !important; }
+  #appShell.radar-layout .sidebar-brand { order: 2 !important; }
+  #appShell.radar-layout .sidebar-brand > div:last-child { display: block !important; }
+  #appShell.radar-layout .sidebar-brand strong { color: #f5f8ff !important; }
+  #appShell.radar-layout .sidebar-brand span { display: none !important; }
+  #appShell.radar-layout #radarMenuToggle { order: 1; color: #f5f8ff; background: transparent; border-color: #304461; }
+  #appShell.radar-layout .radar-menu-open #mainNav button { color: #dbe8ff !important; }
+  #appShell.radar-layout .radar-menu-open #mainNav button b { color: inherit !important; }
+  #appShell.radar-layout .radar-menu-open #mainNav button.active { color: var(--radar-text) !important; }
+  #appShell.radar-layout .radar-menu-open .radar-account-controls > label { color: #dbe8ff; }
+  #appShell.radar-layout .main:has(#view-radar.active) .topbar { display: none; }
+  #view-radar { padding-top: 12px; }
+  #view-radar:not(.radar-detail-open) #radarDetail { display: none; }
+  #view-radar.radar-detail-open > :not(#radarWorkspace),
+  #view-radar.radar-detail-open #radarListPanel { display: none; }
+  #radarSearchForm .radar-search-bar { gap: 5px; }
+  #radarSearchForm .radar-search-bar button { padding-inline: 9px; }
+  #radarFilters :is(.radar-quick-filters,.radar-filters) { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .radar-opportunity-list { display: grid; gap: 7px; }
+  .radar-opportunity-list li + li { border-top: 0; }
+  .radar-opportunity {
+    grid-template-columns: 36px minmax(0,1fr) auto;
+    column-gap: 9px;
+    row-gap: 4px;
+    border: 1px solid var(--radar-line);
+  }
+  .radar-opportunity-icon { grid-row: 1 / 3; }
+  .radar-opportunity-deadline { grid-column: 2; text-align: left; }
+  .radar-opportunity-deadline small { display: inline-block; margin: 2px 0 0 4px; }
+  .radar-opportunity-chevron { display: block; grid-column: 3; grid-row: 1 / 3; font-size: 24px; }
+  .radar-opportunity-deadline .radar-mobile-label { display: inline; }
+  .radar-pagination span { order: 1; margin: 0 auto; }
+  .radar-pagination button:last-child { order: 2; }
+}
