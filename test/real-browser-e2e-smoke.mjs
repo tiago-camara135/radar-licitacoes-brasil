@@ -6,7 +6,7 @@ import {existsSync} from 'node:fs';
 import {Pool} from 'pg';
 import {chromium} from 'playwright-core';
 
-const base='http://127.0.0.1:10000';
+const base=String(process.env.RLB_TEST_BASE_URL||'http://127.0.0.1:10000').replace(/\/$/,'');
 const token=crypto.randomBytes(5).toString('hex');
 const email='radar-browser-'+token+'@example.test';
 const adminEmail='radar-browser-admin-'+token+'@example.test';
