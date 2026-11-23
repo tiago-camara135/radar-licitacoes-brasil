@@ -93,6 +93,11 @@ async function owned(table,id,userId){
   const r=await pool.query("SELECT id FROM "+table+" WHERE id=$1 AND user_id=$2",[id,userId]);
   return r.rowCount>0;
 }
+async function activeAccountOwned(id,userId){
+  if(!id)return false;
+  const r=await pool.query("SELECT id FROM public.accounts WHERE id=$1 AND user_id=$2 AND is_active=true",[id,userId]);
+  return r.rowCount>0;
+}
 app.get("/api/health",asyncRoute(async(_req,res)=>{await pool.query("SELECT 1");res.json({ok:true,app:"TVC Control",database:"connected"});}));
 
 app.post("/api/auth/register",authLimiter,asyncRoute(async(req,res)=>{
@@ -193,7 +198,7 @@ app.post("/api/transactions",requireAuth,asyncRoute(async(req,res)=>{
   if(!["income","expense","transfer"].includes(kind)||description.length<2||description.length>120||!Number.isFinite(amount)||amount<=0||amount>999999999||!validDate(occurred)||!["paid","pending","overdue","cancelled"].includes(status))return res.status(400).json({error:"Confira descrição, tipo, valor, data e situação do lançamento."});
   if(status==="paid"&&kind==="income"&&!b.accountId)return res.status(400).json({error:"Selecione a conta em que o recebimento entrou para atualizar o saldo."});
   if(status==="paid"&&kind==="expense"&&!b.accountId&&!b.cardId)return res.status(400).json({error:"Selecione a conta de saída para descontar esta despesa do saldo, ou informe o cartão utilizado."});
-  if(b.accountId&&!(await owned("public.accounts",b.accountId,req.user.id)))return res.status(400).json({error:"Conta não encontrada."});
+  if(b.accountId&&!(await activeAccountOwned(b.accountId,req.user.id)))return res.status(400).json({error:"Conta não encontrada ou inativa. Selecione uma conta ativa."});
   if(b.categoryId&&!(await owned("public.categories",b.categoryId,req.user.id)))return res.status(400).json({error:"Categoria não encontrada."});
   if(b.cardId&&!(await owned("public.cards",b.cardId,req.user.id)))return res.status(400).json({error:"Cartão não encontrado."});
   if(kind==="transfer"&&(!b.accountId||!b.transferToAccountId||b.accountId===b.transferToAccountId||!(await owned("public.accounts",b.transferToAccountId,req.user.id))))return res.status(400).json({error:"Selecione duas contas diferentes para a transferência."});
@@ -220,7 +225,7 @@ app.patch("/api/transactions/:id",requireAuth,asyncRoute(async(req,res)=>{
   const accountId=b.accountId||null,categoryId=kind==="transfer"?null:(b.categoryId||null),cardId=kind==="expense"?(b.cardId||null):null,transferToAccountId=kind==="transfer"?(b.transferToAccountId||null):null;
   if(status==="paid"&&kind==="income"&&!accountId)return res.status(400).json({error:"Selecione a conta em que o recebimento entrou para atualizar o saldo."});
   if(status==="paid"&&kind==="expense"&&!accountId&&!cardId)return res.status(400).json({error:"Selecione a conta de saída para descontar esta despesa do saldo, ou informe o cartão utilizado."});
-  if(accountId&&!(await owned("public.accounts",accountId,req.user.id)))return res.status(400).json({error:"Conta não encontrada."});
+  if(accountId&&!(await activeAccountOwned(accountId,req.user.id)))return res.status(400).json({error:"Conta não encontrada ou inativa. Selecione uma conta ativa."});
   if(categoryId&&!(await owned("public.categories",categoryId,req.user.id)))return res.status(400).json({error:"Categoria não encontrada."});
   if(cardId&&!(await owned("public.cards",cardId,req.user.id)))return res.status(400).json({error:"Cartão não encontrado."});
   if(kind==="transfer"&&(!accountId||!transferToAccountId||accountId===transferToAccountId||!(await owned("public.accounts",transferToAccountId,req.user.id))))return res.status(400).json({error:"Selecione duas contas diferentes para a transferência."});
@@ -235,11 +240,13 @@ app.delete("/api/transactions/:id",requireAuth,asyncRoute(async(req,res)=>{
 }));
 app.patch("/api/transactions/:id/status",requireAuth,asyncRoute(async(req,res)=>{
   const status=req.body&&req.body.status;if(!["paid","pending","overdue","cancelled"].includes(status))return res.status(400).json({error:"Situação inválida."});
-  const found=await pool.query("SELECT kind,account_id,card_id FROM public.transactions WHERE id=$1 AND user_id=$2",[req.params.id,req.user.id]);
+  const found=await pool.query("SELECT kind,account_id,card_id,transfer_to_account_id FROM public.transactions WHERE id=$1 AND user_id=$2",[req.params.id,req.user.id]);
   if(!found.rowCount)return res.status(404).json({error:"Lançamento não encontrado."});
   const transaction=found.rows[0];
   if(status==="paid"&&transaction.kind==="income"&&!transaction.account_id)return res.status(400).json({error:"Edite o lançamento e selecione a conta em que o recebimento entrou para atualizar o saldo."});
   if(status==="paid"&&transaction.kind==="expense"&&!transaction.account_id&&!transaction.card_id)return res.status(400).json({error:"Edite o lançamento e selecione a conta de saída para descontar a despesa do saldo."});
+  if(status==="paid"&&transaction.account_id&&!(await activeAccountOwned(transaction.account_id,req.user.id)))return res.status(400).json({error:"A conta vinculada está inativa. Edite o lançamento e selecione uma conta ativa."});
+  if(status==="paid"&&transaction.kind==="transfer"&&transaction.transfer_to_account_id&&!(await activeAccountOwned(transaction.transfer_to_account_id,req.user.id)))return res.status(400).json({error:"A conta de destino está inativa. Edite a transferência e selecione uma conta ativa."});
   const r=await pool.query("UPDATE public.transactions SET status=$3,updated_at=now() WHERE id=$1 AND user_id=$2 RETURNING id,status",[req.params.id,req.user.id,status]);
   res.json({transaction:r.rows[0]});
 }));
@@ -261,7 +268,7 @@ app.delete("/api/cards/:id",requireAuth,asyncRoute(async(req,res)=>{
 }));
 
 app.get("/api/budgets",requireAuth,asyncRoute(async(req,res)=>{
-  const month=/^\d{4}-\d{2}$/.test(req.query.month||"")?req.query.month:new Date().toISOString().slice(0,7),bounds=monthBounds(month);
+  const month=/^\d{4}-\d{2}$/.test(req.query.month||"")?req.query.month:saoPauloMonth(),bounds=monthBounds(month);
   const r=await pool.query("SELECT b.id,b.month,b.limit_amount,c.id AS category_id,c.name AS category_name,c.color,COALESCE(SUM(t.amount) FILTER(WHERE t.kind='expense' AND ((t.status='paid' AND t.occurred_on >= $2::date AND t.occurred_on < $3::date) OR (t.status IN ('pending','overdue') AND COALESCE(t.due_on,t.occurred_on) >= $2::date AND COALESCE(t.due_on,t.occurred_on) < $3::date))),0)+COALESCE((SELECT SUM(r.amount) FROM public.calendar_reminders r WHERE r.user_id=b.user_id AND r.category_id=b.category_id AND r.status='pending' AND r.due_on >= $2::date AND r.due_on < $3::date),0) AS spent "+
     "FROM public.budgets b LEFT JOIN public.categories c ON c.id=b.category_id LEFT JOIN public.transactions t ON t.user_id=b.user_id AND t.category_id=b.category_id AND ((t.status='paid' AND t.occurred_on >= $2::date AND t.occurred_on < $3::date) OR (t.status IN ('pending','overdue') AND COALESCE(t.due_on,t.occurred_on) >= $2::date AND COALESCE(t.due_on,t.occurred_on) < $3::date)) "+
     "WHERE b.user_id=$1 AND b.month=$4::date GROUP BY b.id,c.id ORDER BY c.name",[req.user.id,bounds[0],bounds[1],bounds[0]]);
@@ -327,7 +334,7 @@ app.post("/api/recurring",requireAuth,asyncRoute(async(req,res)=>{
  const b=req.body||{},amount=Number(b.amount);
  if(typeof b.description!=="string"||b.description.trim().length<2||b.description.trim().length>120||!Number.isFinite(amount)||amount<=0||!["income","expense"].includes(b.kind)||!["weekly","monthly","yearly"].includes(b.frequency)||!validDate(b.nextDue))
   return res.status(400).json({error:"Confira descrição, valor, tipo, frequência e próxima data."});
- if(b.accountId&&!(await owned("public.accounts",b.accountId,req.user.id)))return res.status(400).json({error:"Conta não encontrada."});
+ if(b.accountId&&!(await activeAccountOwned(b.accountId,req.user.id)))return res.status(400).json({error:"Conta não encontrada ou inativa. Selecione uma conta ativa."});
  if(b.categoryId&&!(await owned("public.categories",b.categoryId,req.user.id)))return res.status(400).json({error:"Categoria não encontrada."});
  const r=await pool.query("INSERT INTO public.recurring_rules(user_id,account_id,category_id,description,amount,kind,frequency,next_due) VALUES($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *",
   [req.user.id,b.accountId||null,b.categoryId||null,b.description.trim(),amount,b.kind,b.frequency,b.nextDue]);
@@ -366,7 +373,7 @@ app.post("/api/recurring/:id/record",requireAuth,asyncRoute(async(req,res)=>{
 app.post("/api/reminders",requireAuth,asyncRoute(async(req,res)=>{
   const b=req.body||{},description=typeof b.description==="string"?b.description.trim():"",amount=Number(b.amount),dueOn=b.dueOn;
   if(description.length<2||description.length>120||!Number.isFinite(amount)||amount<=0||amount>999999999||!validDate(dueOn))return res.status(400).json({error:"Informe o nome do pagamento, um valor válido e a data do vencimento."});
-  if(b.accountId&&!(await owned("public.accounts",b.accountId,req.user.id)))return res.status(400).json({error:"Conta não encontrada."});
+  if(b.accountId&&!(await activeAccountOwned(b.accountId,req.user.id)))return res.status(400).json({error:"Conta não encontrada ou inativa. Selecione uma conta ativa."});
   if(b.categoryId&&!(await owned("public.categories",b.categoryId,req.user.id)))return res.status(400).json({error:"Categoria não encontrada."});
   const notes=typeof b.notes==="string"?b.notes.trim().slice(0,500):null;
   const r=await pool.query("INSERT INTO public.calendar_reminders(user_id,account_id,category_id,description,amount,due_on,notes) VALUES($1,$2,$3,$4,$5,$6,$7) RETURNING id,description,amount,due_on,status",[req.user.id,b.accountId||null,b.categoryId||null,description,amount,dueOn,notes]);
@@ -375,7 +382,7 @@ app.post("/api/reminders",requireAuth,asyncRoute(async(req,res)=>{
 app.patch("/api/reminders/:id",requireAuth,asyncRoute(async(req,res)=>{
   const b=req.body||{},description=typeof b.description==="string"?b.description.trim():"",amount=Number(b.amount),dueOn=b.dueOn;
   if(description.length<2||description.length>120||!Number.isFinite(amount)||amount<=0||amount>999999999||!validDate(dueOn))return res.status(400).json({error:"Informe o nome do pagamento, um valor válido e a data do vencimento."});
-  if(b.accountId&&!(await owned("public.accounts",b.accountId,req.user.id)))return res.status(400).json({error:"Conta não encontrada."});
+  if(b.accountId&&!(await activeAccountOwned(b.accountId,req.user.id)))return res.status(400).json({error:"Conta não encontrada ou inativa. Selecione uma conta ativa."});
   if(b.categoryId&&!(await owned("public.categories",b.categoryId,req.user.id)))return res.status(400).json({error:"Categoria não encontrada."});
   const notes=typeof b.notes==="string"?b.notes.trim().slice(0,500):null;
   const r=await pool.query("UPDATE public.calendar_reminders SET account_id=$3,category_id=$4,description=$5,amount=$6,due_on=$7,notes=$8,updated_at=now() WHERE id=$1 AND user_id=$2 AND status='pending' RETURNING id,description,amount,due_on,status",[req.params.id,req.user.id,b.accountId||null,b.categoryId||null,description,amount,dueOn,notes]);
@@ -390,6 +397,9 @@ app.post("/api/reminders/:id/pay",requireAuth,asyncRoute(async(req,res)=>{
     if(!found.rowCount){await client.query("ROLLBACK");return res.status(404).json({error:"Lembrete não encontrado."});}
     const reminder=found.rows[0];
     if(reminder.status!=="pending"){await client.query("ROLLBACK");return res.status(409).json({error:"Este pagamento já foi registrado ou não está pendente."});}
+    if(!reminder.account_id){await client.query("ROLLBACK");return res.status(400).json({error:"Edite o lembrete e selecione a conta de onde o pagamento será feito para atualizar o saldo."});}
+    const active=await client.query("SELECT id FROM public.accounts WHERE id=$1 AND user_id=$2 AND is_active=true",[reminder.account_id,req.user.id]);
+    if(!active.rowCount){await client.query("ROLLBACK");return res.status(400).json({error:"A conta vinculada está inativa. Edite o lembrete e selecione uma conta ativa."});}
     const paidOn=saoPauloToday();
     const transaction=await client.query("INSERT INTO public.transactions(user_id,account_id,category_id,kind,description,amount,occurred_on,due_on,status,notes) VALUES($1,$2,$3,'expense',$4,$5,$6,$7,'paid',$8) RETURNING id",[req.user.id,reminder.account_id,reminder.category_id,reminder.description,reminder.amount,paidOn,reminder.due_on,"Pagamento registrado a partir do lembrete do calendário."]);
     await client.query("UPDATE public.calendar_reminders SET status='paid',transaction_id=$3,paid_at=now(),updated_at=now() WHERE id=$1 AND user_id=$2",[reminder.id,req.user.id,transaction.rows[0].id]);
@@ -424,10 +434,10 @@ app.get("/api/calendar",requireAuth,asyncRoute(async(req,res)=>{
  res.json({month,events});
 }));
 app.get("/api/dashboard",requireAuth,asyncRoute(async(req,res)=>{
-  const month=/^\d{4}-\d{2}$/.test(req.query.month||"")?req.query.month:new Date().toISOString().slice(0,7),bounds=monthBounds(month),uid=req.user.id;
+  const month=/^\d{4}-\d{2}$/.test(req.query.month||"")?req.query.month:saoPauloMonth(),bounds=monthBounds(month),uid=req.user.id;
   const q=[
     pool.query("SELECT a.id,a.name,a.account_type,a.institution,a.color,a.opening_balance,a.opening_balance+COALESCE(SUM(CASE WHEN t.status='paid' AND t.kind='income' AND t.account_id=a.id THEN t.amount WHEN t.status='paid' AND t.kind='expense' AND t.account_id=a.id THEN -t.amount WHEN t.status='paid' AND t.kind='transfer' AND t.account_id=a.id THEN -t.amount WHEN t.status='paid' AND t.kind='transfer' AND t.transfer_to_account_id=a.id THEN t.amount ELSE 0 END),0) AS current_balance,COALESCE((SELECT SUM(p.amount) FROM public.transactions p WHERE p.user_id=a.user_id AND p.account_id=a.id AND ((p.kind='expense' AND p.status IN ('pending','overdue')) OR (p.kind='transfer' AND p.status IN ('pending','overdue'))) AND COALESCE(p.due_on,p.occurred_on) < $2::date),0) AS pending_commitments,COALESCE((SELECT SUM(p.amount) FROM public.transactions p WHERE p.user_id=a.user_id AND ((p.kind='income' AND p.account_id=a.id) OR (p.kind='transfer' AND p.transfer_to_account_id=a.id)) AND p.status IN ('pending','overdue') AND COALESCE(p.due_on,p.occurred_on) < $2::date),0) AS pending_income_commitments FROM public.accounts a LEFT JOIN public.transactions t ON (t.account_id=a.id OR t.transfer_to_account_id=a.id) AND t.user_id=a.user_id WHERE a.user_id=$1 AND a.is_active=true GROUP BY a.id ORDER BY a.created_at",[uid,bounds[1]]),
-    pool.query("SELECT COALESCE(SUM(amount) FILTER(WHERE kind='income' AND status='paid' AND occurred_on >= $2::date AND occurred_on < $3::date),0) AS income,COALESCE(SUM(amount) FILTER(WHERE kind='expense' AND status='paid' AND occurred_on >= $2::date AND occurred_on < $3::date),0) AS expense,COALESCE(SUM(amount) FILTER(WHERE kind='income' AND status='pending' AND COALESCE(due_on,occurred_on) >= $2::date AND COALESCE(due_on,occurred_on) < $3::date),0) AS pending_income,COALESCE(SUM(amount) FILTER(WHERE kind='expense' AND status IN ('pending','overdue') AND COALESCE(due_on,occurred_on) >= $2::date AND COALESCE(due_on,occurred_on) < $3::date),0) AS pending_expense_month,COALESCE(SUM(amount) FILTER(WHERE kind='expense' AND status IN ('pending','overdue')),0) AS pending_expense,(SELECT COALESCE(SUM(t2.amount),0) FROM public.transactions t2 WHERE t2.user_id=$1 AND t2.kind='expense' AND t2.status IN ('pending','overdue') AND COALESCE(t2.due_on,t2.occurred_on) < $3::date) AS outstanding_expense,(SELECT COALESCE(SUM(t3.amount),0) FROM public.transactions t3 WHERE t3.user_id=$1 AND t3.kind='income' AND t3.status IN ('pending','overdue') AND COALESCE(t3.due_on,t3.occurred_on) < $3::date) AS outstanding_income,COUNT(*) AS transaction_count FROM public.transactions WHERE user_id=$1 AND ((occurred_on >= $2::date AND occurred_on < $3::date) OR (status IN ('pending','overdue') AND COALESCE(due_on,occurred_on) >= $2::date AND COALESCE(due_on,occurred_on) < $3::date))",[uid,bounds[0],bounds[1]]),
+    pool.query("SELECT COALESCE(SUM(amount) FILTER(WHERE kind='income' AND status='paid' AND occurred_on >= $2::date AND occurred_on < $3::date),0) AS income,COALESCE(SUM(amount) FILTER(WHERE kind='expense' AND status='paid' AND occurred_on >= $2::date AND occurred_on < $3::date),0) AS expense,COALESCE(SUM(amount) FILTER(WHERE kind='income' AND status='pending' AND COALESCE(due_on,occurred_on) >= $2::date AND COALESCE(due_on,occurred_on) < $3::date),0) AS pending_income,COALESCE(SUM(amount) FILTER(WHERE kind='expense' AND status IN ('pending','overdue') AND COALESCE(due_on,occurred_on) >= $2::date AND COALESCE(due_on,occurred_on) < $3::date),0) AS pending_expense_month,COALESCE(SUM(amount) FILTER(WHERE kind='expense' AND status IN ('pending','overdue')),0) AS pending_expense,(SELECT COALESCE(SUM(t2.amount),0) FROM public.transactions t2 WHERE t2.user_id=$1 AND t2.kind='expense' AND t2.status IN ('pending','overdue') AND COALESCE(t2.due_on,t2.occurred_on) < $3::date) AS outstanding_expense,(SELECT COALESCE(SUM(t3.amount),0) FROM public.transactions t3 WHERE t3.user_id=$1 AND t3.kind='income' AND t3.status IN ('pending','overdue') AND COALESCE(t3.due_on,t3.occurred_on) < $3::date) AS outstanding_income,COUNT(*) AS transaction_count FROM public.transactions WHERE user_id=$1 AND status<>'cancelled' AND ((occurred_on >= $2::date AND occurred_on < $3::date) OR (status IN ('pending','overdue') AND COALESCE(due_on,occurred_on) >= $2::date AND COALESCE(due_on,occurred_on) < $3::date))",[uid,bounds[0],bounds[1]]),
     pool.query("SELECT name,color,SUM(amount) AS amount FROM (SELECT COALESCE(c.name,'Sem categoria') AS name,COALESCE(c.color,'#8792A5') AS color,SUM(t.amount) AS amount FROM public.transactions t LEFT JOIN public.categories c ON c.id=t.category_id WHERE t.user_id=$1 AND t.kind='expense' AND ((t.status='paid' AND t.occurred_on >= $2::date AND t.occurred_on < $3::date) OR (t.status IN ('pending','overdue') AND COALESCE(t.due_on,t.occurred_on) >= $2::date AND COALESCE(t.due_on,t.occurred_on) < $3::date)) GROUP BY c.name,c.color UNION ALL SELECT COALESCE(c.name,'Sem categoria'),COALESCE(c.color,'#8792A5'),SUM(r.amount) FROM public.calendar_reminders r LEFT JOIN public.categories c ON c.id=r.category_id WHERE r.user_id=$1 AND r.status='pending' AND r.due_on >= $2::date AND r.due_on < $3::date GROUP BY c.name,c.color) spending GROUP BY name,color ORDER BY amount DESC LIMIT 7",[uid,bounds[0],bounds[1]]),
     pool.query("SELECT to_char(date_trunc('month',occurred_on),'YYYY-MM') AS month,COALESCE(SUM(amount) FILTER(WHERE kind='income' AND status='paid'),0) AS income,COALESCE(SUM(amount) FILTER(WHERE kind='expense' AND status='paid'),0) AS expense FROM public.transactions WHERE user_id=$1 AND occurred_on >= (date_trunc('month',$2::date)-interval '5 months')::date AND occurred_on < (date_trunc('month',$2::date)+interval '1 month')::date GROUP BY 1 ORDER BY 1",[uid,bounds[0]]),
     pool.query("SELECT t.id,t.description,t.amount,t.due_on,t.status,t.kind,COALESCE(c.name,'Sem categoria') AS category_name FROM public.transactions t LEFT JOIN public.categories c ON c.id=t.category_id WHERE t.user_id=$1 AND t.status IN ('pending','overdue') AND t.kind IN ('expense','income') ORDER BY t.due_on NULLS LAST LIMIT 6",[uid]),
