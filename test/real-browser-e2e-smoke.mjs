@@ -70,6 +70,24 @@ try{
  assert.notEqual(inTheme,changed,'Authenticated theme control works');
  note('Registration, authenticated dashboard, four metrics, user role and theme OK');
 
+ // Exercita permissões cedo, antes do volume elevado de requisições da suíte.
+ // As alterações de função afetam somente a conta temporária do banco CI.
+ await pool.query("UPDATE users SET role='admin' WHERE id=$1",[userId]);
+ const adminReload=await page.reload({waitUntil:'domcontentloaded'});
+ assert.equal(adminReload.status(),200,'Admin page must reload within ordinary request budget');
+ await page.locator('#appShell:not(.hidden)').waitFor({state:'visible',timeout});
+ await page.locator('#adminNav').waitFor({state:'visible',timeout});
+ await gotoSection(page,'admin');
+ await page.locator('#revHealth .rev-action').click();
+ await until(page,()=>document.querySelector('#revHealthStatus')?.textContent?.includes('Serviço operacional'),timeout);
+ note('Admin-only navigation and live health diagnostic OK');
+ await pool.query("UPDATE users SET role='user' WHERE id=$1",[userId]);
+ const userReload=await page.reload({waitUntil:'domcontentloaded'});
+ assert.equal(userReload.status(),200,'Regular user must reload after role downgrade');
+ await page.locator('#appShell:not(.hidden)').waitFor({state:'visible',timeout});
+ assert.equal(await page.locator('#adminNav').isVisible(),false,'Admin controls disappear after downgrade');
+ note('Admin-to-user role isolation OK');
+
  await gotoSection(page,'alerts');
  await page.locator('#alertName').fill('Combustíveis QA '+token);
  await page.locator('#alertKeyword').fill('combustível');
@@ -170,23 +188,6 @@ try{
  await page.keyboard.press('Escape');
  assert.equal(await page.locator('#revNotifPanel').getAttribute('hidden'),'','Escape closes notification panel');
  note('Mobile 390px responsiveness, notifications and keyboard Escape OK');
-
- // Escala apenas o usuário efêmero do banco CI para validar papéis e admin.
- // Evita nova inscrição após muitos testes HTTP sob o mesmo IP de runner.
- await pool.query("UPDATE users SET role='admin' WHERE id=$1",[userId]);
- await page.setViewportSize({width:1366,height:850});
- const meBefore=await page.request.get(base+'/api/me',{timeout:8000});
- console.log('[browser-qa] Admin escalation: me-before status='+meBefore.status());
- await page.reload({waitUntil:'domcontentloaded'});
- await page.waitForTimeout(900);
- const meAfter=await page.request.get(base+'/api/me',{timeout:8000});
- console.log('[browser-qa] Admin escalation: me-after status='+meAfter.status()+' authMessage='+JSON.stringify(await page.locator('#authMessage').textContent())+' appHidden='+await page.locator('#appShell').evaluate(e=>e.classList.contains('hidden')));
- await page.locator('#appShell:not(.hidden)').waitFor({state:'visible',timeout});
- await page.locator('#adminNav').waitFor({state:'visible',timeout});
- await gotoSection(page,'admin');
- await page.locator('#revHealth .rev-action').click();
- await until(page,()=>document.querySelector('#revHealthStatus')?.textContent?.includes('Serviço operacional'),timeout);
- note('Admin-only navigation and live health diagnostic OK');
 
  const fatal=problems.filter(x=>!(/ERR_CONNECTION|Failed to fetch|network error/i.test(x)));
  assert.deepEqual(fatal,[],'Unexpected browser JavaScript errors');
