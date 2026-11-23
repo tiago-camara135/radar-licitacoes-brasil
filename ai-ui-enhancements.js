@@ -72,7 +72,7 @@ function enhanceWelcome(){
   const welcome=root?.querySelector('.ai-welcome');
   if(!welcome||welcome.dataset.enhanced==='1')return;
   welcome.dataset.enhanced='1';
-  welcome.innerHTML='<div class="ai-welcome-icon">⚖</div><b>Olá, sou seu assessor virtual de licitações.</b><span>Posso apoiar em editais, habilitação, recursos, Lei 14.133/2021, documentos e oportunidades monitoradas.</span><div class="ai-welcome-tags"><em>PNCP</em><em>Lei 14.133</em><em>Habilitação</em><em>Recursos</em></div>';
+  welcome.innerHTML='<div class="ai-welcome-icon" aria-hidden="true">⚖</div><b>Olá, sou seu assessor virtual de licitações.</b><span>Posso apoiar em editais, habilitação, recursos, Lei 14.133/2021, documentos e oportunidades monitoradas.</span><div class="ai-welcome-tags"><em>PNCP</em><em>Lei 14.133</em><em>Habilitação</em><em>Recursos</em></div>';
 }
 
 function installSuggestions(){

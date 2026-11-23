@@ -4,14 +4,14 @@ if(window.__rlbAuthHomeV1)return;
 window.__rlbAuthHomeV1=true;
 
 const icons={
-  radar:`<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"></circle><circle cx="12" cy="12" r="3"></circle><path d="M12 12l6-5"></path><path d="M12 4v2M4 12h2M18 12h2M12 18v2"></path></svg>`,
-  alert:`<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"></path><path d="M10 21h4"></path></svg>`,
-  ai:`<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="7" width="14" height="11" rx="3"></rect><path d="M9 11h.01M15 11h.01M9 15h6M12 3v4M3 12h2M19 12h2"></path></svg>`,
-  support:`<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 13a8 8 0 0 1 16 0"></path><path d="M4 13v5h4v-6H5M20 13v5h-4v-6h3"></path><path d="M16 20h-4"></path></svg>`,
-  legal:`<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v18M6 6h12M8 6l-4 7h8L8 6ZM16 6l-4 7h8l-4-7Z"></path><path d="M6 21h12"></path></svg>`,
-  docs:`<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h8l4 4v14H6z"></path><path d="M14 3v5h5M9 12h6M9 16h6"></path></svg>`,
-  search:`<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6"></circle><path d="m16 16 4 4"></path></svg>`,
-  shield:`<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 5 6v5c0 5 3 8 7 10 4-2 7-5 7-10V6z"></path><path d="m9 12 2 2 4-4"></path></svg>`
+  radar:`<svg data-rp-icon="radar" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"></circle><circle cx="12" cy="12" r="3"></circle><path d="M12 12l6-5"></path><path d="M12 4v2M4 12h2M18 12h2M12 18v2"></path></svg>`,
+  alert:`<svg data-rp-icon="bell" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"></path><path d="M10 21h4"></path></svg>`,
+  ai:`<svg data-rp-icon="ai" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="7" width="14" height="11" rx="3"></rect><path d="M9 11h.01M15 11h.01M9 15h6M12 3v4M3 12h2M19 12h2"></path></svg>`,
+  support:`<svg data-rp-icon="support" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 13a8 8 0 0 1 16 0"></path><path d="M4 13v5h4v-6H5M20 13v5h-4v-6h3"></path><path d="M16 20h-4"></path></svg>`,
+  legal:`<svg data-rp-icon="legal" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v18M6 6h12M8 6l-4 7h8L8 6ZM16 6l-4 7h8l-4-7Z"></path><path d="M6 21h12"></path></svg>`,
+  docs:`<svg data-rp-icon="document" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h8l4 4v14H6z"></path><path d="M14 3v5h5M9 12h6M9 16h6"></path></svg>`,
+  search:`<svg data-rp-icon="search" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6"></circle><path d="m16 16 4 4"></path></svg>`,
+  shield:`<svg data-rp-icon="shield" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 5 6v5c0 5 3 8 7 10 4-2 7-5 7-10V6z"></path><path d="m9 12 2 2 4-4"></path></svg>`
 };
 
 function init(){
