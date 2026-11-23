@@ -82,6 +82,9 @@ try{
  await adminPage.locator('#appShell:not(.hidden)').waitFor({state:'visible',timeout});
  await adminPage.locator('#adminNav').waitFor({state:'visible',timeout});
  await gotoSection(adminPage,'admin');
+ // Simula a Central Administrativa substituindo seus componentes.
+ await adminPage.evaluate(()=>document.querySelector('#revHealth')?.remove());
+ await adminPage.locator('#revHealth .rev-action').waitFor({state:'visible',timeout});
  await adminPage.locator('#revHealth .rev-action').click();
  await until(adminPage,()=>document.querySelector('#revHealthStatus')?.textContent?.includes('Serviço operacional'),timeout);
  assert.equal(await page.locator('#adminNav').isVisible(),false,'Ordinary account cannot access admin controls');
