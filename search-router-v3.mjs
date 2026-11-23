@@ -1,5 +1,5 @@
 import { Pool } from 'pg';
-import { fetchPncpOpenSearch, normalizeSearchFilters, applySearchFilters, resultKey, pncpUrl, originUrl, municipalityOf, closingOf, pncpClientHealth, radarSearchTerms } from './pncp-client-v3.mjs';
+import { fetchPncpOpenSearch, normalizeSearchFilters, applySearchFilters, resultKey, pncpUrl, originUrl, municipalityOf, closingOf, pncpClientHealth, radarSearchTerms, textNorm } from './pncp-client-v3.mjs';
 
 const PORT=Number(process.env.PORT||10000);
 const DATABASE_URL=process.env.DATABASE_URL||'';
@@ -65,12 +65,13 @@ async function localSearch(filters,limit=5000){
   if(f.states.length){where.push(`uf = ANY($${n++}::text[])`);params.push(f.states)}
   if(f.closingDays){where.push(`closes_at <= NOW() + ($${n++}::int * INTERVAL '1 day')`);params.push(f.closingDays)}
   if(f.workspace){
-    const searchable = `translate(lower(concat_ws(' ', object_text, org_name, unit_name, municipality,
+    const normalizedSql = field => `translate(lower(${field}), 'áàâãäéèêëíìîïóòôõöúùûüç', 'aaaaaeeeeiiiiooooouuuuc')`;
+    const searchable = normalizedSql(`concat_ws(' ', object_text, org_name, unit_name, municipality,
       raw->>'informacaoComplementar', raw->>'numeroCompra', raw->>'numeroProcesso', pncp_id,
-      (raw->>'numeroCompra') || '/' || (raw->>'anoCompra'))),
-      'áàâãäéèêëíìîïóòôõöúùûüç', 'aaaaaeeeeiiiiooooouuuuc')`;
+      (raw->>'numeroCompra') || '/' || (raw->>'anoCompra'))`);
     for(const term of radarSearchTerms(f.keyword)) add(`strpos(${searchable}, ?) > 0`,term);
-    if(f.municipality)add("strpos(translate(lower(COALESCE(municipality,'')), 'áàâãäéèêëíìîïóòôõöúùûüç', 'aaaaaeeeeiiiiooooouuuuc'), ?) > 0",f.municipality.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase());
+    if(f.municipality)add(`strpos(${normalizedSql("COALESCE(municipality,'')")}, ?) > 0`,textNorm(f.municipality));
+    if(f.org)add(`strpos(${normalizedSql("concat_ws(' ', org_name, unit_name)")}, ?) > 0`,textNorm(f.org));
   }
 
   if(f.modalities.length){where.push(`modality_code = ANY($${n++}::int[])`);params.push(f.modalities)}

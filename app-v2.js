@@ -14,15 +14,59 @@ function pncp(x){if(x?._pncpUrl)return x._pncpUrl;const c=String(x?.orgaoEntidad
 function toast(msg,error=false){const e=$('#toast');if(!e)return;e.textContent=msg;e.className='toast show'+(error?' error':'');clearTimeout(toast.t);toast.t=setTimeout(()=>e.className='toast',3000)}
 async function api(path,opt={}){const {timeoutMs=15000,signal,...request}=opt,controller=new AbortController(),timer=setTimeout(()=>controller.abort(),timeoutMs),relay=()=>controller.abort();if(signal){if(signal.aborted)controller.abort();else signal.addEventListener('abort',relay,{once:true})}try{const r=await fetch(path,{credentials:'same-origin',cache:'no-store',...request,signal:controller.signal,headers:{accept:'application/json',...(request.body?{'content-type':'application/json'}:{}),...(request.headers||{})}});const d=await r.json().catch(()=>({}));if(!r.ok)throw Object.assign(new Error(d.error||`Erro ${r.status}`),{status:r.status,data:d});return d}catch(e){if(controller.signal.aborted&&!signal?.aborted)throw Object.assign(new Error('A solicitação demorou mais que o esperado. Tente novamente.'),{code:'request_timeout'});throw e}finally{clearTimeout(timer);signal?.removeEventListener('abort',relay)}}
 function fillSelects(){for(const id of ['searchUf','alertUf']){const e=$('#'+id);if(e&&!e.dataset.ready){UFS.forEach(v=>e.insertAdjacentHTML('beforeend',`<option value="${v}">${v}</option>`));e.dataset.ready='1'}}for(const id of ['searchModality','alertModality']){const e=$('#'+id);if(e&&!e.dataset.ready){MOD.forEach(([v,n])=>e.insertAdjacentHTML('beforeend',`<option value="${v}">${esc(n)}</option>`));e.dataset.ready='1'}}}
-function applyTheme(t){t=t==='dark'?'dark':'light';document.documentElement.dataset.theme=t;try{localStorage.setItem('rlb-theme-v2',t)}catch{}$$('[data-theme-choice]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.themeChoice===t)))}
-function initTheme(){let t='light';try{t=localStorage.getItem('rlb-theme-v2')||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light')}catch{}applyTheme(t);$('#themeControl')?.addEventListener('click',e=>{const b=e.target.closest('[data-theme-choice]');if(b)applyTheme(b.dataset.themeChoice)})}
+function initTheme() {
+  const select = $('#radarTheme');
+  const systemTheme = matchMedia('(prefers-color-scheme: dark)');
+  try { select.value = localStorage.getItem('rlb-theme-v2') || 'system'; } catch {}
+  if (!select.value) select.value = 'system';
+  const render = () => {
+    document.documentElement.dataset.theme = select.value === 'system' ? (systemTheme.matches ? 'dark' : 'light') : select.value;
+  };
+  select.addEventListener('change', () => {
+    try { localStorage.setItem('rlb-theme-v2', select.value); } catch {}
+    render();
+  });
+  systemTheme.addEventListener('change', render);
+  render();
+}
+
+function renderRadarAccount(user) {
+  const email = String(user.email || '');
+  const name = String(user.name || user.display_name || email.split('@')[0] || 'Usuário')
+    .replace(/[._-]+/g, ' ').trim() || 'Usuário';
+  $('#radarUserName').textContent = name.replace(/(^|\s)\p{L}/gu, letter => letter.toLocaleUpperCase('pt-BR'));
+  $('#radarAvatar').textContent = name.split(/\s+/).slice(0, 2).map(word => word[0]).join('').toUpperCase();
+  $('#radarUserRole').textContent = user.role === 'admin' ? 'Administrador' : 'Usuário';
+  $('#userPill').textContent = email;
+}
+
+function setRadarMenu(open) {
+  $('#radarMenuToggle').setAttribute('aria-expanded', String(open));
+  $('.sidebar-inner').classList.toggle('radar-menu-open', open);
+}
+
+function bindRadarMenu() {
+  const toggle = $('#radarMenuToggle');
+  toggle.addEventListener('click', () => setRadarMenu(toggle.getAttribute('aria-expanded') !== 'true'));
+  $('#mainNav').addEventListener('click', event => {
+    if (event.target.closest('[data-view]') && toggle.offsetWidth && toggle.getAttribute('aria-expanded') === 'true') {
+      queueMicrotask(() => $('#pageTitle').focus());
+    }
+  });
+  $('.sidebar').addEventListener('keydown', event => {
+    if (event.key === 'Escape' && toggle.getAttribute('aria-expanded') === 'true') {
+      setRadarMenu(false);
+      toggle.focus();
+    }
+  });
+}
 function authMode(mode){state.mode=mode;const login=mode==='login';$('#tabLogin')?.classList.toggle('active',login);$('#tabRegister')?.classList.toggle('active',!login);$('#tabLogin')?.setAttribute('aria-selected',String(login));$('#tabRegister')?.setAttribute('aria-selected',String(!login));if($('#authSubmit'))$('#authSubmit').textContent=login?'Entrar':'Criar conta';if($('#authPassword'))$('#authPassword').autocomplete=login?'current-password':'new-password';if($('#authMessage'))$('#authMessage').textContent=''}
 async function submitAuth(e){e?.preventDefault();const email=$('#authEmail')?.value.trim()||'',password=$('#authPassword')?.value||'',button=$('#authSubmit'),msg=$('#authMessage');if(!email||password.length<10){if(msg)msg.textContent='Informe um e-mail válido e uma senha com pelo menos 10 caracteres.';return}if(button)button.disabled=true;try{const d=await api(state.mode==='login'?'/api/auth/login':'/api/auth/register',{method:'POST',body:JSON.stringify({email,password})});await enter(d.user)}catch(err){if(msg)msg.textContent=err.message}finally{if(button)button.disabled=false}}
 async function checkSession(){try{const d=await api('/api/me');if(d.user)await enter(d.user);else throw new Error()}catch{$('#authScreen')?.classList.remove('hidden');$('#appShell')?.classList.add('hidden')}}
-async function enter(user){state.user=user;$('#authScreen')?.classList.add('hidden');$('#appShell')?.classList.remove('hidden');if($('#userPill'))$('#userPill').textContent=user.email;$('#adminNav')?.classList.toggle('hidden',user.role!=='admin');show('radar');startLive();startRadarDashboard()}
+async function enter(user){state.user=user;$('#authScreen')?.classList.add('hidden');$('#appShell')?.classList.remove('hidden');renderRadarAccount(user);$('#adminNav')?.classList.toggle('hidden',user.role!=='admin');show('radar');startLive();startRadarDashboard()}
 async function logout(){try{await api('/api/auth/logout',{method:'POST',body:'{}'})}catch{}location.reload()}
 const titles={radar:['Radar de Licitações',''],saved:['Oportunidades salvas',''], 'saved-searches':['Buscas salvas',''],alerts:['Alertas','Critérios e canais de notificação'],documents:['Documentos','Acervo pessoal'],ai:['IA RLB','Assistente para licitações'],admin:['Administração','Gestão da plataforma']};
-function show(v){state.view=v;$$('.view').forEach(x=>x.classList.remove('active'));$('#view-'+v)?.classList.add('active');$$('#mainNav [data-view]').forEach(x=>x.classList.toggle('active',x.dataset.view===v));if($('#pageTitle'))$('#pageTitle').textContent=titles[v]?.[0]||'';if($('#pageSubtitle'))$('#pageSubtitle').textContent=titles[v]?.[1]||'';if(v==='saved'){renderSavedTenders();loadDashboardSaved('tender')}if(v==='saved-searches'){renderSavedSearches();loadDashboardSaved('search')}if(v==='alerts')loadAlertsPage();if(v==='documents')loadDocuments();if(v==='ai')loadAiStatus();if(v==='admin')loadAdmin()}
+function show(v){state.view=v;setRadarMenu(false);$$('.view').forEach(x=>x.classList.remove('active'));$('#view-'+v)?.classList.add('active');$$('#mainNav [data-view]').forEach(x=>{const active=x.dataset.view===v;x.classList.toggle('active',active);if(active)x.setAttribute('aria-current','page');else x.removeAttribute('aria-current')});if($('#pageTitle'))$('#pageTitle').textContent=titles[v]?.[0]||'';if($('#pageSubtitle'))$('#pageSubtitle').textContent=titles[v]?.[1]||'';if(v==='saved'){renderSavedTenders();loadDashboardSaved('tender')}if(v==='saved-searches'){renderSavedSearches();loadDashboardSaved('search')}if(v==='alerts')loadAlertsPage();if(v==='documents')loadDocuments();if(v==='ai')loadAiStatus();if(v==='admin')loadAdmin()}
 function isMunicipal(x){return norm(x?.orgaoEntidade?.esferaId)==='M'||/MUNICIPIO|MUNICIPAL|PREFEITURA|CAMARA MUNICIPAL|FUNDO MUNICIPAL|SECRETARIA MUNICIPAL/.test(norm(org(x)+' '+(x?.unidadeOrgao?.nomeUnidade||'')))}
 function isChamber(x){return (norm(x?.orgaoEntidade?.poderId)==='L'&&norm(x?.orgaoEntidade?.esferaId)==='M')||/CAMARA MUNICIPAL|CAMARA DE VEREADORES|LEGISLATIVO MUNICIPAL/.test(norm(org(x)+' '+(x?.unidadeOrgao?.nomeUnidade||'')))}
 function renderLive() {
@@ -55,8 +99,8 @@ const dashboard = {
   pendingSave: new Set(), savedLoads: new Map()
 };
 const dashboardPageSize = 30;
-const radarIds = ['searchKeyword', 'radarMunicipality', 'searchModality', 'searchDays', 'radarClosingDays', 'radarOrder'];
-const radarParams = ['keyword', 'municipality', 'modalidade', 'days', 'closingDays', 'order'];
+const radarIds = ['searchKeyword', 'radarMunicipality', 'searchModality', 'searchDays', 'radarClosingDays', 'radarOrder', 'radarOrganization'];
+const radarParams = ['keyword', 'municipality', 'modalidade', 'days', 'closingDays', 'order', 'org'];
 
 function dashboardUrl(value) {
   try {
@@ -97,8 +141,10 @@ function dashboardChip(label, key) {
 }
 
 function renderDashboardChips() {
-  const chips = selectedRadarStates().map(uf => dashboardChip(uf, uf));
-  for (const id of ['radarMunicipality', 'searchModality', 'searchDays', 'radarClosingDays']) {
+  const states = selectedRadarStates();
+  $('#radarStateSummary').textContent = states.length > 3 ? `${states.length} estados` : states.join(', ') || 'Todo o Brasil';
+  const chips = states.map(uf => dashboardChip(uf, uf));
+  for (const id of ['radarMunicipality', 'searchModality', 'searchDays', 'radarClosingDays', 'radarOrganization']) {
     const input = $('#' + id);
     if (input.value && input.value !== '0') chips.push(dashboardChip(input.selectedOptions?.[0]?.text || input.value, id));
   }
@@ -122,15 +168,29 @@ function radarItem(item) {
   };
 }
 
+function deadlineLabel(value) {
+  if (!value) return '';
+  const date = new Date(value);
+  if (!Number.isFinite(date.getTime())) return '';
+  const now = new Date();
+  if (date < now) return 'Prazo encerrado';
+  if (date.toDateString() === now.toDateString()) return 'Encerra hoje';
+  now.setDate(now.getDate() + 1);
+  return date.toDateString() === now.toDateString() ? 'Encerra amanhã' : '';
+}
+
 function dashboardRows(items, selected, more = 0) {
   if (!items.length) return '<p class="radar-message">Nenhuma oportunidade encontrada.</p>';
   return `<table class="radar-table">
     <thead><tr><th scope="col">Objeto</th><th scope="col">Município/UF</th><th scope="col">Prazo</th></tr></thead>
-    <tbody>${items.map(item => `<tr class="${item.key === selected ? 'radar-selected' : ''}">
+    <tbody>${items.map(item => {
+      const deadline = deadlineLabel(item.closing);
+      return `<tr class="${item.key === selected ? 'radar-selected' : ''}">
       <td><button type="button" data-radar-select="${esc(item.key)}" aria-pressed="${item.key === selected}">${esc(item.title)}</button>
         <small>${esc(item.modality)} · ${esc(item.org)}</small></td>
-      <td>${esc(item.place)}</td><td><span class="radar-mobile-label">Prazo </span>${esc(when(item.closing))}</td>
-    </tr>`).join('')}</tbody></table>
+      <td>${esc(item.place)}</td><td><span class="radar-mobile-label">Prazo </span>${esc(when(item.closing))}${deadline ? `<small class="radar-deadline">${deadline}</small>` : ''}</td>
+    </tr>`;
+    }).join('')}</tbody></table>
     ${more ? `<button type="button" class="radar-button radar-more" id="radarMore">Carregar mais oportunidades (${more} restantes)</button>` : ''}`;
 }
 
@@ -192,12 +252,12 @@ function renderRadarDetail(panel, item) {
   panel.innerHTML = `<article class="result-item radar-detail-card" data-radar-key="${esc(item.key)}">
     <button type="button" class="radar-button radar-back" data-radar-back>Voltar à lista</button>
     <h2 tabindex="-1">${esc(item.title)}</h2>
-    <dl>${rows.filter(([, value])=>value).map(([label,value])=>`<div><dt>${label}</dt><dd>${esc(value)}</dd></div>`).join('')}</dl>
-    <div class="radar-actions">
+    <div class="radar-actions radar-detail-actions">
       ${externalRadarLink(item.official, 'Ver edital no PNCP', 'radar-primary')}
       ${/^[\w-]{1,100}$/.test(item.key) ? `<button type="button" data-radar-save class="radar-button" aria-pressed="${saved}">${saved ? 'Remover dos salvos' : 'Salvar'}</button>` : ''}
       ${item.origin !== item.official ? externalRadarLink(item.origin, 'Portal de origem') : ''}
     </div>
+    <dl>${rows.filter(([, value])=>value).map(([label,value])=>`<div><dt>${label}</dt><dd>${esc(value)}</dd></div>`).join('')}</dl>
     <h3>Documentos da licitação</h3><div class="radar-documents" aria-live="polite"></div>
   </article>`;
   loadRadarDocuments(panel.querySelector('.radar-documents'), item);
@@ -222,14 +282,19 @@ async function loadRadarDocuments(root, item) {
   try {
     const response = await pending;
     if (!root.isConnected) return;
-    const docs = (response.items || []).map(doc => ({
-      ...doc, correction: /RETIFICA|ERRATA|ADENDO/.test(norm(doc.title + ' ' + doc.type))
-    })).sort((a,b) => Number(b.correction) - Number(a.correction));
-    root.innerHTML = docs.length ? `<ul>${docs.map(doc => `<li>
-      <div><strong>${esc(doc.title)}</strong>${doc.correction ? ' <span class="radar-correction">Retificação</span>' : ''}
-      <small>${esc([doc.type, doc.source, doc.publishedAt && when(doc.publishedAt)].filter(Boolean).join(' · '))}</small></div>
-      ${externalRadarLink(doc.url, /\.pdf(?:$|[?#])/i.test(doc.url) || /\.pdf$/i.test(doc.title) ? 'Abrir PDF' : 'Abrir arquivo')}
-      </li>`).join('')}</ul>` : '<p>Nenhum arquivo listado. Consulte a publicação oficial.</p>';
+    const groups = new Map([['Retificações', []], ['Edital e termo de referência', []], ['Anexos e outros documentos', []]]);
+    for (const doc of response.items || []) {
+      const description = norm(doc.title + ' ' + doc.type).replaceAll('_', ' ');
+      const group = /RETIFICA|ERRATA|ADENDO/.test(description) ? 'Retificações' :
+        /EDITAL|INSTRUMENTO CONVOCATORIO|TERMO DE REFERENCIA/.test(description) ? 'Edital e termo de referência' : 'Anexos e outros documentos';
+      groups.get(group).push(doc);
+    }
+    root.innerHTML = [...groups].filter(([, docs]) => docs.length).map(([group, docs]) =>
+      `<section class="radar-document-group"><h4>${group}</h4><ul>${docs.map(doc => `<li>
+        <div><strong>${esc(doc.title)}</strong>${group === 'Retificações' ? ' <span class="radar-correction">Retificação</span>' : ''}
+        <small>${esc([doc.type, doc.source, doc.publishedAt && when(doc.publishedAt)].filter(Boolean).join(' · '))}</small></div>
+        ${externalRadarLink(doc.url, /\.pdf(?:$|[?#])/i.test(doc.url) || /\.pdf$/i.test(doc.title) ? 'Abrir PDF' : 'Abrir arquivo')}
+        </li>`).join('')}</ul></section>`).join('') || '<p>Nenhum arquivo listado. Consulte a publicação oficial.</p>';
   } catch (error) {
     if (dashboard.documents.get(item.key) === pending) dashboard.documents.delete(item.key);
     if (root.isConnected) root.innerHTML = `<p>${esc(error.message)}</p><button type="button" class="radar-button" data-radar-doc-retry>Tentar novamente</button>`;
@@ -323,7 +388,29 @@ function selectRadarItem(button, saved) {
 }
 
 function bindRadarDashboard() {
-  $('#radarStates').innerHTML = UFS.map(uf => `<label><input type="checkbox" value="${uf}"> ${uf}</label>`).join('');
+  const names = ['Acre','Alagoas','Amapá','Amazonas','Bahia','Ceará','Distrito Federal','Espírito Santo',
+    'Goiás','Maranhão','Mato Grosso','Mato Grosso do Sul','Minas Gerais','Pará','Paraíba','Paraná',
+    'Pernambuco','Piauí','Rio de Janeiro','Rio Grande do Norte','Rio Grande do Sul','Rondônia','Roraima',
+    'Santa Catarina','São Paulo','Sergipe','Tocantins'];
+  $('#radarStates').innerHTML = UFS.map((uf, i) => `<label><input type="checkbox" value="${uf}"><span><b>${uf}</b> ${names[i]}</span></label>`).join('');
+  const picker = $('#radarStatePicker');
+  const stateSearch = $('#radarStateSearch');
+  const stateOptions = $$('#radarStates label');
+  const filterStates = () => {
+    const query = norm(stateSearch.value.trim());
+    stateOptions.forEach(option => { option.hidden = !norm(option.textContent).includes(query); });
+    $('#radarNoStates').hidden = stateOptions.some(option => !option.hidden);
+  };
+  stateSearch.addEventListener('input', filterStates);
+  stateSearch.addEventListener('keydown', event => { if (event.key === 'Enter') event.preventDefault(); });
+  picker.addEventListener('toggle', () => {
+    if (picker.open) stateSearch.focus();
+    else { stateSearch.value = ''; filterStates(); }
+  });
+  const closePicker = () => { picker.open = false; $('summary', picker).focus(); };
+  $('#radarStateDone').addEventListener('click', closePicker);
+  picker.addEventListener('keydown', event => { if (event.key === 'Escape' && picker.open) closePicker(); });
+  document.addEventListener('click', event => { if (!picker.contains(event.target)) picker.open = false; });
   const form = $('#radarSearchForm');
   form.addEventListener('submit', event => {
     event.preventDefault();
@@ -435,7 +522,7 @@ function aiMsg(role,text){const root=$('#aiMessages');root?.querySelector('.empt
 async function sendAi(){const text=$('#aiPrompt')?.value.trim();if(!text)return;if($('#aiPrompt'))$('#aiPrompt').value='';aiMsg('user',text);if($('#aiSend'))$('#aiSend').disabled=true;try{const d=await api('/api/ai-rlb/chat',{method:'POST',body:JSON.stringify({message:text,use_web:true}),timeoutMs:60000});aiMsg('assistant',String(d.answer||d.response||d.content||d.message||d.text||'Resposta recebida.'))}catch(e){aiMsg('assistant','Erro: '+e.message)}finally{if($('#aiSend'))$('#aiSend').disabled=false}}
 async function loadAdmin(){if(state.user?.role!=='admin')return;try{const [s,u,a]=await Promise.all([api('/api/admin/stats'),api('/api/admin/users'),api('/api/admin/audit')]);const st=s.stats||{};if($('#adminUsers'))$('#adminUsers').textContent=st.users?.total??'—';if($('#adminActive'))$('#adminActive').textContent=st.users?.active??'—';if($('#adminAlerts'))$('#adminAlerts').textContent=st.alerts?.enabled??'—';if($('#adminDocs'))$('#adminDocs').textContent=st.documents?.count??'—';if($('#adminUsersList'))$('#adminUsersList').innerHTML=(u.items||[]).map(x=>`<div class="stack-item admin-row"><div class="stack-copy"><b>${esc(x.email)}</b><span>${esc(x.role)} • ${x.active?'ativo':'inativo'}</span></div><select data-role-user="${x.id}" ${x.id==state.user.id?'disabled':''}><option value="user" ${x.role==='user'?'selected':''}>Usuário</option><option value="admin" ${x.role==='admin'?'selected':''}>Admin</option></select><button class="btn ghost compact" data-active-user="${x.id}" data-active="${x.active}" ${x.id==state.user.id?'disabled':''}>${x.active?'Desativar':'Ativar'}</button></div>`).join('');if($('#adminAuditList'))$('#adminAuditList').innerHTML=(a.items||[]).slice(0,60).map(x=>`<div class="stack-item"><div class="stack-copy"><b>${esc(x.action)}</b><span>${esc(x.email||'sistema')} • ${esc(when(x.created_at))}</span></div></div>`).join('')||'<div class="empty-state">Sem eventos recentes.</div>'}catch(e){toast(e.message,true)}}
 async function patchUser(id,p){try{await api('/api/admin/users/'+id,{method:'PATCH',body:JSON.stringify(p)});toast('Usuário atualizado.');await loadAdmin()}catch(e){toast(e.message,true)}}
-function bind(){fillSelects();initTheme();$('#tabLogin')?.addEventListener('click',()=>authMode('login'));$('#tabRegister')?.addEventListener('click',()=>authMode('register'));$('#authForm')?.addEventListener('submit',submitAuth);$('#logoutBtn')?.addEventListener('click',logout);document.addEventListener('click',e=>{const b=e.target.closest('[data-view]');if(b&&!b.classList.contains('hidden')&&b.dataset.view)show(b.dataset.view)});bindRadarDashboard();$('#refreshLive')?.addEventListener('click',refreshLive);$('#liveScope')?.addEventListener('change',renderLive);$('#createAlertBtn')?.addEventListener('click',createAlert);$('#alertsList')?.addEventListener('click',async e=>{const d=e.target.closest('[data-delete-alert]'),t=e.target.closest('[data-toggle-alert]');if(d&&confirm('Excluir este alerta?')){await api('/api/alerts/'+d.dataset.deleteAlert,{method:'DELETE',body:'{}'});loadAlerts()}if(t){await api('/api/alerts/'+t.dataset.toggleAlert,{method:'PATCH',body:JSON.stringify({enabled:t.dataset.enabled!=='true'})});loadAlerts()}});$('#notificationProfile')?.addEventListener('click',e=>{const r=e.target.closest('[data-request-verify]'),c=e.target.closest('[data-confirm-verify]');if(r)requestVerify(r.dataset.requestVerify);if(c)confirmVerify(c.dataset.confirmVerify);const t=e.target.closest('[data-test-notification]');if(t){t.disabled=true;api('/api/notifications/test',{method:'POST',body:JSON.stringify({channel:t.dataset.testNotification})}).then(()=>toast('E-mail de teste enviado. Confira sua caixa de entrada.')).catch(err=>toast(err.message,true)).finally(()=>t.disabled=false)}});$('#docInput')?.addEventListener('change',e=>uploadDoc(e.target.files?.[0]));$('#documentsList')?.addEventListener('click',async e=>{const b=e.target.closest('[data-delete-doc]');if(b&&confirm('Excluir este documento?')){await api('/api/documents/'+b.dataset.deleteDoc,{method:'DELETE',body:'{}'});loadDocuments()}});$('#aiSend')?.addEventListener('click',sendAi);$('#aiPrompt')?.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendAi()}});$('#adminUsersList')?.addEventListener('change',e=>{const s=e.target.closest('[data-role-user]');if(s)patchUser(s.dataset.roleUser,{role:s.value})});$('#adminUsersList')?.addEventListener('click',e=>{const b=e.target.closest('[data-active-user]');if(b)patchUser(b.dataset.activeUser,{active:b.dataset.active!=='true'})});window.addEventListener('focus',()=>state.user&&state.view==='radar'&&refreshLive());document.addEventListener('visibilitychange',()=>!document.hidden&&state.user&&state.view==='radar'&&refreshLive())}
+function bind(){fillSelects();initTheme();bindRadarMenu();$('#tabLogin')?.addEventListener('click',()=>authMode('login'));$('#tabRegister')?.addEventListener('click',()=>authMode('register'));$('#authForm')?.addEventListener('submit',submitAuth);$('#logoutBtn')?.addEventListener('click',logout);document.addEventListener('click',e=>{const b=e.target.closest('[data-view]');if(b&&!b.classList.contains('hidden')&&b.dataset.view)show(b.dataset.view)});bindRadarDashboard();$('#refreshLive')?.addEventListener('click',refreshLive);$('#liveScope')?.addEventListener('change',renderLive);$('#createAlertBtn')?.addEventListener('click',createAlert);$('#alertsList')?.addEventListener('click',async e=>{const d=e.target.closest('[data-delete-alert]'),t=e.target.closest('[data-toggle-alert]');if(d&&confirm('Excluir este alerta?')){await api('/api/alerts/'+d.dataset.deleteAlert,{method:'DELETE',body:'{}'});loadAlerts()}if(t){await api('/api/alerts/'+t.dataset.toggleAlert,{method:'PATCH',body:JSON.stringify({enabled:t.dataset.enabled!=='true'})});loadAlerts()}});$('#notificationProfile')?.addEventListener('click',e=>{const r=e.target.closest('[data-request-verify]'),c=e.target.closest('[data-confirm-verify]');if(r)requestVerify(r.dataset.requestVerify);if(c)confirmVerify(c.dataset.confirmVerify);const t=e.target.closest('[data-test-notification]');if(t){t.disabled=true;api('/api/notifications/test',{method:'POST',body:JSON.stringify({channel:t.dataset.testNotification})}).then(()=>toast('E-mail de teste enviado. Confira sua caixa de entrada.')).catch(err=>toast(err.message,true)).finally(()=>t.disabled=false)}});$('#docInput')?.addEventListener('change',e=>uploadDoc(e.target.files?.[0]));$('#documentsList')?.addEventListener('click',async e=>{const b=e.target.closest('[data-delete-doc]');if(b&&confirm('Excluir este documento?')){await api('/api/documents/'+b.dataset.deleteDoc,{method:'DELETE',body:'{}'});loadDocuments()}});$('#aiSend')?.addEventListener('click',sendAi);$('#aiPrompt')?.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendAi()}});$('#adminUsersList')?.addEventListener('change',e=>{const s=e.target.closest('[data-role-user]');if(s)patchUser(s.dataset.roleUser,{role:s.value})});$('#adminUsersList')?.addEventListener('click',e=>{const b=e.target.closest('[data-active-user]');if(b)patchUser(b.dataset.activeUser,{active:b.dataset.active!=='true'})});window.addEventListener('focus',()=>state.user&&state.view==='radar'&&refreshLive());document.addEventListener('visibilitychange',()=>!document.hidden&&state.user&&state.view==='radar'&&refreshLive())}
 async function boot(){try{bind();const m=$('#runtimeMessage');if(m){m.textContent='Interface carregada.';m.classList.add('ok')}await checkSession()}catch(e){console.error('RLB boot fatal:',e);const m=$('#runtimeMessage');if(m){m.textContent='Falha ao iniciar a interface. Atualize a página.';m.classList.remove('ok')}const a=$('#authMessage');if(a)a.textContent='Falha ao iniciar a interface.'}}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 })();

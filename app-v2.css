@@ -1562,3 +1562,139 @@ button.radar-chip:hover { border-color: #4384ff; }
     color: var(--radar-text) !important;
   }
 }
+
+/* Perfil, navegação compacta e filtros de consulta do Radar */
+#radarMenuToggle { display: none; }
+.radar-account-controls {
+  color: #e5eeff;
+  display: grid;
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 12px;
+  border-top: 1px solid #304461;
+}
+#radarAccount { background: #142647; border: 1px solid #304461; border-radius: 10px; }
+#radarAccount summary {
+  display: grid;
+  grid-template-columns: 34px minmax(0,1fr) auto;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  list-style: none;
+  cursor: pointer;
+  min-height: 48px;
+}
+#radarAccount summary::-webkit-details-marker, #radarStatePicker summary::-webkit-details-marker { display: none; }
+#radarAvatar {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  background: #264575;
+  color: #f2f7ff;
+  font-weight: 750;
+}
+#radarUserName { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#radarAccount small, #radarAccount > div, .radar-account-controls > label { color: #b6c9e7; font-size: 12px; }
+#radarAccount > div { padding: 9px; border-top: 1px solid #304461; }
+#userPill { display: block; overflow-wrap: anywhere; }
+#radarTheme, .radar-signout {
+  width: 100%;
+  min-height: 42px;
+  padding: 8px 10px;
+  color: #e5eeff;
+  background: #142647;
+  border: 1px solid #304461;
+  border-radius: 8px;
+}
+.radar-signout { display: flex; align-items: center; gap: 8px; font-weight: 650; }
+.radar-signout:hover, #radarAccount summary:hover { background: #1b355d; }
+.radar-signout svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; }
+#appShell.radar-layout #mainNav #adminNav { order: 1; }
+#appShell.radar-layout #mainNav #adminNav.hidden { display: none !important; }
+#appShell.radar-layout .main-nav .nav-icon { border: 0 !important; background: transparent !important; }
+
+.radar-search {
+  padding: clamp(12px,2vw,20px);
+  background: var(--radar-paper);
+  border: 1px solid var(--radar-line);
+  border-radius: 14px;
+}
+.radar-quick-filters {
+  display: grid;
+  grid-template-columns: minmax(0,1fr) minmax(0,1.3fr) minmax(0,1fr) auto;
+  align-items: end;
+  gap: 10px;
+}
+.radar-quick-filters > * { min-width: 0; }
+#radarStatePicker { position: relative; z-index: 5; }
+#radarStatePicker summary {
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  color: var(--radar-text);
+  border: 1px solid var(--radar-line);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 13px;
+  cursor: pointer;
+  list-style: none;
+}
+#radarStatePicker summary span { color: var(--radar-muted); }
+#radarStatePicker summary strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#radarStatePicker summary::after { content: "⌄"; margin-left: auto; }
+.radar-state-popover {
+  position: absolute;
+  top: calc(100% + 7px);
+  left: 0;
+  width: min(300px, calc(100vw - 48px));
+  padding: 10px;
+  background: var(--radar-paper);
+  border: 1px solid var(--radar-line);
+  border-radius: 10px;
+  box-shadow: 0 10px 26px #07163835;
+}
+.radar-state-popover fieldset { border: 0; padding: 0; margin: 8px 0; min-width: 0; }
+.radar-state-popover legend { padding: 0; color: var(--radar-muted); font-size: 12px; }
+#radarStates { display: grid; gap: 2px; max-height: 220px; overflow: auto; }
+#radarStates label { padding: 3px 6px; gap: 7px; border-radius: 6px; }
+#radarStates label:hover { background: var(--radar-soft); }
+#radarStates label[hidden] { display: none; }
+.radar-filters:not([hidden]) { grid-template-columns: repeat(3, minmax(0,1fr)); }
+.radar-filter-bar #radarChips { flex: 1 1 120px; }
+.radar-table td:first-child button {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+.radar-table td button:focus-visible { outline-offset: 0; }
+.radar-table small.radar-deadline { font-weight: 750; color: var(--radar-text); }
+.radar-panel .radar-detail-card { overflow: visible; }
+.radar-detail-card > :is(h3,.radar-documents) { order: 1; }
+.radar-detail-actions { background: var(--radar-paper); padding-block: 5px; }
+.radar-document-group + .radar-document-group { margin-top: 13px; }
+.radar-document-group h4 { margin: 0 0 6px; color: var(--radar-muted); font-size: 13px; }
+@media (min-width: 1101px) {
+  .radar-detail-actions { position: sticky; top: 0; z-index: 2; }
+}
+@media (max-width: 1100px) {
+  #appShell.radar-layout .sidebar { height: auto !important; max-height: 85dvh; overflow-y: auto; min-height: 0 !important; }
+  #appShell.radar-layout .sidebar-inner { display: flex !important; min-height: 0 !important; gap: 8px !important; }
+  #appShell.radar-layout .sidebar-brand { flex: 1 1 0 !important; }
+  #radarMenuToggle { display: inline-flex; align-items: center; gap: 7px; min-height: 42px; padding-inline: 12px; color: var(--radar-text); background: var(--radar-paper); border: 1px solid var(--radar-line); border-radius: 8px; }
+  #appShell.radar-layout #mainNav, .radar-account-controls { display: none !important; }
+  #appShell.radar-layout .radar-menu-open #mainNav { display: grid !important; grid-template-columns: repeat(2,minmax(0,1fr)); order: 3 !important; }
+  #appShell.radar-layout #mainNav button { min-width: 0 !important; min-height: 42px; }
+  .radar-menu-open .radar-account-controls { display: grid !important; order: 4; flex: 1 0 100%; color: var(--radar-text); border-color: var(--radar-line); }
+  #radarAccount, #radarTheme, .radar-signout { color: var(--radar-text); background: var(--radar-paper); border-color: var(--radar-line); }
+  #radarAccount small, #radarAccount > div, .radar-account-controls > label { color: var(--radar-muted); }
+  .radar-signout:hover, #radarAccount summary:hover { background: var(--radar-soft); }
+}
+@media (max-width: 620px) {
+  .radar-quick-filters, .radar-filters:not([hidden]) { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .radar-filter-bar #radarChips { flex-basis: 100%; }
+  .radar-workspace aside { scroll-margin-top: 70px; }
+}
