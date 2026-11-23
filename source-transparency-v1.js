@@ -5,7 +5,7 @@ window.__rlbSourceTransparencyV1=true;
 
 const nativeFetch=window.fetch.bind(window);
 let searchItems=[];
-let liveItems=[];
+let liveItemsByUrl=new Map();
 let queued=false;
 
 const clean=v=>String(v??'').trim();
@@ -166,10 +166,11 @@ function enhanceSearch(){
 }
 function enhanceLive(){
   const root=document.getElementById('liveList');
-  if(!root||!liveItems.length)return;
+  if(!root||!liveItemsByUrl.size)return;
   const rows=[...root.querySelectorAll('.live-item')];
-  rows.forEach((row,index)=>{
-    const item=liveItems[index];
+  rows.forEach(row=>{
+    const official=urlOf(row.querySelector('.item-open')?.getAttribute('href'));
+    const item=liveItemsByUrl.get(official);
     if(!item)return;
     const key=sourceKey(item);
     const existing=row.querySelector('.rlb-live-source');
@@ -193,7 +194,11 @@ window.fetch=async function rlbSourceAwareFetch(input,init){
     if(url.pathname==='/api/licitacoes'){
       response.clone().json().then(data=>{searchItems=Array.isArray(data?.items)?data.items:[];queueEnhance()}).catch(()=>{});
     }else if(url.pathname==='/api/live-feed'){
-      response.clone().json().then(data=>{liveItems=Array.isArray(data?.items)?data.items:[];queueEnhance()}).catch(()=>{});
+      response.clone().json().then(data=>{
+        const items=Array.isArray(data?.items)?data.items:[];
+        liveItemsByUrl=new Map(items.map(item=>[pncpUrl(item),item]).filter(([url])=>url));
+        queueEnhance();
+      }).catch(()=>{});
     }
   }catch{}
   return response;
