@@ -1044,6 +1044,20 @@ async function check(){
 }
 function boot(){
  install();
+ const admin=$('#view-admin');
+ let panelRepairScheduled=false;
+ // A Central Administrativa substitui parte de sua tela dinamicamente.
+ // Mantém o diagnóstico acessível mesmo após esse redesenho.
+ if(admin)new MutationObserver(()=>{
+   if(panelRepairScheduled||!logged()||$('#adminNav')?.classList.contains('hidden')||$('#revHealth'))return;
+   panelRepairScheduled=true;
+   queueMicrotask(()=>{
+     panelRepairScheduled=false;
+     if(!logged()||$('#adminNav')?.classList.contains('hidden')||$('#revHealth'))return;
+     install();
+     if(admin.classList.contains('active')&&!loading)check();
+   });
+ }).observe(admin,{childList:true,subtree:true});
  document.addEventListener('click',e=>{if(e.target.closest('#mainNav [data-view="admin"]')){install();if(logged())check()}});
  const shell=$('#appShell');if(shell)new MutationObserver(()=>{if(!logged()){epoch++;const status=$('#revHealthStatus');if(status){status.textContent='Entre como administrador para consultar o estado do serviço.';status.removeAttribute('data-ok')}}}).observe(shell,{attributes:true,attributeFilter:['class']});
 }

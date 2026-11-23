@@ -76,3 +76,10 @@ test('sino de notificações continua acessível em telas pequenas',()=>{
  assert.match(css, /topbar\.rev-n-wrap|topbar \.rev-n-wrap/);
  assert.match(css, /\.rev-n-bell::before/);
 });
+
+
+test('admin diagnostic survives dynamic Admin Center rerender',()=>{
+ assert.match(js,/panelRepairScheduled/);
+ assert.match(js,/observe\(admin,\{childList:true,subtree:true\}\)/);
+ assert.match(js,/if\(admin\.classList\.contains\('active'\)&&!loading\)check\(\)/);
+});
