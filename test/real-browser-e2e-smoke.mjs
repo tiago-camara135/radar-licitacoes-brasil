@@ -249,6 +249,25 @@ try{
    'Identical refreshed recommendations preserve DOM and do not blink');
  await page.evaluate(data=>document.dispatchEvent(new CustomEvent('radar:overview',{detail:data})),originalOverview);
  note('Real-snapshot diff highlights only newly introduced recommendations; unchanged cards do not blink OK');
+ // Cycle through compatible records even when the next successful response has no new IDs.
+ await page.evaluate(data=>{
+   const first=data.recommendations[0];
+   const recommendations=Array.from({length:7},(_,i)=>({...first,sequence:Number(first.sequence)+100+i}));
+   window.__qaRotationOverview={...data,recommendations};
+   document.dispatchEvent(new CustomEvent('radar:overview',{detail:window.__qaRotationOverview}));
+ },originalOverview);
+ const beforeRotation=await page.locator('#revRecommendations .rev-rec').evaluateAll(cards=>cards.map(card=>card.dataset.seq));
+ await page.evaluate(()=>{
+   document.dispatchEvent(new CustomEvent('radar:recommendations-cycle'));
+   document.dispatchEvent(new CustomEvent('radar:overview',{detail:window.__qaRotationOverview}));
+ });
+ const afterRotation=await page.locator('#revRecommendations .rev-rec').evaluateAll(cards=>cards.map(card=>card.dataset.seq));
+ assert.equal(afterRotation.length,3);
+ assert.ok(afterRotation.every(id=>!beforeRotation.includes(id)),'Unchanged response should rotate to other compatible records');
+ assert.equal(await page.locator('#revRecommendations [data-pulse-state]').count(),0,'Rotated records should not be reported as new');
+ await page.evaluate(data=>document.dispatchEvent(new CustomEvent('radar:overview',{detail:data})),originalOverview);
+ note('Successful consultation rotates compatible recommendations without false novelty');
+
 
  await page.locator('.rev-n-bell').click();
  await page.locator('#revNotifPanel:not([hidden])').waitFor({state:'visible',timeout});
@@ -286,11 +305,11 @@ try{
  await gotoSection(page,'home');
  // A gravação em Minha Operação deve atualizar KPIs, panorama e prazos
  // sem exigir botão Atualizar nem esperar o cache expirar.
- await until(page,()=>document.querySelector('#rlbHomePanorama .rlb-home-ring-center strong')?.textContent?.trim()==='1',18000);
+ await until(page,()=>document.querySelector('#rlbHomePanorama .pulse-stage-chart')?.getAttribute('aria-label')==='1 licitações acompanhadas',18000);
  await until(page,()=>document.querySelector('#rlbHomeKpis .rev-stat:nth-child(3) .rev-value')?.textContent?.trim()==='1',18000);
  await page.locator('#revSummary .rev-action').first().click();
  assert.ok(await page.locator('#rlbHomeDeadlines .rlb-home-deadline').count()>0,'Real deadline agenda present');
- assert.ok(await page.locator('#rlbHomePanorama .rlb-home-ring').count()===1,'Real tracking chart present');
+ assert.ok(await page.locator('#rlbHomePanorama .pulse-stage-chart').count()===1,'Real tracking chart present');
  await page.locator('#rlbHomeDeadlineControls [data-home-period="30"]').click();
  assert.equal(await page.locator('#rlbHomeDeadlineControls [data-home-period="30"]').getAttribute('aria-pressed'),'true');
  await page.locator('#rlbHomeDeadlineControls [data-home-period="7"]').click();
