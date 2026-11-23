@@ -426,6 +426,30 @@ try{
  }
  note('Executive home and Radar search responsive 320/390/768/1024/1440px, both themes OK');
 
+ // A paleta deve alterar cores computadas dos quatro KPIs quando o tema muda.
+ const themePalettes=[];
+ for(const theme of ['light','dark']){
+   await page.evaluate(next=>{document.documentElement.dataset.theme=next},theme);
+   themePalettes.push(await page.evaluate(()=>{
+     const home=document.querySelector('#view-home');
+     const first=home.querySelector('.rev-stat');
+     const styles=getComputedStyle(first);
+     return {color:styles.color,background:styles.backgroundImage,
+       surface:getComputedStyle(home).getPropertyValue('--rlb-home-surface').trim()};
+   }));
+ }
+ assert.notEqual(themePalettes[0].background,themePalettes[1].background,'KPI gradient must react to theme');
+ assert.notEqual(themePalettes[0].color,themePalettes[1].color,'KPI text must react to theme');
+ assert.notEqual(themePalettes[0].surface,themePalettes[1].surface,'Card surfaces must react to theme');
+ // Toggle real preserva interação e preferência, não apenas atributo via JS.
+ const themeBefore=await page.locator('html').getAttribute('data-theme');
+ await page.locator('#radarTheme').click();
+ assert.notEqual(await page.locator('html').getAttribute('data-theme'),themeBefore,'Theme button must toggle palette');
+ await page.locator('#radarTheme').click();
+ assert.equal(await page.locator('html').getAttribute('data-theme'),themeBefore,'Theme button must restore palette');
+ note('Adaptive KPI palette and functional light/dark theme toggle OK');
+
+
  // Avança apenas o relógio da aba isolada de QA: comprova o disparo real
  // do agendamento de cinco minutos sem esperar cinco minutos no CI.
  await gotoSection(page,'home');
