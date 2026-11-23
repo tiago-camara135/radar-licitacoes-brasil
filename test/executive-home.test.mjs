@@ -59,3 +59,19 @@ test('links oficiais não aceitam javascript e os textos são renderizados como 
  assert.match(js,/a\.rel='noopener noreferrer'/);
  assert.match(js,/Nenhum prazo futuro registrado/);
 });
+
+
+test('auditoria: home é atualizada por eventos de monitoramento nacional',()=>{
+ assert.match(js,/state\.view==='radar'\|\|state\.view==='home'/);
+ assert.match(js,/document\.dispatchEvent\(new CustomEvent\('radar:live-feed'/);
+});
+test('auditoria: novos filtros de busca não são contaminados por filtros antigos',()=>{
+ assert.match(js,/for\(const id of \['radarMunicipality','radarOrganization'\]\)/);
+ assert.match(js,/if\(\$\('#searchDays'\)\)\$\('#searchDays'\)\.value='0'/);
+ assert.match(js,/#radarSearchForm'\)\?\.requestSubmit\(\)/);
+});
+test('auditoria: Minha Operação sincroniza indicadores no dashboard',()=>{
+ assert.match(js,/overview=d;render\(\);installTrackActions\(\);document\.dispatchEvent\(new CustomEvent\('radar:overview'/);
+ assert.match(js,/document\.addEventListener\('radar:overview',event=>\{/);
+ assert.match(js,/ui\.values\[i\]\.textContent=number\(metrics\[key\]\)/);
+});

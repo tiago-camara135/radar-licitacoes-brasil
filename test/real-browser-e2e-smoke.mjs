@@ -163,12 +163,22 @@ try{
  note('Tracking status, private notes persistence and calendar OK');
 
  await gotoSection(page,'home');
- await page.locator('#revSummary .rev-action').first().click();
+ // A gravação em Minha Operação deve atualizar KPIs, panorama e prazos
+ // sem exigir botão Atualizar nem esperar o cache expirar.
  await until(page,()=>document.querySelector('#rlbHomePanorama .rlb-home-ring-center strong')?.textContent?.trim()==='1',18000);
+ await until(page,()=>document.querySelector('#rlbHomeKpis .rev-stat:nth-child(3) .rev-value')?.textContent?.trim()==='1',18000);
+ await page.locator('#revSummary .rev-action').first().click();
  assert.ok(await page.locator('#rlbHomeDeadlines .rlb-home-deadline').count()>0,'Real deadline agenda present');
  assert.ok(await page.locator('#rlbHomePanorama .rlb-home-ring').count()===1,'Real tracking chart present');
  note('Executive home agenda and operation donut chart use persisted account data OK');
 
+ // Filtros avançados antigos não devem contaminar uma busca nova.
+ await gotoSection(page,'radar');
+ if(await page.locator('#radarFilters').evaluate(e=>e.hidden))await page.locator('#radarFiltersToggle').click();
+ await page.locator('#radarMunicipality').fill('Cidade anterior');
+ await page.locator('#radarOrganization').fill('Órgão anterior');
+ await page.locator('#searchDays').selectOption('90');
+ await gotoSection(page,'home');
  await page.locator('#rlbHomeKeyword').fill('combustível');
  await page.locator('#rlbHomeUf').selectOption('RN');
  await page.locator('#rlbHomeModality').selectOption('6');
@@ -179,7 +189,10 @@ try{
  assert.equal(await page.locator('#searchModality').inputValue(),'6');
  assert.equal(await page.locator('#radarClosingDays').inputValue(),'7');
  assert.equal(await page.locator('#radarStates input[value="RN"]').isChecked(),true);
- note('Executive search transfers keyword, UF, modality and deadline filters to full Radar OK');
+ assert.equal(await page.locator('#radarMunicipality').inputValue(),'','Old municipality filter cleared');
+ assert.equal(await page.locator('#radarOrganization').inputValue(),'','Old organization filter cleared');
+ assert.equal(await page.locator('#searchDays').inputValue(),'0','Old publication date filter cleared');
+ note('Executive search transfers keyword, UF, modality and deadline without hidden legacy filters OK');
 
  await page.locator('#radarSaveSearch').click();
  await page.locator('#radarSaveDialog').waitFor({state:'visible'});
@@ -224,6 +237,25 @@ try{
  await page.keyboard.press('Escape');
  assert.equal(await page.locator('#revNotifPanel').getAttribute('hidden'),'','Escape closes notification panel');
  note('Mobile 390px responsiveness, notifications and keyboard Escape OK');
+
+ // Visibilidade em mais larguras, sem rolagem horizontal oculta, nos dois temas.
+ for(const width of [320,390,768,1024,1440]){
+   await page.setViewportSize({width,height:880});
+   await gotoSection(page,'home');
+   for(const theme of ['light','dark']){
+     await page.evaluate(next=>{document.documentElement.dataset.theme=next},theme);
+     const dimensions=await page.evaluate(()=>{
+       const root=document.querySelector('#view-home'),body=document.documentElement;
+       const e=document.querySelector('#rlbHomeSearchForm'),k=document.querySelector('#rlbHomeKpis');
+       const r=root.getBoundingClientRect(),a=e.getBoundingClientRect(),b=k.getBoundingClientRect();
+       return {innerWidth,documentWidth:body.scrollWidth,homeRight:r.right,searchRight:a.right,kpisRight:b.right};
+     });
+     assert.ok(dimensions.documentWidth<=width+6,'Horizontal overflow '+theme+' @'+width+': '+JSON.stringify(dimensions));
+     assert.ok(dimensions.homeRight<=width+6&&dimensions.searchRight<=width+6&&dimensions.kpisRight<=width+6,
+       'Home content overflows '+theme+' @'+width+': '+JSON.stringify(dimensions));
+   }
+ }
+ note('Executive responsive layout 320/390/768/1024/1440px in light and dark themes OK');
 
  const fatal=problems.filter(x=>!(/ERR_CONNECTION|Failed to fetch|network error/i.test(x)));
  assert.deepEqual(fatal,[],'Unexpected browser JavaScript errors');

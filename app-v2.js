@@ -102,7 +102,7 @@ function renderLive() {
   }).join('') || '<div class="empty-state">Nenhuma oportunidade neste filtro.</div>';
 }
 async function refreshLive(){if(state.livePromise)return state.livePromise;const task=(async()=>{try{const d=await api('/api/live-feed?limit=40',{timeoutMs:12000});state.live=d.items||[];renderLive();const s=d.status||{};document.dispatchEvent(new CustomEvent('radar:live-feed',{detail:{items:state.live,status:s}}));if($('#metricStored'))$('#metricStored').textContent=Number(s.total_stored||0).toLocaleString('pt-BR');if($('#metricNew'))$('#metricNew').textContent=Number(s.last_new_count||0).toLocaleString('pt-BR');if($('#metricLast'))$('#metricLast').textContent=time(s.last_success_at);$('#statusDot')?.classList.toggle('ok',!s.consecutive_failures);if($('#monitorStatusText'))$('#monitorStatusText').textContent=s.running?'Varredura em andamento':`PNCP • ${s.live?.modalities_per_cycle||14} modalidades • ${s.interval_seconds||90}s`;if($('#liveMeta'))$('#liveMeta').textContent=`Atualização por eventos • varredura ${time(s.last_success_at)} • tela ${time(d.fetched_at)} • ${Number(s.total_stored||0).toLocaleString('pt-BR')} registros`}catch(e){if($('#liveMeta'))$('#liveMeta').textContent=e.code==='request_timeout'?'A atualização demorou mais que o esperado. Tentaremos novamente.':'Falha temporária ao sincronizar o feed.'}})();state.livePromise=task;try{return await task}finally{if(state.livePromise===task)state.livePromise=null}}
-function startLive(){clearInterval(state.timer);state.timer=null;try{state.sse?.close()}catch{}state.sse=null;refreshLive();try{state.sse=new EventSource('/api/live-events');const sync=()=>{if(state.view==='radar')refreshLive()};state.sse.addEventListener('procurement',sync);state.sse.addEventListener('status',sync);state.timer=setInterval(()=>{if(!state.sse||state.sse.readyState!==EventSource.OPEN)refreshLive()},90000)}catch{state.sse=null;state.timer=setInterval(refreshLive,90000)}}
+function startLive(){clearInterval(state.timer);state.timer=null;try{state.sse?.close()}catch{}state.sse=null;refreshLive();try{state.sse=new EventSource('/api/live-events');const sync=()=>{if(state.view==='radar'||state.view==='home')refreshLive()};state.sse.addEventListener('procurement',sync);state.sse.addEventListener('status',sync);state.timer=setInterval(()=>{if(!state.sse||state.sse.readyState!==EventSource.OPEN)refreshLive()},90000)}catch{state.sse=null;state.timer=setInterval(refreshLive,90000)}}
 const dashboard = {
   search: null, items: [], page: 0, listScroll: 0, selected: '', savedSelected: '',
   saved: new Map(), searches: new Map(), documents: new Map(),
@@ -696,6 +696,17 @@ function install(){
  if(shell)new MutationObserver(()=>{if(!logged()){epoch++;lastLoad=0;lastIdentity='';ui.values.forEach(x=>x.textContent='—');ui.status.textContent='Entre na conta para consultar os indicadores.'}else load(false)}).observe(shell,{attributes:true,attributeFilter:['class']});
  document.addEventListener('click',e=>{if(e.target.closest('#mainNav [data-view="radar"], #mainNav [data-view="home"]'))load(false)});
  document.addEventListener('visibilitychange',()=>{if(!document.hidden&&Date.now()-lastLoad>180000)load(false)});
+ // Reconciliar indicadores após acompanhamento salvo em Minha Operação.
+ document.addEventListener('radar:overview',event=>{
+   if(!logged()||!event.detail)return;
+   const metrics=event.detail.metrics||{};
+   ['new_matches_today','recommended_high','tracked_active','upcoming_7d'].forEach((key,i)=>{
+     ui.values[i].textContent=number(metrics[key]);
+   });
+   lastIdentity=identity();
+   lastLoad=Date.now();
+   ui.status.textContent='Atualizado às '+new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})+' • Dados da sua conta';
+ });
  if(logged())load(false);
 }
 async function load(force){
@@ -902,7 +913,7 @@ async function load(force){
  if(overview&&!force){render();return}
  loading=true;ui.root.replaceChildren(el('p','rev-op-loading','Carregando dados da conta…'));
  const seq=generation;
- try{const d=await request('/api/dashboard/overview');if(!logged()||seq!==generation)return;overview=d;render();installTrackActions()}
+ try{const d=await request('/api/dashboard/overview');if(!logged()||seq!==generation)return;overview=d;render();installTrackActions();document.dispatchEvent(new CustomEvent('radar:overview',{detail:d}))}
  catch(e){if(seq!==generation||!logged())return;ui.root.replaceChildren(el('p','rev-op-error',e.message));const retry=el('button','rev-track-button','Tentar novamente');retry.type='button';retry.addEventListener('click',()=>load(true));ui.root.append(retry)}
  finally{loading=false}
 }
@@ -1122,6 +1133,13 @@ function setupSearch(){
     event.preventDefault();
     if(!logged())return;
     openSection('radar');
+    // Uma nova pesquisa não deve herdar município, órgão ou período
+    // ocultos que foram usados anteriormente na busca avançada.
+    for(const id of ['radarMunicipality','radarOrganization']){
+      const control=$('#'+id);
+      if(control)control.value='';
+    }
+    if($('#searchDays'))$('#searchDays').value='0';
     const keyword=$('#searchKeyword'),modal=$('#searchModality'),deadline=$('#radarClosingDays');
     if(keyword)keyword.value=$('#rlbHomeKeyword').value.trim();
     if(modal)modal.value=modality.value;
