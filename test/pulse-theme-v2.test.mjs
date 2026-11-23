@@ -26,3 +26,15 @@ test('appearance groups retain original toggle, expose auto and persist preferen
  assert.match(js,/preference === 'auto' && systemTheme.matches/);
  assert.match(js,/function renderMetric/);assert.match(js,/if\(previous===next\)return/);
 });
+
+test('real metric values are written immediately and unchanged snapshots are not animated',()=>{
+ const body=js.slice(js.indexOf('function renderMetric('),js.indexOf('let busy=false',js.indexOf('function renderMetric(')));
+ let animated=0;
+ const node={textContent:'—',animate:()=>{animated++}};
+ const render=new Function('number','matchMedia',body+';return renderMetric')(v=>String(v),()=>({matches:false}));
+ render(node,18);assert.equal(node.textContent,'18');assert.equal(animated,0);
+ render(node,18);assert.equal(animated,0);
+ render(node,21);assert.equal(node.textContent,'21');assert.equal(animated,1);
+ const reduced=new Function('number','matchMedia',body+';return renderMetric')(v=>String(v),()=>({matches:true}));
+ reduced(node,24);assert.equal(node.textContent,'24');assert.equal(animated,1);
+});

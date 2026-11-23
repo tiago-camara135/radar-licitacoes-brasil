@@ -82,7 +82,7 @@ test('auditoria: filtros detalhados permanecem na mesma pesquisa, sem redirecion
 test('auditoria: Minha Operação sincroniza indicadores no dashboard',()=>{
  assert.match(js,/overview=d;render\(\);installTrackActions\(\);document\.dispatchEvent\(new CustomEvent\('radar:overview'/);
  assert.match(js,/document\.addEventListener\('radar:overview',event=>\{/);
- assert.match(js,/ui\.values\[i\]\.textContent=number\(metrics\[key\]\)/);
+ assert.match(js,/renderMetric\(ui\.values\[i\],metrics\[key\]\)/);
 });
 
 
