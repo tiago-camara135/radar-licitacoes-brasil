@@ -32,7 +32,7 @@ test('search requests abort after a bounded wait and display a retry action',()=
 
 test('frontend script cache keys identify the deployed revisions',()=>{
   const html=read('app-v2.html');
-  assert.match(html,/app-v2\.js\?v=20261123-post-release-qa-2/);
+  assert.match(html,/app-v2\.js\?v=20261123-interactive-dashboard-1/);
   assert.match(html,/stability-ui-v1\.js\?v=20261122-performance-1/);
 });
 
