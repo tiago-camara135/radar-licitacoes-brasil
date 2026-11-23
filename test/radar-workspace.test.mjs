@@ -62,3 +62,18 @@ test('Radar delivers official PNCP PDFs as attachments and keeps upstream fallba
   assert.equal(response.statusCode, 302);
   assert.equal(headers.get('Location'), sentUrl);
 });
+
+test('initial UF is validated and isolated per account', async () => {
+  const route = createRadarWorkspaceRouter({pool:null, readJson:async req=>req.body, json:(_,status,data)=>({status,data})});
+  const url = new URL('http://localhost/api/radar/preferences');
+  const call = (id,method,uf,headers={}) => route({method,body:{uf},headers},{},url,{id});
+  assert.deepEqual(await call(1,'GET'), {status:200,data:{uf:''}});
+  assert.equal((await call(1,'PUT','XX')).status,400);
+  assert.equal((await call(1,'PUT','RN',{'sec-fetch-site':'cross-site'})).status,403);
+  assert.deepEqual(await call(1,'PUT','RN'), {status:200,data:{uf:'RN'}});
+  assert.deepEqual(await call(2,'PUT','SP'), {status:200,data:{uf:'SP'}});
+  assert.deepEqual(await call(1,'GET'), {status:200,data:{uf:'RN'}});
+  await call(1,'PUT','');
+  assert.deepEqual(await call(1,'GET'), {status:200,data:{uf:''}});
+  assert.deepEqual(await call(2,'GET'), {status:200,data:{uf:'SP'}});
+});

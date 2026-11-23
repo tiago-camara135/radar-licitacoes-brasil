@@ -15,15 +15,22 @@ function toast(msg,error=false){const e=$('#toast');if(!e)return;e.textContent=m
 async function api(path,opt={}){const {timeoutMs=15000,signal,...request}=opt,controller=new AbortController(),timer=setTimeout(()=>controller.abort(),timeoutMs),relay=()=>controller.abort();if(signal){if(signal.aborted)controller.abort();else signal.addEventListener('abort',relay,{once:true})}try{const r=await fetch(path,{credentials:'same-origin',cache:'no-store',...request,signal:controller.signal,headers:{accept:'application/json',...(request.body?{'content-type':'application/json'}:{}),...(request.headers||{})}});const d=await r.json().catch(()=>({}));if(!r.ok)throw Object.assign(new Error(d.error||`Erro ${r.status}`),{status:r.status,data:d});return d}catch(e){if(controller.signal.aborted&&!signal?.aborted)throw Object.assign(new Error('A solicitação demorou mais que o esperado. Tente novamente.'),{code:'request_timeout'});throw e}finally{clearTimeout(timer);signal?.removeEventListener('abort',relay)}}
 function fillSelects(){for(const id of ['searchUf','alertUf']){const e=$('#'+id);if(e&&!e.dataset.ready){UFS.forEach(v=>e.insertAdjacentHTML('beforeend',`<option value="${v}">${v}</option>`));e.dataset.ready='1'}}for(const id of ['searchModality','alertModality']){const e=$('#'+id);if(e&&!e.dataset.ready){MOD.forEach(([v,n])=>e.insertAdjacentHTML('beforeend',`<option value="${v}">${esc(n)}</option>`));e.dataset.ready='1'}}}
 function initTheme() {
-  const select = $('#radarTheme');
+  const button = $('#radarTheme');
   const systemTheme = matchMedia('(prefers-color-scheme: dark)');
-  try { select.value = localStorage.getItem('rlb-theme-v2') || 'system'; } catch {}
-  if (!select.value) select.value = 'system';
+  let preference;
+  try { preference = localStorage.getItem('rlb-theme-v2'); } catch {}
   const render = () => {
-    document.documentElement.dataset.theme = select.value === 'system' ? (systemTheme.matches ? 'dark' : 'light') : select.value;
+    const dark = preference === 'dark' || (preference !== 'light' && systemTheme.matches);
+    document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+    const label = dark ? 'Ativar tema claro' : 'Ativar tema escuro';
+    button.setAttribute('aria-label', label);
+    button.title = label;
+    $('[data-theme-sun]', button).toggleAttribute('hidden', !dark);
+    $('[data-theme-moon]', button).toggleAttribute('hidden', dark);
   };
-  select.addEventListener('change', () => {
-    try { localStorage.setItem('rlb-theme-v2', select.value); } catch {}
+  button.addEventListener('click', () => {
+    preference = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+    try { localStorage.setItem('rlb-theme-v2', preference); } catch {}
     render();
   });
   systemTheme.addEventListener('change', render);
@@ -486,6 +493,17 @@ function bindRadarDashboard() {
     'Goiás','Maranhão','Mato Grosso','Mato Grosso do Sul','Minas Gerais','Pará','Paraíba','Paraná',
     'Pernambuco','Piauí','Rio de Janeiro','Rio Grande do Norte','Rio Grande do Sul','Rondônia','Roraima',
     'Santa Catarina','São Paulo','Sergipe','Tocantins'];
+  const defaultUf = $('#radarDefaultUf');
+  const saveDefault = $('#radarSaveDefaultUf');
+  UFS.forEach((uf, index) => defaultUf.add(new Option(`${uf} · ${names[index]}`, uf)));
+  saveDefault.addEventListener('click', async () => {
+    defaultUf.disabled = saveDefault.disabled = true;
+    try {
+      await api('/api/radar/preferences', {method:'PUT', body:JSON.stringify({uf:defaultUf.value})});
+      toast(defaultUf.value ? `UF inicial salva: ${defaultUf.value}.` : 'Busca inicial configurada para todo o Brasil.');
+    } catch (error) { toast(error.message, true); }
+    finally { defaultUf.disabled = saveDefault.disabled = false; }
+  });
   $('#radarStates').innerHTML = UFS.map((uf, i) => `<label><input type="checkbox" value="${uf}"><span><b>${uf}</b> ${names[i]}</span></label>`).join('');
   const picker = $('#radarStatePicker');
   const stateSearch = $('#radarStateSearch');
@@ -606,8 +624,20 @@ function bindRadarDashboard() {
 }
 
 function startRadarDashboard() {
-  applyDashboardQuery('');
-  runDashboardSearch();
+  const initialQuery = dashboardQuery().toString();
+  $('#radarSearchMeta').textContent = 'Carregando preferências…';
+  api('/api/radar/preferences', {timeoutMs:4000}).then(preferences => {
+    const uf = UFS.includes(preferences.uf) ? preferences.uf : '';
+    $('#radarDefaultUf').value = uf;
+    if (!dashboard.search && dashboardQuery().toString() === initialQuery) {
+      applyDashboardQuery(uf ? `states=${uf}` : '');
+    }
+  }).catch(() => {
+    toast('Não foi possível carregar a UF inicial.', true);
+  }).finally(() => {
+    $('#radarDefaultUf').disabled = $('#radarSaveDefaultUf').disabled = false;
+    if (!dashboard.search) runDashboardSearch();
+  });
   loadDashboardSaved('tender');
   api('/api/radar/metrics').then(metrics => {
     $('#radarNewCount').textContent = Number(metrics.recent).toLocaleString('pt-BR');

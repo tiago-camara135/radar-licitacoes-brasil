@@ -2278,3 +2278,28 @@ html[data-theme="dark"] .radar-notice {
 .radar-notice-footer { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 4px 8px; border-top: 1px solid var(--notice-border); padding-top: 6px; }
 .radar-notice-link { margin-left: auto; padding: 5px 0; color: var(--notice-blue); font-size: 12px; font-weight: 680; }
 .radar-notice-link:hover { text-decoration: underline; }
+
+/* Conta compacta, escolha de tema e preferência de busca */
+#radarAccountControls { grid-template-columns: minmax(0,1fr) 36px; align-items: start; }
+#radarAccount { min-width: 0; }
+#radarAccount summary { grid-template-columns: 28px minmax(0,1fr) auto; min-height: 38px; gap: 5px; padding: 5px; }
+#radarAvatar { width: 28px; height: 28px; font-size: 11px; }
+#radarUserName, #radarUserRole { font-size: 11px; }
+#radarAccount > div { display: grid; gap: 6px; }
+#radarDefaultUf {
+  min-width: 0;
+  width: 100%;
+  min-height: 34px;
+  padding: 4px;
+  color: var(--radar-text);
+  background: var(--radar-paper);
+  border: 1px solid var(--radar-line);
+  border-radius: 6px;
+  font-size: 12px;
+}
+#radarSaveDefaultUf { min-height: 32px; padding: 4px 7px; font-size: 12px; }
+#radarTheme { display: grid; place-items: center; min-height: 38px; padding: 0; }
+#radarTheme:hover { border-color: #4384ff; }
+#radarTheme svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; }
+#radarTheme svg[hidden] { display: none; }
+#logoutBtn { grid-column: 1 / -1; min-height: 36px; }

@@ -85,7 +85,15 @@ function savedData(kind, body) {
 }
 
 export function createRadarWorkspaceRouter({ pool, readJson, json }) {
-  let schema;
+  let schema, preferencesSchema;
+  const preferences = new Map();
+  function ensurePreferencesSchema() {
+    preferencesSchema ??= pool.query(`CREATE TABLE IF NOT EXISTS radar_user_preferences (
+      user_id BIGINT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+      default_uf TEXT NOT NULL DEFAULT ''
+    )`).catch(error => { preferencesSchema = undefined; throw error; });
+    return preferencesSchema;
+  }
   const memory = new Map();
   function ensureSchema() {
     schema ??= pool.query(`CREATE TABLE IF NOT EXISTS radar_workspace_saved (
@@ -99,6 +107,25 @@ export function createRadarWorkspaceRouter({ pool, readJson, json }) {
     return schema;
   }
   return async function handleRadarWorkspace(req, res, url, user) {
+    if (url.pathname === '/api/radar/preferences') {
+      if (!['GET','PUT'].includes(req.method)) return json(res, 405, {error:'Método não permitido.'});
+      if (req.method === 'PUT' && req.headers['sec-fetch-site'] === 'cross-site') return json(res, 403, {error:'Origem não autorizada.'});
+      if (pool) await ensurePreferencesSchema();
+      if (req.method === 'GET') {
+        const uf = pool
+          ? (await pool.query('SELECT default_uf FROM radar_user_preferences WHERE user_id=$1', [user.id])).rows[0]?.default_uf
+          : preferences.get(user.id);
+        return json(res, 200, {uf:uf || ''});
+      }
+      const {uf} = await readJson(req, 1024) || {};
+      if (typeof uf !== 'string' || !/^(?:AC|AL|AP|AM|BA|CE|DF|ES|GO|MA|MT|MS|MG|PA|PB|PR|PE|PI|RJ|RN|RS|RO|RR|SC|SP|SE|TO)?$/.test(uf)) {
+        return json(res, 400, {error:'Selecione uma UF válida.'});
+      }
+      if (pool) await pool.query(`INSERT INTO radar_user_preferences(user_id,default_uf) VALUES ($1,$2)
+        ON CONFLICT(user_id) DO UPDATE SET default_uf=EXCLUDED.default_uf`, [user.id,uf]);
+      else preferences.set(user.id,uf);
+      return json(res, 200, {uf});
+    }
     const download = url.pathname.match(downloadPath);
     if (download && req.method === 'GET') return downloadDocument(res, download.slice(1), url.searchParams.get('name'));
     const file = url.pathname.match(documentPath);
