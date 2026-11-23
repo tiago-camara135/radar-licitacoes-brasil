@@ -82,6 +82,8 @@ try{
  // sessão já ativa. O usuário comum continua autenticado na aba principal.
  const adminCtx=await browser.newContext({viewport:{width:1366,height:850},locale:'pt-BR',timezoneId:'America/Fortaleza',extraHTTPHeaders:{'X-Forwarded-For':'198.51.100.27'}});
  const adminPage=await adminCtx.newPage();
+ const adminMeResponses=[];
+ adminPage.on('response',response=>{if(response.url().endsWith('/api/me'))adminMeResponses.push(response.status())});
  adminPage.on('pageerror',e=>problems.push('admin: '+e.message));
  adminId=await register(adminPage,adminEmail);
  await pool.query("UPDATE users SET role='admin' WHERE id=$1",[adminId]);
@@ -97,7 +99,7 @@ try{
    breadcrumb:!!document.querySelector('#rlbPageNavBar')
  }));
  console.log('[browser-qa] admin reload diagnostic '+JSON.stringify(adminState)+
-   ' errors='+JSON.stringify(problems.slice(-4)));
+   ' meStatus='+JSON.stringify(adminMeResponses)+' errors='+JSON.stringify(problems.slice(-4)));
  await adminPage.locator('#appShell:not(.hidden)').waitFor({state:'visible',timeout});
  await adminPage.locator('#adminNav').waitFor({state:'visible',timeout});
  await gotoSection(adminPage,'admin');
