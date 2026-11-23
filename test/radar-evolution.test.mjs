@@ -24,3 +24,17 @@ test('pontuações vêm do backend, com justificativas e ressalvas',()=>{
  assert.match(js,/x\.fit\?\.reasons/);
  assert.match(js,/não representa chance de vencer/);
 });
+
+
+test('acompanhamento e calendário usam rotas autenticadas existentes',()=>{
+ for(const term of ['view-operation','/api/dashboard/tracking','/api/dashboard/overview','notes:notes.value','status:s.value','America/Fortaleza','data-rev-track'])assert.ok(js.includes(term),term);
+ assert.match(css,/\.rev-op-layout/);
+ assert.match(css,/\.rev-cal-grid/);
+ assert.match(css,/@media\(max-width:900px\)/);
+});
+test('backend permite limpar anotações sem excluir licitações',()=>{
+ const backend=fs.readFileSync(new URL('../user-dashboard-v1.mjs',import.meta.url),'utf8');
+ assert.match(backend,/b\.notes===undefined\?null:clean\(b\.notes,1500\)/);
+ assert.match(backend,/WHERE t\.user_id=\$1/);
+ assert.match(backend,/ON CONFLICT\(user_id,pncp_key\)/);
+});
