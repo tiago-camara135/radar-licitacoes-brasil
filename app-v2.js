@@ -1173,8 +1173,9 @@ function renderDeadlines(data){
   if(!events.length){list.append(cardEmpty('Nenhum prazo futuro registrado na agenda da sua conta.'));return}
   for(const event of events){
     const row=element('article','rlb-home-deadline');row.setAttribute('role','listitem');
-    const stamp=element('div','rlb-home-date'),day=dateFmt.format(event.parsed).replace('.','').split(' ');
-    stamp.append(element('strong','',day[0]||'—'),element('span','',day.slice(1).join(' ').toUpperCase()));
+    const stamp=element('div','rlb-home-date'),parts=dateFmt.formatToParts(event.parsed);
+    const day=parts.find(part=>part.type==='day')?.value||'—',month=parts.find(part=>part.type==='month')?.value||'';
+    stamp.append(element('strong','',day),element('span','',month.toUpperCase().replace('.','')));
     const body=element('div','rlb-home-deadline-copy');
     body.append(element('strong','',clean(event.title,260)),element('small','',clean(event.subtitle||(event.type==='document'?'Documento cadastrado':'Oportunidade em acompanhamento'),180)));
     const right=element('span','rlb-home-deadline-status');
