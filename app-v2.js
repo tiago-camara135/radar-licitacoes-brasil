@@ -1443,14 +1443,30 @@ function renderPanorama(data){
 }
 function renderRecent(rows){
   const root=$('#rlbHomeRecent');if(!root)return;
-  root.replaceChildren();
-  if(Array.isArray(rows))liveCache=rows;
+  if(Array.isArray(rows)){
+    const incoming=new Map(rows.map(x=>[tenderKey(x),tenderVersion(x)]));
+    let added=0,changed=0;recentPulse.clear();
+    if(recentInitialized){
+      for(const tender of rows){
+        const key=tenderKey(tender),version=tenderVersion(tender);
+        if(!recentSeen.has(key)){recentPulse.set(key,'new');added++}
+        else if(recentSeen.get(key)!==version){recentPulse.set(key,'changed');changed++}
+      }
+    }
+    recentInitialized=true;recentSeen=incoming;liveCache=rows;
+    if(added||changed)document.dispatchEvent(new CustomEvent('radar:pulse-updates',{
+      detail:{source:'recent',added,changed}
+    }));
+  }
   const now=Date.now();
   const items=liveCache.filter(item=>{
     if(feedFilter!=='open')return true;
     const closing=dateOf(item.dataEncerramentoProposta||item.dataFimRecebimentoProposta);
     return closing&&closing.getTime()>=now;
   }).slice(0,4);
+  const signature=JSON.stringify([feedFilter,items.map(x=>[tenderKey(x),tenderVersion(x)])]);
+  if(signature===renderedRecentSignature&&root.querySelector('.rlb-home-table'))return;
+  renderedRecentSignature=signature;root.replaceChildren();
   if(!items.length){root.append(cardEmpty(feedFilter==='open'?
     'Nenhum registro com prazo vigente na amostra recente. Consulte a pesquisa completa.':
     'Nenhum registro recente disponível no monitoramento neste momento.'));return}
@@ -1460,7 +1476,14 @@ function renderRecent(rows){
   list.append(heading);
   for(const tender of items){
     const row=element('article','rlb-home-table-row'),obj=element('div','rlb-home-object');
+    const pulse=recentPulse.get(tenderKey(tender));
+    if(pulse){
+      row.classList.add('rlb-pulse-item');row.dataset.pulseState=pulse;
+      setTimeout(()=>{row.classList.remove('rlb-pulse-item');row.removeAttribute('data-pulse-state')},10000);
+    }
     obj.append(element('strong','',clean(tender.objetoCompra||'Objeto não informado',340)),element('small','',clean(tender.orgaoEntidade?.razaoSocial||'Órgão não informado',170)));
+    if(pulse){const label=element('span','rlb-pulse-chip',pulse==='new'?'Novo registro':'Atualizado');
+      obj.append(label);setTimeout(()=>label.remove(),10000)}
     const location=element('div','',clean([tender.unidadeOrgao?.municipioNome||tender.unidadeOrgao?.nomeMunicipio,tender.unidadeOrgao?.ufSigla].filter(Boolean).join('/')||'Não informado',100));
     const modality=element('div','rlb-home-table-modality',clean(tender.modalidadeNome||'Não informada',100));
     const closing=dateOf(tender.dataEncerramentoProposta||tender.dataFimRecebimentoProposta);
@@ -1551,6 +1574,29 @@ function boot(){
     const msg='Não foi possível consultar a agenda. Use Atualizar para tentar novamente.';
     $('#rlbHomeDeadlines')?.replaceChildren(cardEmpty(msg));
     $('#rlbHomePanorama')?.replaceChildren(cardEmpty('Não foi possível consultar os indicadores da sua operação.'));
+  });
+  let noticeTimer=0;
+  const detected={recommendations:0,deadlines:0,recent:0,changed:0};
+  document.addEventListener('radar:pulse-updates',event=>{
+    if(!logged())return;
+    const payload=event.detail||{},source=payload.source;
+    if(!['recommendations','deadlines','recent'].includes(source))return;
+    const added=Math.max(0,Number(payload.added)||0),updated=Math.max(0,Number(payload.changed)||0);
+    if(!added&&!updated)return;
+    detected[source]+=added;detected.changed+=updated;
+    const parts=[];
+    if(detected.recommendations)parts.push(detected.recommendations+' nova(s) recomendação(ões)');
+    if(detected.deadlines)parts.push(detected.deadlines+' prazo(s) incluído(s)');
+    if(detected.recent)parts.push(detected.recent+' nova(s) publicação(ões) monitorada(s)');
+    if(detected.changed)parts.push(detected.changed+' registro(s) alterado(s)');
+    const bar=$('#rlbHomeNewUpdates');
+    if(bar){bar.hidden=false;bar.textContent='Atualizações detectadas: '+parts.join(' • ')}
+    if(noticeTimer)clearTimeout(noticeTimer);
+    noticeTimer=setTimeout(()=>{
+      if(bar){bar.hidden=true;bar.textContent=''}
+      for(const key of Object.keys(detected))detected[key]=0;
+      noticeTimer=0;
+    },11000);
   });
   document.addEventListener('radar:live-feed',event=>{
     if(!logged())return;
