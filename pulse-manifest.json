@@ -1,0 +1,18 @@
+{
+  "id": "/",
+  "name": "Radar de Licitações Brasil",
+  "short_name": "Radar Pulse",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#091322",
+  "theme_color": "#091322",
+  "icons": [
+    {
+      "src": "/assets/pulse-app-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

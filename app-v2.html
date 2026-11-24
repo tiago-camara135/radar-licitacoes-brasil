@@ -9,6 +9,8 @@
   <title>Radar de Licitações Brasil</title>
   <link rel="stylesheet" href="/assets/app-v2.css?v=20261123-pulse-desktop-radar2-icons3-ocean2-intelligence1-lightfix1-notice1-layout2-pulse30">
   <link rel="stylesheet" href="/assets/source-transparency-v1.css?v=2114">
+  <link rel="stylesheet" href="/assets/pulse-business-v1.css?v=1">
+  <link rel="manifest" href="/manifest.webmanifest">
   <link rel="stylesheet" href="/assets/admin-user-support-v1.css?v=290">
 </head>
 <body>
@@ -89,6 +91,7 @@
         <button type="button" id="radarMenuToggle" aria-label="Abrir menu de navegação" aria-controls="mainNav radarAccountControls" aria-expanded="false"><span data-rp-icon="menu" aria-hidden="true"></span> <span class="rp-menu-label">Menu</span></button>
         <button type="button" id="pulseRailToggle" aria-label="Expandir menu lateral" aria-controls="mainNav" aria-expanded="false" title="Expandir menu lateral"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M9 4v16m3-11 3 3-3 3"/></svg></button>
         <nav id="mainNav" class="main-nav" aria-label="Navegação principal">
+          <button type="button" data-view="intelligence" id="pulseIntelligenceNav"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 3v18h18M7 17v-5h3v5M13 17V8h3v9M19 17V4"/></svg></span><span><b>Inteligência</b><small>Mercado e contratos</small></span></button>
           <button type="button" id="rlbHomeNav" data-view="home" class="active"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m3 11 9-8 9 8v10h-7v-7h-4v7H3z"/></svg></span><span><b>Visão Geral</b><small>Painel executivo</small></span></button>
           <button type="button" data-view="radar"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"></circle><path d="M12 3.5v4M20.5 12h-4M12 20.5v-4M3.5 12h4M12 12l4.5-4.5"></path><circle cx="12" cy="12" r="1.4"></circle></svg></span><span><b>Radar</b><small>Ao vivo</small></span></button>
           <button type="button" data-view="saved"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 4h12v16l-6-4-6 4z"/></svg></span><span><b>Salvas</b></span></button>
@@ -150,6 +153,7 @@
         <div id="rlbHomeNewUpdates" class="rlb-live-new" role="status" aria-live="polite" hidden></div>
 
         <div id="rlbHomeKpis" class="rlb-home-kpis" aria-label="Indicadores personalizados"></div>
+        <div class="pb-home-tools"><button type="button" id="pbCustomize" class="btn ghost compact">Personalizar painel</button><button type="button" id="pbCommand" class="btn ghost compact">Busca rápida · Ctrl + K</button><button type="button" data-view="intelligence" class="btn ghost compact">Inteligência de mercado</button><button type="button" id="pbInstall" class="btn ghost compact" hidden>Instalar Radar</button></div>
         <div class="rlb-home-main-grid">
           <section class="rlb-home-card rlb-home-recommendations" aria-labelledby="rlbHomeRecsTitle">
             <div class="rlb-home-card-head"><div><span class="rlb-home-card-kicker">SELEÇÃO PERSONALIZADA</span><h2 id="rlbHomeRecsTitle">Recomendações para você</h2><p>Oportunidades relacionadas aos critérios dos seus alertas.</p></div>
@@ -204,6 +208,13 @@
               <button type="button" data-home-action="calendar"><span aria-hidden="true" data-rp-icon="calendar">▦</span> Consultar calendário</button>
             </div>
           </section>
+      </section>
+
+      <section id="view-intelligence" class="view">
+        <div class="section-intro"><span class="eyebrow">RADAR INTELLIGENCE</span><h1>Inteligência de mercado</h1><p>Explore oportunidades vigentes na base monitorada e contratos publicados no PNCP.</p></div>
+        <div class="pb-tabs" role="group" aria-label="Tipo de inteligência"><button type="button" data-pb-tab="national" aria-pressed="true">Oportunidades vigentes</button><button type="button" data-pb-tab="contracts" aria-pressed="false">Contratos e concorrentes</button></div>
+        <section id="pbNational" class="panel glass-panel pb-panel"><h2>Monitoramento nacional</h2><form id="pbNationalForm" class="pb-fields"><label>Palavra-chave<input name="keyword" maxlength="180" placeholder="Objeto ou órgão"></label><label>UF<select name="uf" class="pb-uf"><option value="">Brasil</option></select></label><label>Valor mínimo<input type="number" name="min" min="0" step="0.01"></label><label>Valor máximo<input type="number" name="max" min="0" step="0.01"></label><button class="btn primary" type="submit">Consultar base</button></form><div id="pbNationalResults" aria-live="polite"><p>Consulte a base monitorada para visualizar os indicadores.</p></div></section>
+        <section id="pbContracts" class="panel glass-panel pb-panel" hidden><h2>Contratos públicos e fornecedores</h2><p>Consulta oficial por período de publicação, com filtros na página retornada. Não é um levantamento histórico integral.</p><form id="pbContractForm" class="pb-fields"><label>Publicação inicial<input type="date" name="start" required></label><label>Publicação final<input type="date" name="end" required></label><label>Objeto / órgão / fornecedor<input name="keyword" maxlength="180"></label><label>CNPJ do fornecedor<input name="supplier" maxlength="18" inputmode="numeric"></label><label>UF<select name="uf" class="pb-uf"><option value="">Brasil</option></select></label><label>Vencimento<select name="expiry"><option value="0">Todos</option><option value="30">Próximos 30 dias</option><option value="60">Próximos 60 dias</option><option value="90">Próximos 90 dias</option></select></label><button class="btn primary" type="submit">Consultar contratos</button></form><div id="pbContractResults" aria-live="polite"><p>Informe o período de publicação para consultar o PNCP.</p></div><div class="pb-pagination"><button type="button" id="pbPrev" class="btn ghost compact" disabled>Anterior</button><span id="pbPage" role="status">Página 1</span><button type="button" id="pbNext" class="btn ghost compact" disabled>Próxima</button></div><p class="pb-muted">Para o planejamento de compras, consulte o <a href="https://pncp.gov.br/app/pca" target="_blank" rel="noopener noreferrer">PCA oficial no PNCP</a>. Vencimentos não garantem republicação.</p></section>
       </section>
 
       <section id="view-radar" class="view">
@@ -317,6 +328,7 @@
 
   <script src="/assets/app-v2.js?v=20261123-pulse-header-radar2-icons3-ocean2-coverage1-intelligence1-notice1-audit1-layout2-digest1-homefix1-pulse30-readfix2" defer></script>
   <script src="/assets/source-transparency-v1.js?v=2115" defer></script>
+  <script src="/assets/pulse-business-v1.js?v=1" defer></script>
   <script src="/assets/habilitation-badge-v2.js?v=283" defer></script>
   <script src="/assets/admin-user-support-v1.js?v=20261122-performance-1" defer></script>
   <script src="/assets/stability-ui-v1.js?v=20261122-performance-1" defer></script>
