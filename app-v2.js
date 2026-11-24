@@ -2,6 +2,14 @@
 const radarPncpDate=value=>typeof value==='string'&&/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?$/.test(value)
   ? value+'-03:00'
   : value;
+function liveCoverageText(s){
+ const live=s?.live,successful=Number(live?.successful_modalities||0),failed=Number(live?.failed_modalities||0),total=Number(live?.modalities_per_cycle||14);
+ if(!s?.last_success_at)return 'Aguardando primeira sincronização';
+ if(s.consecutive_failures>0||failed>=total)return 'PNCP temporariamente indisponível • dados anteriores';
+ if(failed>0)return 'Cobertura parcial • '+successful+'/'+total+' modalidades';
+ if(s.partial===true)return 'Cobertura parcial • páginas em rotação';
+ return '';
+}
 (()=>{
 'use strict';
 const $=(s,r=document)=>r.querySelector(s);const $$=(s,r=document)=>Array.from(r.querySelectorAll(s));
@@ -164,7 +172,7 @@ function renderLive() {
     </article>`;
   }).join('') || '<div class="empty-state">Nenhuma oportunidade neste filtro.</div>';
 }
-async function refreshLive(){if(state.livePromise)return state.livePromise;const task=(async()=>{try{const d=await api('/api/live-feed?limit=40',{timeoutMs:12000});state.live=d.items||[];renderLive();const s=d.status||{};document.dispatchEvent(new CustomEvent('radar:live-feed',{detail:{items:state.live,status:s}}));if($('#metricStored'))$('#metricStored').textContent=Number(s.total_stored||0).toLocaleString('pt-BR');if($('#metricNew'))$('#metricNew').textContent=Number(s.last_new_count||0).toLocaleString('pt-BR');if($('#metricLast'))$('#metricLast').textContent=time(s.last_success_at);$('#statusDot')?.classList.toggle('ok',!s.consecutive_failures);if($('#monitorStatusText'))$('#monitorStatusText').textContent=s.running?'Varredura em andamento':`PNCP • ${s.live?.modalities_per_cycle||14} modalidades • ${s.interval_seconds||90}s`;if($('#liveMeta'))$('#liveMeta').textContent=`Atualização por eventos • varredura ${time(s.last_success_at)} • tela ${time(d.fetched_at)} • ${Number(s.total_stored||0).toLocaleString('pt-BR')} registros`}catch(e){if($('#liveMeta'))$('#liveMeta').textContent=e.code==='request_timeout'?'A atualização demorou mais que o esperado. Tentaremos novamente.':'Falha temporária ao sincronizar o feed.'}})();state.livePromise=task;try{return await task}finally{if(state.livePromise===task)state.livePromise=null}}
+async function refreshLive(){if(state.livePromise)return state.livePromise;const task=(async()=>{try{const d=await api('/api/live-feed?limit=40',{timeoutMs:12000});state.live=d.items||[];renderLive();const s=d.status||{};document.dispatchEvent(new CustomEvent('radar:live-feed',{detail:{items:state.live,status:s}}));if($('#metricStored'))$('#metricStored').textContent=Number(s.total_stored||0).toLocaleString('pt-BR');if($('#metricNew'))$('#metricNew').textContent=Number(s.last_new_count||0).toLocaleString('pt-BR');if($('#metricLast'))$('#metricLast').textContent=time(s.last_success_at);const coverage=liveCoverageText(s);$('#statusDot')?.classList.toggle('ok',Boolean(s.last_success_at)&&!s.consecutive_failures&&!s.live?.failed_modalities);if($('#monitorStatusText'))$('#monitorStatusText').textContent=s.running?'Varredura em andamento':coverage||`PNCP • ${s.live?.successful_modalities||s.live?.modalities_per_cycle||14} modalidades • ${s.interval_seconds||90}s`;if($('#liveMeta'))$('#liveMeta').textContent=`Atualização por eventos • varredura ${time(s.last_success_at)} • tela ${time(d.fetched_at)} • ${Number(s.total_stored||0).toLocaleString('pt-BR')} registros${coverage?' • '+coverage:''}`}catch(e){if($('#liveMeta'))$('#liveMeta').textContent=e.code==='request_timeout'?'A atualização demorou mais que o esperado. Tentaremos novamente.':'Falha temporária ao sincronizar o feed.'}})();state.livePromise=task;try{return await task}finally{if(state.livePromise===task)state.livePromise=null}}
 document.addEventListener('radar:live-refresh-request',()=>{
   if($('#appShell')?.classList.contains('hidden')||document.hidden)return;
   refreshLive(); // Consulta dados monitorados; não faz scraping nem cria licitações.
@@ -360,7 +368,9 @@ async function runDashboardSearch(query = dashboardQuery()) {
     dashboard.page = 0;
     dashboard.selected = dashboard.items[0]?.key || '';
     const count = dashboard.items.length.toLocaleString('pt-BR');
-    $('#radarSearchMeta').textContent = `${count} ${dashboard.items.length === 1 ? 'oportunidade' : 'oportunidades'} · PNCP${response.partial ? ' · consulta parcial' : ''}`;
+    const coverageState=response.coverage?.state;
+    const coverageLabel=coverageState==='unavailable'?' · PNCP temporariamente indisponível; base monitorada':coverageState==='stale'?' · sincronização anterior; cobertura parcial':coverageState==='initializing'?' · sincronização nacional em preparação':response.partial?' · cobertura parcial da fonte':'';
+    $('#radarSearchMeta').textContent = `${count} ${dashboard.items.length === 1 ? 'oportunidade' : 'oportunidades'} · base PNCP${coverageLabel}`;
     resultRows();
     renderRadarDetail($('#radarDetail'), dashboard.items[0], 0);
   } catch (error) {
@@ -1714,10 +1724,11 @@ function boot(){
   document.addEventListener('radar:live-feed',event=>{
     if(!logged())return;
     renderRecent(event.detail?.items);
-    const last=event.detail?.status?.last_success_at;
-    const date=dateOf(last);
-    if($('#rlbHomeFeedStatus'))$('#rlbHomeFeedStatus').textContent=date?
-      'Última sincronização: '+dateTimeFmt.format(date):'Dados do monitoramento nacional';
+    const status=event.detail?.status;
+    const date=dateOf(status?.last_success_at);
+    const coverage=status?liveCoverageText(status):'';
+    if($('#rlbHomeFeedStatus'))$('#rlbHomeFeedStatus').textContent=(date?
+      'Última sincronização: '+dateTimeFmt.format(date):'Dados do monitoramento nacional')+(coverage?' • '+coverage:'');
   });
   if(logged()){greeting();nextDashboardRefresh=Date.now()+DASHBOARD_REFRESH_MS;updateLiveClock()}
   else updateLiveClock();
