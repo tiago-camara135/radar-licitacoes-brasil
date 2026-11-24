@@ -77,6 +77,26 @@ try{
  assert.equal(await publicAppearance.locator('[data-pulse-theme="auto"]').getAttribute('aria-pressed'),'true');
  await publicAppearance.locator('[data-pulse-theme="light"]').click();
  note('Pulse 2.0 appearance selector: light/dark/auto, system changes and reload persistence OK');
+ // Test actual browser-computed foreground/background pairs; ignore no painted backgrounds.
+ async function assertLightContrast(target,background,label){
+   const pair=await page.evaluate(({target,background})=>{
+     const a=document.querySelector(target),b=document.querySelector(background);
+     if(!a||!b)throw new Error('Missing contrast target: '+target+' / '+background);
+     return {fg:getComputedStyle(a).color,bg:getComputedStyle(b).backgroundColor};
+   },{target,background});
+   const luminance=v=>{const values=v.match(/[0-9.]+/g).slice(0,3).map(Number).map(n=>n/255).map(n=>n<=.04045?n/12.92:((n+.055)/1.055)**2.4);return .2126*values[0]+.7152*values[1]+.0722*values[2]};
+   const a=luminance(pair.fg),b=luminance(pair.bg),ratio=(Math.max(a,b)+.05)/(Math.min(a,b)+.05);
+   assert.ok(ratio>=4.5,label+' contrast '+ratio.toFixed(2)+' '+JSON.stringify(pair));
+ }
+
+ await assertLightContrast('.auth-home-capability-stats strong','.auth-home-capability-stats>div','Public capability KPI');
+ for(const [tab,selector] of [['radar','.demo-results b'],['alerts','.demo-alert-builder b'],['ai','.demo-ai-msg b'],['support','.demo-support-grid b']]){
+   await page.locator('.auth-home-demo-tabs [data-demo="'+tab+'"]').click();
+   await page.locator(selector).first().waitFor({state:'visible',timeout});
+   await assertLightContrast(selector,'.auth-home-demo-panel','Public '+tab+' demo');
+ }
+ await page.locator('.auth-home-demo-tabs [data-demo="radar"]').click();
+ note('Arctic Pro: public KPI and all four demonstration tabs contrast OK');
 
  userId=await register(page,email);
  await until(page,()=>!!document.querySelector('#revSummary .rev-value') && Array.from(document.querySelectorAll('#revSummary .rev-value')).every(e=>e.textContent.trim()!=='—'));
@@ -439,6 +459,12 @@ try{
  assert.equal(aiPopup.opacity,'1','AI-RLB must not remain transparent');
  assert.ok(aiPopup.width>=250&&aiPopup.height>=250,'AI popup must have a usable visible size');
  assert.ok(await page.locator('#aiPrompt').isVisible(),'AI floating composer must open');
+ await page.evaluate(()=>{document.documentElement.dataset.theme='light'});
+ await page.waitForTimeout(250);
+ await assertLightContrast('#ai-assistant .ai-window-head b','#ai-assistant .ai-window-head','AI header');
+ await assertLightContrast('#aiStatusText','#ai-assistant .ai-window-head','AI status');
+ await assertLightContrast('#ai-assistant .ai-close','#ai-assistant .ai-close','AI close control');
+ note('Arctic Pro: AI-RLB header and controls contrast OK');
  await page.locator('#ai-assistant .ai-close').click();
  await until(page,()=>!document.querySelector('#ai-assistant')?.classList.contains('ai-widget-open'));
  note('AI-RLB launcher, composer and close button OK (no paid API request)');
@@ -457,6 +483,9 @@ try{
  await page.keyboard.press('Escape');
  assert.equal(await page.locator('#revNotifPanel').getAttribute('hidden'),'','Escape closes notification panel');
  note('Mobile 390px responsiveness, notifications and keyboard Escape OK');
+ await assertLightContrast('#radarMenuToggle','#radarMenuToggle','Mobile menu control');
+ await assertLightContrast('#mainNav button.active','#mainNav button.active','Active mobile navigation');
+ note('Arctic Pro: mobile navigation contrast OK');
 
  // Visibilidade em mais larguras, sem rolagem horizontal oculta, nos dois temas.
  for(const [width,height] of [[320,700],[390,844],[768,880],[800,600],[1024,768],[1280,720],[1366,768],[1440,900],[1536,864],[1920,1080],[2560,1440],[3440,1440],[1280,550]]){
