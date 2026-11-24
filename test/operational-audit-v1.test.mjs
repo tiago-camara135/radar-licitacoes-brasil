@@ -25,3 +25,10 @@ test('429 without Retry-After gets longer adaptive pause and does not lose actua
 test('notification creation skips missing or expired deadlines and unknown estimates do not match value filters',()=>{
  const s=read('notifications-v1.mjs');assert.match(s,/const deadline=Date.parse\(closeOf\(x\)\|\|''\)/);assert.match(s,/deadline<Date.now\(\)\)continue/);assert.match(s,/value==null\|\|value<Number\(a.min_value\)/);assert.match(s,/estimated_value:knownEstimate\(x\)/);
 });
+
+test('local search and its status share the legacy deadline correction; alerts do not hide query failures',()=>{
+ const s=read('search-router-v3.mjs');assert.match(s,/const deadlineSql=effectivePncpDeadline\('m'\)/);assert.match(s,/FROM \$\{activeSource\} WHERE/);assert.match(s,/FROM \$\{deadlineSource\}/);assert.doesNotMatch(s,/await localSearch\(filters,5000\)\.catch/);
+});
+test('unknown price cannot be interpreted as free procurement in remote search',()=>{
+ const s=read('pncp-client-v3.mjs');assert.match(s,/knownValue\(x\)!==null&&knownValue\(x\)<=f.maxValue/);assert.match(s,/knownValue\(x\)!==null&&knownValue\(x\)>=f.minValue/);
+});
