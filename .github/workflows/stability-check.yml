@@ -12,6 +12,7 @@ permissions:
 jobs:
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 12
     services:
       postgres:
         image: postgres:16
@@ -42,6 +43,7 @@ jobs:
       - name: Regression tests
         run: npm test
       - name: Authenticated browser-like integration smoke
+        timeout-minutes: 8
         env:
           DATABASE_URL: postgresql://radar_app:radar_app_test_password@127.0.0.1:5432/radar_test?sslmode=disable
           NODE_ENV: test
@@ -62,64 +64,64 @@ jobs:
             fi
           }
           trap cleanup EXIT
-          if ! node test/integration-smoke.mjs; then
+          if ! timeout --signal=TERM --kill-after=5s 60s node test/integration-smoke.mjs; then
             echo "--- server log ---"
             cat /tmp/rlb-integration.log
             exit 1
           fi
-          if ! node test/browser-origin-smoke.mjs; then
+          if ! timeout --signal=TERM --kill-after=5s 60s node test/browser-origin-smoke.mjs; then
             echo "--- server log ---"
             cat /tmp/rlb-integration.log
             exit 1
           fi
-          if ! node test/rate-limit-ip-smoke.mjs; then
+          if ! timeout --signal=TERM --kill-after=5s 60s node test/rate-limit-ip-smoke.mjs; then
             echo "--- server log ---"
             cat /tmp/rlb-integration.log
             exit 1
           fi
-          if ! node test/frontend-runtime-smoke.mjs; then
+          if ! timeout --signal=TERM --kill-after=5s 60s node test/frontend-runtime-smoke.mjs; then
             echo "--- server log ---"
             cat /tmp/rlb-integration.log
             exit 1
           fi
-          if ! node test/tender-intelligence-runtime-smoke.mjs; then
+          if ! timeout --signal=TERM --kill-after=5s 60s node test/tender-intelligence-runtime-smoke.mjs; then
             echo "--- server log ---"
             cat /tmp/rlb-integration.log
             exit 1
           fi
-          if ! node test/tender-compliance-v3-smoke.mjs; then
+          if ! timeout --signal=TERM --kill-after=5s 60s node test/tender-compliance-v3-smoke.mjs; then
             echo "--- server log ---"
             cat /tmp/rlb-integration.log
             exit 1
           fi
-          if ! node test/account-recovery-smoke.mjs; then
+          if ! timeout --signal=TERM --kill-after=5s 60s node test/account-recovery-smoke.mjs; then
             echo "--- server log ---"
             cat /tmp/rlb-integration.log
             exit 1
           fi
-          if ! node test/account-recovery-history-smoke.mjs; then
+          if ! timeout --signal=TERM --kill-after=5s 60s node test/account-recovery-history-smoke.mjs; then
             echo "--- server log ---"
             cat /tmp/rlb-integration.log
             exit 1
           fi
-          if ! node test/user-dashboard-smoke.mjs; then
+          if ! timeout --signal=TERM --kill-after=5s 60s node test/user-dashboard-smoke.mjs; then
             echo "--- server log ---"
             cat /tmp/rlb-integration.log
             exit 1
           fi
-          if ! node test/admin-center-smoke.mjs; then
+          if ! timeout --signal=TERM --kill-after=5s 60s node test/admin-center-smoke.mjs; then
             echo "--- server log ---"
             cat /tmp/rlb-integration.log
             exit 1
           fi
           # Chrome is already installed on GitHub-hosted Ubuntu images; install only
           # the lightweight automation protocol client, never a browser bundle.
-          npm install --no-save --ignore-scripts playwright-core@1.55.0
+          timeout 120s npm install --no-save --ignore-scripts playwright-core@1.55.0
           # Browser integration uses a separate Node process/rate-limit bucket on
           # the same isolated test database. The production limiter is unchanged.
           PORT=10001 node production-v34.mjs > /tmp/rlb-browser.log 2>&1 &
           echo $! > /tmp/rlb-browser.pid
-          if ! RLB_TEST_BASE_URL=http://127.0.0.1:10001 node test/real-browser-e2e-smoke.mjs; then
+          if ! timeout --signal=TERM --kill-after=10s 180s env RLB_TEST_BASE_URL=http://127.0.0.1:10001 node test/real-browser-e2e-smoke.mjs; then
             echo "--- browser e2e failed, isolated server log ---"
             tail -n 180 /tmp/rlb-browser.log
             exit 1

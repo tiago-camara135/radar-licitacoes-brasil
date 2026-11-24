@@ -16,7 +16,7 @@ const TWILIO_WHATSAPP_CONTENT_SID = process.env.TWILIO_WHATSAPP_CONTENT_SID || '
 const TWILIO_WHATSAPP_VERIFY_CONTENT_SID = process.env.TWILIO_WHATSAPP_VERIFY_CONTENT_SID || '';
 const DISPATCH_INTERVAL_MS = 15_000;
 
-const pool = DATABASE_URL ? new Pool({ connectionString: DATABASE_URL, ssl: { rejectUnauthorized: false }, max: 2, idleTimeoutMillis: 30_000 }) : null;
+const pool = DATABASE_URL ? new Pool({ connectionString: DATABASE_URL, ssl: { rejectUnauthorized: false }, max: 2, idleTimeoutMillis: 30_000, connectionTimeoutMillis: 5000 }) : null;
 const verifyRate = new Map();
 let dispatchTimer = null;
 let dispatching = false;
@@ -70,9 +70,27 @@ function allowVerification(key,limit=5,windowMs=10*60_000){
   old.count+=1;return old.count<=limit;
 }
 
+function notificationSessionHash(cookie){
+  let token='';
+  for(const entry of String(cookie||'').split(';')){
+    const i=entry.indexOf('=');
+    if(i<1||entry.slice(0,i).trim()!=='radar_session')continue;
+    try{token=decodeURIComponent(entry.slice(i+1).trim())}catch{return null}
+  }
+  if(!/^[A-Za-z0-9_-]{43}$/.test(token))return null;
+  return crypto.createHash('sha256').update(token).digest('hex');
+}
 async function authenticatedUser(req){
-  const r=await fetch(`http://127.0.0.1:${PORT}/api/me`,{headers:{cookie:String(req.headers.cookie||'')},signal:AbortSignal.timeout(5000)});
-  if(!r.ok)return null;const d=await r.json().catch(()=>({}));return d.user||null;
+  const hash=notificationSessionHash(req.headers.cookie);if(!hash)return null;
+  const r=await pool.query({text:'SELECT u.id,u.email,u.role,u.active,u.created_at FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=$1 AND s.expires_at>NOW() AND u.active=TRUE LIMIT 1',values:[hash],query_timeout:5000});
+  return r.rows[0]||null;
+}
+const notificationRates=new Map();
+function allowNotification(uid,now=Date.now()){
+ const key=String(uid);let entry=notificationRates.get(key);
+ if(!entry||now-entry.at>=60000){entry={at:now,count:0};notificationRates.set(key,entry)}
+ if(notificationRates.size>1000)for(const [k,v] of notificationRates)if(now-v.at>=60000)notificationRates.delete(k);
+ return ++entry.count<=120;
 }
 async function readJson(req,max=100_000){
   let size=0;const chunks=[];for await(const c of req){size+=c.length;if(size>max)throw Object.assign(new Error('Payload muito grande.'),{status:413});chunks.push(c)}
@@ -299,6 +317,7 @@ export async function handleNotificationRoute(req,res,url){
     if(!pool){send(res,503,{error:'Notificações requerem PostgreSQL.'});return true}
     if(['POST','PUT','PATCH','DELETE'].includes(req.method)&&APP_ORIGIN&&req.headers.origin&&req.headers.origin!==APP_ORIGIN){send(res,403,{error:'Origem não autorizada.'});return true}
     const user=await authenticatedUser(req);if(!user){send(res,401,{error:'Faça login para continuar.'});return true}
+    if(!allowNotification(user.id)){res.setHeader('Retry-After','60');send(res,429,{error:'Muitas consultas. Tente novamente em instantes.'});return true}
     await initTables();
     if(req.method==='GET'&&url.pathname==='/api/notifications/profile'){send(res,200,await profileFor(user));return true}
     if(req.method==='PUT'&&url.pathname==='/api/notifications/profile'){
@@ -312,7 +331,7 @@ export async function handleNotificationRoute(req,res,url){
     let m=url.pathname.match(/^\/api\/notifications\/alerts\/(\d+)$/);
     if(m&&req.method==='PUT'){const item=await updateAlertSettings(user.id,Number(m[1]),await readJson(req));await audit(user.id,'notifications.alert_settings',{alert_id:Number(m[1]),region:item.region,onsite:item.onsite_enabled,email:item.email_enabled,whatsapp:item.whatsapp_enabled},ip);send(res,200,{item});return true}
     if(req.method==='GET'&&url.pathname==='/api/notifications/deliveries'){send(res,200,{items:await deliveries(user.id,url.searchParams.get('limit')||50)});return true}
-    if(req.method==='POST'&&url.pathname==='/api/notifications/read-all'){await pool.query(`UPDATE notification_deliveries SET read_at=NOW() WHERE user_id=$1 AND channel='onsite' AND read_at IS NULL`,[user.id]);send(res,200,{ok:true});return true}
+    if(req.method==='POST'&&url.pathname==='/api/notifications/read-all'){await pool.query({text:`UPDATE notification_deliveries SET read_at=NOW() WHERE user_id=$1 AND channel='onsite' AND read_at IS NULL`,values:[user.id],query_timeout:8000});send(res,200,{ok:true});return true}
     if(req.method==='POST'&&url.pathname==='/api/notifications/test'){
       const b=await readJson(req);const pf=await ensureProfile(user);const channel=String(b.channel||'');
       if(channel==='email'){

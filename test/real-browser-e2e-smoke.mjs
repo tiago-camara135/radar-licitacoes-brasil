@@ -50,6 +50,7 @@ try{
  browser=await chromium.launch({headless:true,executablePath,args:['--no-sandbox','--disable-dev-shm-usage']});
  const ctx=await browser.newContext({viewport:{width:1366,height:850},locale:'pt-BR',timezoneId:'America/Fortaleza'});
  const page=await ctx.newPage();
+ page.setDefaultTimeout(timeout);page.setDefaultNavigationTimeout(timeout);
  page.on('pageerror',e=>problems.push(e.message));
  await page.goto(base,{waitUntil:'domcontentloaded'});
  await page.locator('#authScreen:not(.hidden)').waitFor({state:'visible'});
@@ -349,18 +350,23 @@ try{
  const digestStored=await page.evaluate(id=>JSON.parse(localStorage.getItem('rlb-popup-digest-v1:'+id)||'null'),String(userId));
  assert.ok(digestStored?.lastPopupAt&&digestStored?.afterId,'Per-account popup budget persisted');
  note('Personalized Pulse consolidated notification excludes old history, preserves unread state and prevents rapid replay OK');
- await page.locator('.rev-n-bell').click();
+ note('Notification inbox: opening');
+ await page.locator('.rev-n-bell').click({timeout});
  await page.locator('#revNotifPanel:not([hidden])').waitFor({state:'visible',timeout});
  await until(page,()=>document.querySelector('#revNotifPanel .rev-n-list')?.textContent?.includes('Aquisição de combustível para a frota CI'),15000);
- await page.locator('.rev-n-filter').filter({hasText:'Urgentes'}).click();
+ note('Notification inbox: deliveries rendered');
+ await page.locator('.rev-n-filter').filter({hasText:'Urgentes'}).click({timeout});
  assert.equal(await page.locator('.rev-n-filter.active').textContent(),'Urgentes');
- await page.locator('.rev-n-filter').filter({hasText:'Não lidos'}).click();
+ await page.locator('.rev-n-filter').filter({hasText:'Não lidos'}).click({timeout});
  assert.ok(await page.locator('.rev-n-filter.active').filter({hasText:'Não lidos'}).count()===1,'Unread filter is selected');
  // O aviso flutuante pode marcar a entrega como lida antes da abertura da central.
  // Teste o filtro e a persistência da ação em ambos os estados legítimos.
- await page.locator('.rev-n-mark').click();
+ note('Notification inbox: marking all via real HTTP');
+ const [marked]=await Promise.all([page.waitForResponse(r=>r.url().endsWith('/api/notifications/read-all')&&r.request().method()==='POST',{timeout}),page.locator('.rev-n-mark').click({timeout})]);
+ assert.equal(marked.status(),200,'Mark all HTTP '+marked.status());
+ note('Notification inbox: mark-all HTTP 200');
  await until(page,()=>!document.querySelector('#revNotifPanel .rev-n-item.unread'));
- const databaseUnread=await pool.query("SELECT COUNT(*)::int AS count FROM notification_deliveries WHERE user_id=$1 AND channel='onsite' AND read_at IS NULL",[userId]);
+ const databaseUnread=await pool.query({text:"SELECT COUNT(*)::int AS count FROM notification_deliveries WHERE user_id=$1 AND channel='onsite' AND read_at IS NULL",values:[userId],query_timeout:8000});
  assert.equal(databaseUnread.rows[0].count,0);
  await page.locator('.rev-n-close').click();
  note('Notification inbox, unread filter and mark-read persistence OK');
@@ -521,6 +527,15 @@ try{
  await assertLightContrast('#radarMenuToggle','#radarMenuToggle','Mobile menu control');
  await assertLightContrast('#mainNav button.active','#mainNav button.active','Active mobile navigation');
  note('Arctic Pro: mobile navigation contrast OK');
+ await page.setViewportSize({width:1440,height:900});
+ await gotoSection(page,'home');
+ await page.locator('#pulseRailToggle').click();
+ const expandedRail=await page.locator('#mainNav').boundingBox(),expandedHome=await page.locator('#view-home').boundingBox();
+ assert.ok(expandedRail.width>=204&&expandedRail.x+expandedRail.width<=expandedHome.x,'Expanded rail must not overlap content');
+ assert.equal(await page.locator('#pulseRailToggle').getAttribute('aria-expanded'),'true');
+ await page.locator('#pulseRailToggle').click();
+ assert.equal(await page.locator('#pulseRailToggle').getAttribute('aria-expanded'),'false');
+ note('Pulse 3.0 expanded and compact navigation work without overlap');
 
  // Visibilidade em mais larguras, sem rolagem horizontal oculta, nos dois temas.
  for(const [width,height] of [[320,700],[390,844],[768,880],[800,600],[1024,768],[1280,720],[1366,768],[1440,900],[1536,864],[1920,1080],[2560,1440],[3440,1440],[1280,550]]){

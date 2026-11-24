@@ -73,11 +73,21 @@ function renderRadarAccount(user) {
 
 function setRadarMenu(open) {
   $('#radarMenuToggle').setAttribute('aria-expanded', String(open));
+  $('#radarMenuToggle').setAttribute('aria-label',open?'Fechar menu de navegação':'Abrir menu de navegação');
   $('.sidebar-inner').classList.toggle('radar-menu-open', open);
 }
 
 function bindRadarMenu() {
-  const toggle = $('#radarMenuToggle');
+  const toggle = $('#radarMenuToggle'),rail=$('#pulseRailToggle'),shell=$('#appShell');
+  function railMode(expanded){
+    shell.classList.toggle('pulse-rail-expanded',expanded);
+    rail.setAttribute('aria-expanded',String(expanded));
+    rail.title=expanded?'Recolher menu lateral':'Expandir menu lateral';
+    rail.setAttribute('aria-label',rail.title);
+  }
+  let expanded=false;try{expanded=localStorage.getItem('rlb-pulse-rail')==='expanded'}catch{}
+  railMode(expanded);
+  rail.addEventListener('click',()=>{const next=rail.getAttribute('aria-expanded')!=='true';railMode(next);try{localStorage.setItem('rlb-pulse-rail',next?'expanded':'compact')}catch{}});
   toggle.addEventListener('click', () => setRadarMenu(toggle.getAttribute('aria-expanded') !== 'true'));
   $('#mainNav').addEventListener('click', event => {
     if (event.target.closest('[data-view]') && toggle.offsetWidth && toggle.getAttribute('aria-expanded') === 'true') {
@@ -846,7 +856,7 @@ const el=(tag,cls,txt)=>{const v=document.createElement(tag);if(cls)v.className=
 const logged=()=>!!$('#appShell')&&!$('#appShell').classList.contains('hidden');
 const safeUrl=raw=>{try{const u=new URL(raw);return ['http:','https:'].includes(u.protocol)&&!u.username&&!u.password?u.href:''}catch{return''}};
 const formatted=x=>{const d=new Date(x);return Number.isNaN(d.getTime())?'Data não informada':d.toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'})};
-let rows=[],filter='all',open=false,loading=false,lastProfile=0,epoch=0,soundEnabled=false;
+let rows=[],filter='all',open=false,loading=false,markingAll=false,lastProfile=0,epoch=0,soundEnabled=false;
 const urgentNotice=x=>{const t=Date.parse(x.payload?.closes_at||'');return Number.isFinite(t)&&t>=Date.now()&&t-Date.now()<=86400000};
 let recFilter='all',recCache=[],nationalCache=[],activeAlerts=0,recInitialized=false,renderedRecSignature='',recPulse=new Map();
 let rotateRecommendations=false,cycleSelection=null,rotationCycle=0;
@@ -925,16 +935,16 @@ async function profile(){
   }catch{if(logged()&&requestEpoch===epoch)ui.count.textContent='—'}
 }
 async function load(){
-  if(!logged()||loading)return;const requestEpoch=epoch;loading=true;ui.message.textContent='Carregando notificações…';
+  if(!logged()||loading||markingAll)return;const requestEpoch=epoch;loading=true;ui.mark.disabled=true;ui.message.textContent='Carregando notificações…';
   const controller=new AbortController(),t=setTimeout(()=>controller.abort(),12000);
   try{
     const r=await fetch('/api/notifications/deliveries?limit=100',{credentials:'same-origin',cache:'no-store',signal:controller.signal,headers:{accept:'application/json'}});
     if(!r.ok)throw Error(r.status===401?'Acesse sua conta para consultar os alertas.':'Falha ao consultar notificações.');
     const d=await r.json();if(!logged()||requestEpoch!==epoch)return;rows=(Array.isArray(d.items)?d.items:[]).filter(x=>x.channel==='onsite');
-    render();await profile();
+    render();void profile();
   }catch(e){if(!logged()||requestEpoch!==epoch)return;ui.list.replaceChildren();ui.message.textContent=e.name==='AbortError'?'A consulta demorou. Tente novamente.':e.message;
     const retry=el('button','rev-n-filter','Tentar novamente');retry.type='button';retry.addEventListener('click',load);ui.list.append(retry)
-  }finally{clearTimeout(t);loading=false}
+  }finally{clearTimeout(t);loading=false;ui.mark.disabled=markingAll}
 }
 function render(){
   for(const [button,value] of [[ui.all,'all'],[ui.unread,'unread'],[ui.urgent,'urgent']]){button.classList.toggle('active',filter===value);button.setAttribute('aria-pressed',String(filter===value))}
@@ -964,12 +974,12 @@ async function markOne(id){
  }catch(e){if(logged()&&requestEpoch===epoch)ui.message.textContent=e.message}
 }
 async function markAll(){
-  if(!logged()||loading)return;const requestEpoch=epoch;ui.mark.disabled=true;
+  if(!logged()||loading||markingAll)return;const requestEpoch=epoch;markingAll=true;ui.mark.disabled=true;
   try{const controller=new AbortController(),t=setTimeout(()=>controller.abort(),12000);
     try{const r=await fetch('/api/notifications/read-all',{method:'POST',credentials:'same-origin',cache:'no-store',signal:controller.signal,headers:{'content-type':'application/json'},body:'{}'});
-      if(!r.ok)throw Error('Falha ao marcar notificações.');if(!logged()||requestEpoch!==epoch)return;document.dispatchEvent(new CustomEvent('radar:notification-read',{detail:{all:true}}));await load()
+      if(!r.ok)throw Error('Falha ao marcar notificações.');if(!logged()||requestEpoch!==epoch)return;document.dispatchEvent(new CustomEvent('radar:notification-read',{detail:{all:true}}));markingAll=false;await load()
     }finally{clearTimeout(t)}
-  }catch(e){ui.message.textContent=e.message}finally{ui.mark.disabled=false}
+  }catch(e){if(logged()&&requestEpoch===epoch)ui.message.textContent=e.message}finally{markingAll=false;ui.mark.disabled=loading}
 }
 function setRecommendationFilter(value){
   if(!['all','high','soon','today'].includes(value))return;
