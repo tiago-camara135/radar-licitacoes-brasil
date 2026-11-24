@@ -36,3 +36,16 @@ test('manual and automatic scans use the same collector, and background filtered
  assert.match(search,/now-lastFilteredStart<120000/);assert.match(search,/now-lastNationalStart>=240000/);
  assert.match(search,/track:national/);
 });
+
+test('long Retry-After defers the next request without ignoring the provider cooldown',async()=>{
+ let calls=0;const t=rig(async()=>{calls++;return response(429,{}, {'retry-after':'120'})});
+ await assert.rejects(t.get('https://example.test/a'),/pausa prolongada/);
+ assert.equal(calls,1);assert.ok(t.health().cooldown_until);
+});
+test('database counts actual inserts and pending national refresh cannot be displaced by filtered searches',()=>{
+ const m=read('live-monitor-v5.mjs'),s=read('search-router-v3.mjs');
+ assert.match(m,/RETURNING \(xmax=0\) AS inserted/);
+ assert.match(m,/totalStored\+=inserted/);
+ assert.match(s,/if\(national&&!activeNational\)nationalPending=true/);
+ assert.match(s,/if\(nationalPending\)/);
+});

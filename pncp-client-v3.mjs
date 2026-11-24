@@ -144,7 +144,7 @@ async function fetchWithPageFallback(worker,args){
 function scopeKey(kind,date,filters,code){return JSON.stringify([kind,date,serverFilterParams(filters),code]);}
 function progress(key){
  let p=pageProgress.get(key);
- if(!p){p={cursor:2,pending:new Set(),seen:new Set()};pageProgress.set(key,p);}
+ if(!p){p={cursor:2,pending:new Set()};pageProgress.set(key,p);}
  while(pageProgress.size>240)pageProgress.delete(pageProgress.keys().next().value);
  return p;
 }
@@ -166,11 +166,10 @@ async function collectModality({worker,args,key,budget,kind,track}){
  try{
   const first=await fetchWithPageFallback(worker,{...args,page:1});
   const totalPages=first.totalPages||1,items=[...first.items],failedPages=[];
-  p.seen.add(1);
   const extras=planExtra(p,totalPages,budget-1);
   let pagesFetched=1;
   for(const page of extras){
-   try{const extra=await fetchWithPageFallback(worker,{...args,page});items.push(...extra.items);p.pending.delete(page);p.seen.add(page);pagesFetched++;}
+   try{const extra=await fetchWithPageFallback(worker,{...args,page});items.push(...extra.items);p.pending.delete(page);pagesFetched++;}
    catch(e){p.pending.add(page);failedPages.push({code,page,status:e?.status||null,message:clean(e?.message||'falha PNCP',180)});}
   }
   const partial=pagesFetched<totalPages||failedPages.length>0;

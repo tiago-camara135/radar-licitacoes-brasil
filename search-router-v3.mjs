@@ -8,7 +8,7 @@ const cache=new Map();
 let ready=false,refreshTimer=null,openRefreshRunning=false;
 let lastRemote={at:null,ok:null,errors:0,partial:true,count:0,strategy:'open-proposals-background'};
 let lastNationalRemote=null;
-let lastNationalStart=0,lastFilteredStart=0;
+let lastNationalStart=0,lastFilteredStart=0,nationalPending=false,activeNational=false;
 const filteredRefreshAt=new Map();
 const NATIONAL_FRESH_MS=10*60*1000;
 // Filtered searches cannot establish the coverage of the nationwide index.
@@ -124,7 +124,7 @@ async function persistRemote(items){
   }catch(e){try{await client.query('ROLLBACK')}catch{}throw e}finally{client.release()}
 }
 async function refreshOpenIndex(filters={}, {national=false}={}){
-  if(openRefreshRunning)return false;
+  if(openRefreshRunning){if(national&&!activeNational)nationalPending=true;return false;}
   const now=Date.now();
   if(national){lastNationalStart=now;}
   else{
@@ -134,7 +134,7 @@ async function refreshOpenIndex(filters={}, {national=false}={}){
     if(!lastNationalStart||now-lastNationalStart>=240000||now-lastFilteredStart<120000||now-(filteredRefreshAt.get(key)||0)<300000)return false;
     lastFilteredStart=now;filteredRefreshAt.set(key,now);while(filteredRefreshAt.size>64)filteredRefreshAt.delete(filteredRefreshAt.keys().next().value);
   }
-  openRefreshRunning=true;
+  openRefreshRunning=true;activeNational=national;
   try{
     const remote=await fetchPncpOpenSearch({...filters,keyword:'',org:'',municipality:'',states:[],minValue:null,maxValue:null,closingDays:0,days:0,openOnly:true},{track:national});
     await persistRemote(remote.items);
@@ -149,7 +149,7 @@ async function refreshOpenIndex(filters={}, {national=false}={}){
     cache.clear();
     console.warn('search router v4 open refresh deferred:',e?.message||e);
     return false;
-  }finally{openRefreshRunning=false}
+  }finally{openRefreshRunning=false;activeNational=false;if(nationalPending){nationalPending=false;setTimeout(()=>refreshOpenIndex({days:0},{national:true}).catch(()=>{}),0).unref?.()}}
 }
 function scheduleOpenRefresh(){
   if(refreshTimer)return;

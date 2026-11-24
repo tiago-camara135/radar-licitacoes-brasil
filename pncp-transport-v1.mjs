@@ -11,7 +11,7 @@ export function createPncpTransport({fetcher=(...args)=>fetch(...args),now=Date.
  }
  async function turn(){
   const step=gate.then(async()=>{
-   while(true){const wait=Math.max(0,nextStart-now(),cooldown-now());if(!wait)break;await sleep(wait);}
+   while(true){const wait=Math.max(0,nextStart-now(),cooldown-now());if(!wait)break;if(wait>30000)throw error('PNCP solicitou pausa prolongada; consulta adiada',429,false);await sleep(wait);}
    nextStart=now()+spacing+penalty;
   });
   gate=step.catch(()=>{});await step;
