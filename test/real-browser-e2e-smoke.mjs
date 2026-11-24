@@ -536,6 +536,25 @@ try{
  await page.locator('#pulseRailToggle').click();
  assert.equal(await page.locator('#pulseRailToggle').getAttribute('aria-expanded'),'false');
  note('Pulse 3.0 expanded and compact navigation work without overlap');
+ await page.keyboard.press('Control+k');
+ await page.locator('.pb-dialog[open]').waitFor({timeout});
+ await page.locator('.pb-dialog input[type="search"]').fill('Inteligência');
+ await page.locator('.pb-dialog .pb-choice').filter({hasText:/^Inteligência$/}).click();
+ await page.locator('#view-intelligence.active').waitFor({timeout});
+ const intelResponse=page.waitForResponse(r=>r.url().includes('/api/dashboard/intelligence?'),{timeout});
+ await page.locator('#pbNationalForm button[type="submit"]').click();
+ assert.equal((await intelResponse).status(),200,'Intelligence API must respond');
+ await page.locator('#pbNationalResults .pb-metrics').waitFor({timeout});
+ await page.locator('[data-pb-tab="contracts"]').click();
+ assert.ok(await page.locator('#pbContractForm').isVisible(),'Contract form accessible; no external requests in CI');
+ await gotoSection(page,'home');
+ await page.locator('#pbCustomize').click();
+ await page.locator('.pb-dialog input[type="checkbox"]').first().uncheck();
+ assert.equal(await page.locator('.rlb-home-recommendations').getAttribute('data-pb-hidden'),'true');
+ await page.locator('.pb-dialog .pb-choice').filter({hasText:'Restaurar padrão'}).click();
+ await page.locator('.pb-dialog header button').click();
+ assert.equal(await page.locator('.rlb-home-recommendations').getAttribute('data-pb-hidden'),'false');
+ note('Pulse Business: global navigation, real national aggregation, contracts form and dashboard preference OK');
 
  // Visibilidade em mais larguras, sem rolagem horizontal oculta, nos dois temas.
  for(const [width,height] of [[320,700],[390,844],[768,880],[800,600],[1024,768],[1280,720],[1366,768],[1440,900],[1536,864],[1920,1080],[2560,1440],[3440,1440],[1280,550]]){

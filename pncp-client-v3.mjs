@@ -11,6 +11,12 @@ const OPEN_HORIZON_DAYS=Math.min(Math.max(Number(process.env.PNCP_OPEN_HORIZON_D
 const pageProgress=new Map(),modalityHealth=new Map();
 const transport=createPncpTransport({spacing:REQUEST_SPACING_MS,maxRetries:MAX_RETRIES,maxConcurrent:2});
 const fetchJsonWithRetry=url=>transport.get(url);
+export async function fetchPncpContractPage({start,end,page}){
+ const url=new URL(PNCP_BASE_URL.replace(/\/$/,'')+'/v1/contratos');
+ url.search=new URLSearchParams({dataInicial:start.replaceAll('-',''),dataFinal:end.replaceAll('-',''),pagina:String(page),tamanhoPagina:'50'}).toString();
+ // Share the national queue and cache; no automatic historical backfill.
+ const {body}=await fetchJsonWithRetry(url.href);return body;
+}
 const digits = v => String(v ?? '').replace(/\D/g,'');
 const clean = (v,n=500) => String(v ?? '').trim().slice(0,n);
 export const textNorm = v => String(v ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();

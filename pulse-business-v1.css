@@ -1,0 +1,39 @@
+/* Radar Pulse 4.0 foundation */
+html[data-theme] #appShell #mainNav [data-view="intelligence"]{--rp-icon:var(--rp-icon-chart);order:3}
+html[data-theme] #appShell .pb-home-tools,html[data-theme] #appShell .pb-tabs,html[data-theme] #appShell .pb-pagination{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:12px 0}
+html[data-theme] #appShell .pb-tabs button{background:var(--pulse-paper);color:var(--pulse-ink);border:1px solid var(--pulse-edge);padding:11px 16px;border-radius:10px;cursor:pointer}
+html[data-theme] #appShell .pb-tabs button[aria-pressed=true]{background:var(--pulse-selected);color:white}
+html[data-theme] #appShell .pb-panel{padding:18px;margin:12px 0;color:var(--pulse-ink);background:var(--pulse-paper)}
+html[data-theme] #appShell .pb-fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(165px,100%),1fr));gap:12px;align-items:end;margin:15px 0}
+html[data-theme] #appShell .pb-fields label{display:grid;gap:5px;font-size:13px;color:var(--pulse-secondary);min-width:0}
+html[data-theme] #appShell .pb-fields :is(input,select){min-width:0;width:100%;padding:10px;border-radius:9px}
+html[data-theme] #appShell .pb-metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(150px,100%),1fr));gap:10px;margin:12px 0}
+html[data-theme] #appShell .pb-metric{padding:13px;border:1px solid var(--pulse-edge);border-radius:12px;display:grid;gap:5px;background:var(--pulse-paper);min-width:0}
+html[data-theme] #appShell .pb-metric b{font-size:clamp(20px,2vw,30px);color:var(--rp-accent);overflow-wrap:anywhere}
+html[data-theme] #appShell .pb-metric span,.pb-muted{font-size:12px;color:var(--pulse-secondary)}
+html[data-theme] #appShell .pb-groups{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(260px,100%),1fr));gap:12px}
+html[data-theme] #appShell .pb-group{border:1px solid var(--pulse-edge);border-radius:12px;padding:14px;min-width:0}
+html[data-theme] #appShell .pb-bar{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:5px;margin:8px 0;font-size:13px}
+html[data-theme] #appShell .pb-bar span{overflow-wrap:anywhere}
+html[data-theme] #appShell .pb-bar-track{grid-column:1/-1;background:var(--pulse-inset);height:6px;border-radius:5px;overflow:hidden}
+html[data-theme] #appShell .pb-bar-track i{display:block;height:100%;background:var(--rp-info);border-radius:5px}
+html[data-theme] #appShell .pb-contract{display:grid;gap:5px;border-bottom:1px solid var(--pulse-edge);padding:13px 0;overflow-wrap:anywhere}
+html[data-theme] #appShell .pb-contract a,.pb-muted a{color:var(--rp-info)}
+html[data-theme] #appShell .pb-contract small{color:var(--pulse-secondary)}
+html[data-theme] .pb-dialog{width:min(540px,calc(100vw - 24px));max-height:calc(100dvh - 28px);overflow:auto;background:var(--pulse-paper);color:var(--pulse-ink);border:1px solid var(--pulse-edge);border-radius:16px;padding:18px;box-shadow:var(--rp-shadow-raised)}
+.pb-dialog::backdrop{background:#09132299}
+.pb-dialog header{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:12px}
+.pb-dialog header button,.pb-dialog .pb-choice{background:var(--pulse-inset);color:var(--pulse-ink);border:1px solid var(--pulse-edge);border-radius:9px;padding:10px;cursor:pointer}
+.pb-dialog input[type=search]{width:100%;padding:12px;color:var(--pulse-ink);background:var(--pulse-paper);border:1px solid var(--pulse-edge);border-radius:9px}
+.pb-dialog .pb-choice{display:block;width:100%;text-align:left;margin-top:6px}
+.pb-dialog .pb-setting{display:flex;align-items:center;gap:10px;padding:9px 0}
+.pb-dialog .pb-setting label{flex:1;min-width:0}
+.pb-dialog .pb-setting button{background:var(--pulse-inset);color:var(--pulse-ink);border:1px solid var(--pulse-edge);border-radius:8px;min-width:34px;min-height:34px}
+.pb-skeleton{display:grid;gap:10px;padding:12px 0}
+.pb-skeleton i{display:block;height:12px;border-radius:6px;background:linear-gradient(90deg,var(--pulse-inset),var(--pulse-edge),var(--pulse-inset));background-size:200% 100%;animation:pbShimmer 1.6s linear infinite}
+.pb-skeleton i:nth-child(2){width:76%}.pb-skeleton i:nth-child(3){width:55%}
+@keyframes pbShimmer{to{background-position:-200% 0}}
+@media(prefers-reduced-motion:reduce){.pb-skeleton i{animation:none}}
+html[data-theme] #appShell [data-pb-hidden=true]{display:none!important}
+html[data-theme] #appShell .pb-panel[hidden],html[data-theme] #appShell #pbInstall[hidden]{display:none!important}
+@media(max-width:600px){html[data-theme] #appShell .pb-panel{padding:12px}html[data-theme] #appShell .pb-home-tools button{flex:1 1 140px}}

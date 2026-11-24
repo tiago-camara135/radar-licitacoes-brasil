@@ -106,7 +106,7 @@ async function submitAuth(e){e?.preventDefault();const email=$('#authEmail')?.va
 async function checkSession(){try{const d=await api('/api/me');if(d.user)await enter(d.user);else throw new Error()}catch{$('#authScreen')?.classList.remove('hidden');$('#appShell')?.classList.add('hidden')}}
 async function enter(user){state.user=user;$('#authScreen')?.classList.add('hidden');$('#appShell')?.classList.remove('hidden');renderRadarAccount(user);$('#adminNav')?.classList.toggle('hidden',user.role!=='admin');show('home');startLive();startRadarDashboard()}
 async function logout(){try{await api('/api/auth/logout',{method:'POST',body:'{}'})}catch{}location.reload()}
-const titles={home:['Visão Geral','Seu centro de oportunidades'],radar:['Buscar Licitações','Pesquisa nacional e filtros avançados'],saved:['Oportunidades salvas',''], 'saved-searches':['Buscas salvas',''],alerts:['Alertas','Critérios e canais de notificação'],documents:['Documentos','Acervo pessoal'],operation:['Minha Operação','Acompanhamentos e prazos'],ai:['IA RLB','Assistente para licitações'],admin:['Administração','Gestão da plataforma']};
+const titles={intelligence:['Inteligência de Mercado','Análise de oportunidades e contratos públicos'],home:['Visão Geral','Seu centro de oportunidades'],radar:['Buscar Licitações','Pesquisa nacional e filtros avançados'],saved:['Oportunidades salvas',''], 'saved-searches':['Buscas salvas',''],alerts:['Alertas','Critérios e canais de notificação'],documents:['Documentos','Acervo pessoal'],operation:['Minha Operação','Acompanhamentos e prazos'],ai:['IA RLB','Assistente para licitações'],admin:['Administração','Gestão da plataforma']};
 function show(v){
   const target=$('#view-'+v);
   if(!target)return;
