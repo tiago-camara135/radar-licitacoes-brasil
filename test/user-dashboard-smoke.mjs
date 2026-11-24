@@ -29,7 +29,7 @@ try{
   r=await post('/api/dashboard/preferences',{geo:{scope:'ufs',ufs:['RN']}},c1);assert.equal(r.status,200);
   r=await get('/api/dashboard/overview',c1);assert.equal(r.status,200);const rn=await r.json();assert.ok(rn.recommendations.some(x=>x.pncp_id===pncpId));
 
-  r=await get('/api/dashboard/overview',c2);assert.equal(r.status,200);const d2=await r.json();assert.equal(d2.recommendations.some(x=>x.pncp_id===pncpId),false);
+  r=await get('/api/dashboard/overview',c2);assert.equal(r.status,200);const d2=await r.json();assert.equal(d2.recommendations.some(x=>x.pncp_id===pncpId),false);assert.ok(d2.national_preview.opportunities.some(x=>x.pncp_id===pncpId));assert.ok(d2.national_preview.deadlines.some(x=>x.pncp_key===cnpj+'-'+year+'-'+sequence));assert.equal(d2.metrics.tracked_active,0);assert.equal(d2.tracking.length,0);
 
   r=await post('/api/dashboard/tracking',{cnpj,year,sequence,status:'participando'},c1);assert.equal(r.status,200);j=await r.json();assert.equal(j.ok,true);
   r=await post('/api/dashboard/tracking',{cnpj,year,sequence,status:'participando',notes:'Anotação de teste somente da conta A'},c1);assert.equal(r.status,200);
