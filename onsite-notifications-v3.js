@@ -36,16 +36,18 @@ function createCard(group){
  const status=el('small','rp-notice-status');status.setAttribute('role','status');card.append(footer,status,progress);
  return {card,close,mark,bar,status};
 }
+function overlayOpen(){return Boolean(document.querySelector('#ai-assistant.ai-widget-open,#revNotifPanel:not([hidden]),#radarAccount[open]'))}
+function syncOverlay(){const h=document.getElementById('rlbNationalNoticeHost');if(h)h.hidden=overlayOpen();active?.refreshPause();if(!overlayOpen())displayNext()}
 function schedule(){clearTimeout(nextTimer);if(logged()&&!document.hidden)nextTimer=setTimeout(()=>{nextTimer=null;displayNext()},COOLDOWN_MS)}
 function displayNext(){
- if(active||!queue.length||!logged()||document.hidden)return;
+ if(active||!queue.length||!logged()||document.hidden||overlayOpen())return;
  const group=queue.shift(),{card,close,mark,bar,status}=createCard(group);
  let remaining=DISPLAY_MS,started=0,timeout=null,paused=false,finished=false,marking=false;const generation=epoch;
  function stopClock(){if(timeout!==null){clearTimeout(timeout);timeout=null;remaining=Math.max(0,remaining-(performance.now()-started));}bar.style.transition='none';bar.style.transform='scaleX('+remaining/DISPLAY_MS+')'}
  function finish(){if(finished)return;finished=true;stopClock();if(active?.card===card)active=null;card.remove();schedule()}
- function resume(){if(finished||timeout!==null||document.hidden||paused||marking)return;started=performance.now();bar.style.transition=matchMedia('(prefers-reduced-motion: reduce)').matches?'none':'transform '+remaining+'ms linear';bar.style.transform='scaleX(0)';timeout=setTimeout(finish,remaining)}
- function refreshPause(){paused=card.matches(':hover, :focus-within');if(paused||document.hidden||marking)stopClock();else resume()}
- active={card,group,finish,refreshPause};host().append(card);chime();
+ function resume(){if(finished||timeout!==null||document.hidden||paused||marking||overlayOpen())return;started=performance.now();bar.style.transition=matchMedia('(prefers-reduced-motion: reduce)').matches?'none':'transform '+remaining+'ms linear';bar.style.transform='scaleX(0)';timeout=setTimeout(finish,remaining)}
+ function refreshPause(){paused=card.matches(':hover, :focus-within');if(paused||document.hidden||marking||overlayOpen())stopClock();else resume()}
+ active={card,group,finish,refreshPause};const region=host();region.hidden=false;region.append(card);chime();
  card.addEventListener('pointerenter',refreshPause);card.addEventListener('pointerleave',()=>{paused=card.matches(':focus-within');if(!paused&&!document.hidden)resume()});card.addEventListener('focusin',refreshPause);card.addEventListener('focusout',()=>setTimeout(refreshPause,0));
  close.addEventListener('click',finish);
  mark.addEventListener('click',async()=>{marking=true;stopClock();mark.disabled=true;try{if(await markRows(group.rows)){if(generation===epoch)finish()}else if(generation===epoch)status.textContent='Não foi possível confirmar toda a leitura. Tente novamente.'}finally{marking=false;mark.disabled=false;if(!finished)refreshPause()}});
@@ -59,6 +61,6 @@ function mergeBatch(rows){
 async function loadBatch(){if(loading||document.hidden||!logged())return;const e=epoch,revision=readRevision;loading=true;try{const limit=Math.min(30,MAX_QUEUE-queue.length);if(limit<=0)return;const d=await api('/api/stability/notifications/onsite?limit='+limit+'&after='+encodeURIComponent(afterId));if(e!==epoch||revision!==readRevision||!logged())return;const batch=Array.isArray(d.items)?d.items:[];mergeBatch(batch);if(batch.length)afterId=String(batch[batch.length-1].id);if(!active&&!nextTimer)displayNext()}catch(e){if(!/401/.test(String(e.message)))console.warn('RLB onsite personalized:',e?.message||e)}finally{loading=false}}
 function clearRead(event){readRevision++;const ids=new Set((event.detail?.ids||[]).map(String));if(event.detail?.all){queue=[];active?.finish();return}queue=queue.map(g=>({...g,rows:g.rows.filter(r=>!ids.has(String(r.id)))})).filter(g=>g.rows.length);if(active&&active.group.rows.every(r=>ids.has(String(r.id))))active.finish()}
 function syncSession(){const current=logged();if(current===wasLogged)return;wasLogged=current;epoch++;afterId='0';readRevision++;clearTimeout(nextTimer);nextTimer=null;queue=[];seen.clear();active?.finish();clearTimeout(nextTimer);nextTimer=null;sound=false;if(current)setTimeout(loadBatch,900)}
-function start(){wasLogged=logged();setTimeout(loadBatch,FIRST_LOAD_MS);setInterval(loadBatch,LOAD_INTERVAL_MS);const shell=document.getElementById('appShell');if(shell)new MutationObserver(syncSession).observe(shell,{attributes:true,attributeFilter:['class']});document.addEventListener('visibilitychange',()=>{active?.refreshPause();if(!document.hidden){clearTimeout(nextTimer);nextTimer=null;displayNext();loadBatch()}});document.addEventListener('radar:notifications-refresh',loadBatch);document.addEventListener('radar:notification-read',clearRead)}
+function start(){const watcher=new MutationObserver(syncOverlay);for(const selector of ['#ai-assistant','#revNotifPanel','#radarAccount']){const target=document.querySelector(selector);if(target)watcher.observe(target,{attributes:true,attributeFilter:['class','hidden','open']})}wasLogged=logged();setTimeout(loadBatch,FIRST_LOAD_MS);setInterval(loadBatch,LOAD_INTERVAL_MS);const shell=document.getElementById('appShell');if(shell)new MutationObserver(syncSession).observe(shell,{attributes:true,attributeFilter:['class']});document.addEventListener('visibilitychange',()=>{active?.refreshPause();if(!document.hidden){clearTimeout(nextTimer);nextTimer=null;displayNext();loadBatch()}});document.addEventListener('radar:notifications-refresh',loadBatch);document.addEventListener('radar:notification-read',clearRead)}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
 })();
