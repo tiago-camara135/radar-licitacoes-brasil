@@ -146,3 +146,87 @@ html[data-theme="light"] #authScreen .auth-home-demo-panel :is(.demo-toolbar,.de
  @keyframes rpUrgentEnter{from{box-shadow:0 0 0 3px color-mix(in srgb,var(--rp-warn) 32%,transparent)}to{box-shadow:none}}
 }
 @media(prefers-reduced-motion:reduce){.pulse-appearance button,#view-home .rlb-live-led,#view-home .rev-value,#view-home .rlb-home-date{animation:none!important;transition:none!important}}
+
+/* Arctic Pro accessibility repair: pair foregrounds with the actual light surfaces.
+   Keep deliberate dark illustrations (brand mark) and the dark theme intact. */
+html[data-theme="light"] {color-scheme:light;--rp-control-edge:#8299AF;}
+html[data-theme="dark"] {color-scheme:dark;}
+html[data-theme="light"] :is(#appShell,#authScreen){
+ --radar-blue-hover:#07588F;
+ --radar-showcase-text:var(--pulse-ink);
+}
+html[data-theme="light"] #appShell.radar-layout .sidebar-brand strong{color:var(--pulse-ink)!important}
+html[data-theme="light"] #appShell.radar-layout #radarMenuToggle{
+ color:var(--pulse-ink)!important;background:var(--pulse-paper)!important;border-color:var(--rp-control-edge)!important;
+}
+html[data-theme="light"] #appShell.radar-layout #mainNav button:not(.active),
+html[data-theme="light"] #appShell.radar-layout #mainNav button:not(.active) :is(b,small){
+ color:var(--pulse-ink)!important;
+}
+html[data-theme="light"] #appShell.radar-layout #mainNav button.active,
+html[data-theme="light"] #appShell.radar-layout #mainNav button.active :is(b,small){
+ color:#FFFFFF!important;
+}
+html[data-theme="light"] #appShell.radar-layout .radar-menu-open .radar-account-controls>label{
+ color:var(--pulse-secondary)!important;
+}
+html[data-theme="light"] #appShell #ai-assistant .ai-window-head{
+ background:var(--pulse-inset)!important;color:var(--pulse-ink)!important;border-color:var(--pulse-edge)!important;
+}
+html[data-theme="light"] #appShell #ai-assistant .ai-window-head b{color:var(--pulse-ink)!important}
+html[data-theme="light"] #appShell #ai-assistant #aiStatusText{color:var(--pulse-secondary)!important}
+html[data-theme="light"] #appShell #ai-assistant .ai-close{
+ color:var(--pulse-ink)!important;background:var(--pulse-paper)!important;border:1px solid var(--rp-control-edge)!important;
+}
+html[data-theme="light"] #appShell #ai-assistant .ai-msg-modern.user .ai-msg-bubble{
+ background:linear-gradient(135deg,var(--rp-track),var(--rp-button-end))!important;color:#FFFFFF!important;
+}
+html[data-theme="light"] #appShell #ai-assistant .ai-msg-modern.assistant .ai-msg-bubble{
+ background:var(--pulse-inset)!important;color:var(--pulse-ink)!important;
+}
+html[data-theme="light"] #appShell #ai-assistant .ai-fab-icon{
+ background:var(--rp-icon-ai) center/68% no-repeat!important;color:transparent!important;
+}
+html[data-theme="light"] :is(#appShell,#authScreen) :is(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]),select,textarea):not(:disabled){
+ border-color:var(--rp-control-edge)!important;
+}
+html[data-theme="light"] :is(#appShell,#authScreen) :is(input,textarea)::placeholder{color:var(--pulse-secondary)!important;opacity:1!important}
+html[data-theme="light"] :is(#appShell,#authScreen) :is(button,a,summary,input,select,textarea):focus-visible{
+ outline:2px solid var(--rp-focus)!important;outline-offset:2px;
+}
+/* Public hero and all four interactive product demonstrations. */
+html[data-theme="light"] #authScreen .auth-copy :is(.eyebrow,.auth-home-kicker){color:var(--rp-accent)!important}
+html[data-theme="light"] #authScreen .auth-home-trust-row i{color:var(--rp-accent)!important}
+html[data-theme="light"] #authScreen .auth-home-preview-side span{color:var(--rp-info)!important}
+html[data-theme="light"] #authScreen .auth-home-preview-search b{
+ background:var(--rp-button)!important;color:#FFFFFF!important;
+}
+html[data-theme="light"] #authScreen .auth-home-capability-stats strong{color:var(--pulse-ink)!important}
+html[data-theme="light"] #authScreen .auth-home-capability-stats span{color:var(--pulse-secondary)!important}
+html[data-theme="light"] #authScreen .auth-home-mini-feed em{
+ color:var(--rp-info)!important;background:var(--rp-blue-tile)!important;
+}
+html[data-theme="light"] #authScreen .auth-home-demo-panel :is(.demo-results article,.demo-alert-builder label,.demo-ai-msg>div,.demo-support-grid article,.demo-insight,.demo-filter-row span){
+ background:var(--pulse-inset)!important;border-color:var(--pulse-edge)!important;color:var(--pulse-ink)!important;
+}
+html[data-theme="light"] #authScreen .auth-home-demo-panel :is(.demo-results b,.demo-module-title b,.demo-ai-head b,.demo-alert-builder b,.demo-insight strong,.demo-ai-msg b,.demo-support-grid b,.demo-result-head b){
+ color:var(--pulse-ink)!important;
+}
+html[data-theme="light"] #authScreen .auth-home-demo-panel :is(.demo-results span,.demo-result-head small,.demo-alert-builder span,.demo-insight p,.demo-ai-msg p,.demo-support-grid p,.demo-search){
+ color:var(--pulse-secondary)!important;
+}
+html[data-theme="light"] #authScreen .auth-home-demo-panel :is(.demo-results small,.demo-module-title small,.demo-ai-head small,.demo-enabled,.demo-filter-row span.selected,.demo-results em,.demo-ai-msg li,.demo-support-grid em,.demo-support-grid article>span){
+ color:var(--rp-info)!important;
+}
+html[data-theme="light"] #authScreen .auth-home-demo-panel :is(.demo-results em,.demo-ai-msg li,.demo-support-grid em,.demo-filter-row span.selected){
+ background:var(--rp-blue-tile)!important;border-color:var(--pulse-edge)!important;
+}
+html[data-theme="light"] #authScreen .auth-home-demo-panel .demo-toolbar button{
+ color:#FFFFFF!important;background:var(--rp-button)!important;
+}
+html[data-theme="light"] #authScreen .auth-home-demo-panel .demo-user-msg{
+ color:#FFFFFF!important;background:var(--rp-button-end)!important;
+}
+html[data-theme="light"] #authScreen .auth-home-demo-panel .demo-ai-msg>span{
+ color:#FFFFFF!important;background:var(--rp-button)!important;
+}
