@@ -1,4 +1,5 @@
 import { pncpDeadline } from './pncp-operational-date-v1.mjs';
+import { createPncpTransport } from './pncp-transport-v1.mjs';
 
 const PNCP_BASE_URL = process.env.PNCP_BASE_URL || 'https://pncp.gov.br/api/consulta';
 export const PNCP_MODALITY_CODES = Array.from({length:14},(_,i)=>i+1);
@@ -7,12 +8,9 @@ let effectivePageSize = PREFERRED_PAGE_SIZE;
 const REQUEST_SPACING_MS = Math.max(180, Number(process.env.PNCP_REQUEST_SPACING_MS || 450));
 const MAX_RETRIES = Math.min(Math.max(Number(process.env.PNCP_MAX_RETRIES || 2),0),3);
 const OPEN_HORIZON_DAYS=Math.min(Math.max(Number(process.env.PNCP_OPEN_HORIZON_DAYS||30),7),120);
-const openPageCursor=new Map();
-let gate = Promise.resolve();
-let nextStartAt = 0;
-let cooldownUntil = 0;
-
-const sleep = ms => new Promise(r=>setTimeout(r,ms));
+const pageProgress=new Map(),modalityHealth=new Map();
+const transport=createPncpTransport({spacing:REQUEST_SPACING_MS,maxRetries:MAX_RETRIES,maxConcurrent:2});
+const fetchJsonWithRetry=url=>transport.get(url);
 const digits = v => String(v ?? '').replace(/\D/g,'');
 const clean = (v,n=500) => String(v ?? '').trim().slice(0,n);
 export const textNorm = v => String(v ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
@@ -28,51 +26,6 @@ export function pncpUrl(x){
 export function originUrl(x){
   const raw=x?.linkSistemaOrigem||x?.linkProcessoEletronico||'';
   try{const u=new URL(raw);return ['http:','https:'].includes(u.protocol)?u.href:''}catch{return ''}
-}
-
-async function waitStartTurn(){
-  const step = gate.then(async()=>{
-    const wait=Math.max(0,nextStartAt-Date.now(),cooldownUntil-Date.now());
-    if(wait)await sleep(wait);
-    nextStartAt=Date.now()+REQUEST_SPACING_MS;
-  });
-  gate=step.catch(()=>{});
-  await step;
-}
-function retryAfterMs(response,attempt){
-  const h=response?.headers?.get?.('retry-after');
-  const sec=Number(h);
-  if(Number.isFinite(sec)&&sec>0)return Math.min(sec*1000,15000);
-  return Math.min(1200*(2**attempt)+Math.floor(Math.random()*350),10000);
-}
-async function fetchJsonWithRetry(url){
-  let last;
-  for(let attempt=0;attempt<=MAX_RETRIES;attempt++){
-    await waitStartTurn();
-    const controller=new AbortController();
-    const timeout=setTimeout(()=>controller.abort(),18000);
-    try{
-      const r=await fetch(url,{headers:{accept:'application/json','user-agent':'RadarLicitacoesBrasil/4.1'},signal:controller.signal});
-      if(r.status===204)return {response:r,body:{data:[],totalPaginas:0,totalRegistros:0}};
-      const body=await r.json().catch(()=>({}));
-      if(r.ok)return {response:r,body};
-      const detail=clean(body?.message||body?.error||body?.detail||body?.title||'',240);
-      const err=Object.assign(new Error(`PNCP HTTP ${r.status}${detail?`: ${detail}`:''}`),{status:r.status,body});
-      last=err;
-      if(r.status===429||r.status>=500){
-        const wait=retryAfterMs(r,attempt);
-        cooldownUntil=Math.max(cooldownUntil,Date.now()+wait);
-        if(attempt<MAX_RETRIES)continue;
-      }
-      throw err;
-    }catch(e){
-      last=e;
-      if(e?.name==='AbortError'&&attempt<MAX_RETRIES){cooldownUntil=Math.max(cooldownUntil,Date.now()+900*(attempt+1));continue}
-      if((e?.status===429||e?.status>=500)&&attempt<MAX_RETRIES)continue;
-      throw e;
-    }finally{clearTimeout(timeout)}
-  }
-  throw last||new Error('PNCP indisponível.');
 }
 
 function serverFilterParams(filters={}){
@@ -187,22 +140,43 @@ async function fetchWithPageFallback(worker,args){
     throw e;
   }
 }
-function pagePlan(totalPages,budget){
-  const max=Math.max(1,Math.min(totalPages,Number(budget)||1));
-  if(totalPages<=1||max===1)return [1];
-  const set=new Set([1,totalPages]);
-  let left=2,right=totalPages-1;
-  while(set.size<max&&left<=right){set.add(left++);if(set.size<max&&right>=left)set.add(right--)}
-  return [...set].sort((a,b)=>a-b);
+// Progress is isolated by endpoint, date and actual remote filters. Failed pages are revisited first.
+function scopeKey(kind,date,filters,code){return JSON.stringify([kind,date,serverFilterParams(filters),code]);}
+function progress(key){
+ let p=pageProgress.get(key);
+ if(!p){p={cursor:2,pending:new Set(),seen:new Set()};pageProgress.set(key,p);}
+ while(pageProgress.size>240)pageProgress.delete(pageProgress.keys().next().value);
+ return p;
 }
-function rotatingOpenPagePlan(code,totalPages,budget){
-  const max=Math.max(1,Math.min(totalPages,Number(budget)||1));
-  if(totalPages<=max)return Array.from({length:totalPages},(_,i)=>i+1);
-  const set=new Set([1]);
-  let cursor=Math.max(2,Number(openPageCursor.get(code)||2));
-  while(set.size<max){if(cursor>totalPages)cursor=2;set.add(cursor++);if(totalPages===1)break}
-  openPageCursor.set(code,cursor);
-  return [...set];
+function planExtra(p,totalPages,budget){
+ const max=Math.min(Math.max(0,budget),Math.max(0,totalPages-1));
+ const chosen=new Set();
+ for(const page of p.pending){if(page>totalPages)p.pending.delete(page);else if(page>=2&&chosen.size<max)chosen.add(page);}
+ let tries=0;
+ while(chosen.size<max&&tries++<totalPages){if(p.cursor>totalPages)p.cursor=2;chosen.add(p.cursor++);}
+ return [...chosen];
+}
+function recordModality(kind,code,ok,partial,failedPages=0){
+ const key=kind+':'+code,previous=modalityHealth.get(key)||{attempts:0,successes:0,failures:0,last_success_at:null};
+ modalityHealth.set(key,{code,kind,attempts:previous.attempts+1,successes:previous.successes+Number(ok),failures:previous.failures+Number(!ok),last_success_at:ok?new Date().toISOString():previous.last_success_at,last_attempt_at:new Date().toISOString(),last_ok:ok,partial,failed_pages:failedPages});
+}
+function prioritized(codes,kind,track){return track?[...codes].sort((a,b)=>Number(modalityHealth.get(kind+':'+b)?.last_ok===false)-Number(modalityHealth.get(kind+':'+a)?.last_ok===false)):codes;}
+async function collectModality({worker,args,key,budget,kind,track}){
+ const code=args.code,p=progress(key);
+ try{
+  const first=await fetchWithPageFallback(worker,{...args,page:1});
+  const totalPages=first.totalPages||1,items=[...first.items],failedPages=[];
+  p.seen.add(1);
+  const extras=planExtra(p,totalPages,budget-1);
+  let pagesFetched=1;
+  for(const page of extras){
+   try{const extra=await fetchWithPageFallback(worker,{...args,page});items.push(...extra.items);p.pending.delete(page);p.seen.add(page);pagesFetched++;}
+   catch(e){p.pending.add(page);failedPages.push({code,page,status:e?.status||null,message:clean(e?.message||'falha PNCP',180)});}
+  }
+  const partial=pagesFetched<totalPages||failedPages.length>0;
+  if(track)recordModality(kind,code,true,partial,failedPages.length);
+  return {code,items,totalPages,totalRecords:first.totalRecords,pagesFetched,pageSize:first.pageSize,partial,failedPages};
+ }catch(e){if(track)recordModality(kind,code,false,true);throw e;}
 }
 async function mapLimit(values,limit,worker){
   const output=new Array(values.length);let cursor=0;
@@ -210,34 +184,24 @@ async function mapLimit(values,limit,worker){
   await Promise.all(Array.from({length:Math.min(limit,values.length)},()=>run()));return output;
 }
 function collectResults(results,codes){
-  const errors=[],meta=[];let items=[];
+  const errors=[],meta=[],pageErrors=[];let items=[];
   for(let i=0;i<results.length;i++){
     const r=results[i];
-    if(r.ok){items.push(...r.value.items);meta.push({code:r.value.code,total_pages:r.value.totalPages,pages_fetched:r.value.pagesFetched,page_size:r.value.pageSize,total_records:r.value.totalRecords,partial:r.value.partial})}
+    if(r.ok){items.push(...r.value.items);pageErrors.push(...(r.value.failedPages||[]));meta.push({code:r.value.code,total_pages:r.value.totalPages,pages_fetched:r.value.pagesFetched,page_size:r.value.pageSize,total_records:r.value.totalRecords,partial:r.value.partial})}
     else errors.push({code:codes[i],status:r.error?.status||null,message:clean(r.error?.message||'falha PNCP',240)});
   }
   const seen=new Set();items=items.filter(x=>{const k=resultKey(x);if(!k||seen.has(k))return false;seen.add(k);return true});
-  return {items,errors,meta,partial:errors.length>0||meta.some(x=>x.partial),successfulModalities:meta.length,failedModalities:errors.length};
+  return {items,errors,meta,pageErrors,partial:errors.length>0||pageErrors.length>0||meta.some(x=>x.partial),successfulModalities:meta.length,failedModalities:errors.length};
 }
-export async function fetchPncpRange({startDate,endDate,filters={},codes=PNCP_MODALITY_CODES,maxPagesPerModality=4,concurrency=3}={}){
-  const results=await mapLimit(codes,concurrency,async code=>{
-    const first=await fetchWithPageFallback(fetchPublicationPageOnce,{code,startDate,endDate,filters,page:1});
-    const pages=pagePlan(first.totalPages||1,Math.max(1,maxPagesPerModality));
-    const items=[...first.items];
-    for(const page of pages){if(page===1)continue;const extra=await fetchWithPageFallback(fetchPublicationPageOnce,{code,startDate,endDate,filters,page});items.push(...extra.items)}
-    return {code,items,totalPages:first.totalPages||1,totalRecords:first.totalRecords,pagesFetched:pages.length,pageSize:first.pageSize,partial:(first.totalPages||1)>pages.length};
-  });
-  return collectResults(results,codes);
+export async function fetchPncpRange({startDate,endDate,filters={},codes=PNCP_MODALITY_CODES,maxPagesPerModality=4,concurrency=3,extraPageCodes=null,track=false}={}){
+ const ordered=prioritized(codes,'publication',track);
+ const results=await mapLimit(ordered,concurrency,code=>collectModality({worker:fetchPublicationPageOnce,args:{code,startDate,endDate,filters},key:scopeKey('publication',ymd(startDate)+':'+ymd(endDate),filters,code),budget:extraPageCodes?(extraPageCodes.includes(code)?2:1):Math.max(1,maxPagesPerModality),kind:'publication',track}));
+ return collectResults(results,ordered);
 }
-export async function fetchPncpOpenRange({endDate=new Date(Date.now()+OPEN_HORIZON_DAYS*86400000),filters={},codes=PNCP_MODALITY_CODES,maxPagesPerModality=3,concurrency=2}={}){
-  const results=await mapLimit(codes,concurrency,async code=>{
-    const first=await fetchWithPageFallback(fetchOpenPageOnce,{code,endDate,filters,page:1});
-    const pages=rotatingOpenPagePlan(code,first.totalPages||1,Math.max(1,maxPagesPerModality));
-    const items=[...first.items];
-    for(const page of pages){if(page===1)continue;const extra=await fetchWithPageFallback(fetchOpenPageOnce,{code,endDate,filters,page});items.push(...extra.items)}
-    return {code,items,totalPages:first.totalPages||1,totalRecords:first.totalRecords,pagesFetched:pages.length,pageSize:first.pageSize,partial:(first.totalPages||1)>pages.length};
-  });
-  return collectResults(results,codes);
+export async function fetchPncpOpenRange({endDate=new Date(Date.now()+OPEN_HORIZON_DAYS*86400000),filters={},codes=PNCP_MODALITY_CODES,maxPagesPerModality=3,concurrency=2,track=false}={}){
+ const ordered=prioritized(codes,'open',track);
+ const results=await mapLimit(ordered,concurrency,code=>collectModality({worker:fetchOpenPageOnce,args:{code,endDate,filters},key:scopeKey('open',ymd(endDate),filters,code),budget:Math.max(1,maxPagesPerModality),kind:'open',track}));
+ return collectResults(results,ordered);
 }
 export async function fetchPncpSearch(filters={}){
   const f=normalizeSearchFilters(filters),end=new Date(),days=f.days||30,start=new Date(end.getTime()-days*86400000),codes=f.modalities.length?f.modalities:PNCP_MODALITY_CODES;
@@ -247,12 +211,12 @@ export async function fetchPncpSearch(filters={}){
   const r=await fetchPncpRange({startDate:start,endDate:end,filters:f,codes,maxPagesPerModality:budget,concurrency:restrictive?1:2});
   return {...r,items:applySearchFilters(r.items,f),filters:f};
 }
-export async function fetchPncpOpenSearch(filters={}){
+export async function fetchPncpOpenSearch(filters={}, {track=false}={}){
   const f={...normalizeSearchFilters(filters),openOnly:true},codes=f.modalities.length?f.modalities:PNCP_MODALITY_CODES;
   const restrictive=Boolean(f.uf||f.municipalityIbge||f.cnpj||f.modalities.length);
   const budget=restrictive?4:3;
   const endDate=new Date(Date.now()+OPEN_HORIZON_DAYS*86400000);
-  const r=await fetchPncpOpenRange({endDate,filters:f,codes,maxPagesPerModality:budget,concurrency:restrictive?1:2});
+  const r=await fetchPncpOpenRange({endDate,filters:f,codes,maxPagesPerModality:budget,concurrency:restrictive?1:2,track});
   return {...r,items:applySearchFilters(r.items,f),filters:f,openHorizonDays:OPEN_HORIZON_DAYS};
 }
-export function pncpClientHealth(){return {preferred_page_size:PREFERRED_PAGE_SIZE,effective_page_size:effectivePageSize,request_spacing_ms:REQUEST_SPACING_MS,max_retries:MAX_RETRIES,cooldown_until:cooldownUntil?new Date(cooldownUntil).toISOString():null,base_url:PNCP_BASE_URL,open_endpoint:'/v1/contratacoes/proposta',open_horizon_days:OPEN_HORIZON_DAYS,open_page_strategy:'first-plus-rotating'};}
+export function pncpClientHealth(){return {preferred_page_size:PREFERRED_PAGE_SIZE,effective_page_size:effectivePageSize,request_spacing_ms:REQUEST_SPACING_MS,max_retries:MAX_RETRIES,cooldown_until:transport.health().cooldown_until,transport:transport.health(),modalities:[...modalityHealth.values()],base_url:PNCP_BASE_URL,open_endpoint:'/v1/contratacoes/proposta',open_horizon_days:OPEN_HORIZON_DAYS,open_page_strategy:'first-plus-rotating'};}
