@@ -173,7 +173,7 @@ html[data-theme="light"] #appShell.radar-layout .radar-menu-open .radar-account-
 html[data-theme="light"] #appShell #ai-assistant .ai-window-head{
  background:var(--pulse-inset)!important;color:var(--pulse-ink)!important;border-color:var(--pulse-edge)!important;
 }
-html[data-theme="light"] #appShell #ai-assistant .ai-window-head b{color:var(--pulse-ink)!important}
+html[data-theme="light"] #appShell #ai-assistant :is(#aiStatusText,.ai-window-head b){color:var(--pulse-ink)!important}
 html[data-theme="light"] #appShell #ai-assistant #aiStatusText{color:var(--pulse-secondary)!important}
 html[data-theme="light"] #appShell #ai-assistant .ai-close{
  color:var(--pulse-ink)!important;background:var(--pulse-paper)!important;border:1px solid var(--rp-control-edge)!important;
