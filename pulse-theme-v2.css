@@ -322,6 +322,8 @@ html[data-theme] #rlbNationalNoticeHost .rp-notice .radar-notice-close{min-width
 #rlbNationalNoticeHost .rp-notice-header{grid-template-columns:42px minmax(0,1fr) 40px}
 html[data-theme] #appShell #ai-assistant .ai-window{
  min-width:0!important;min-height:0!important;max-width:calc(100vw - 12px)!important;max-height:calc(100dvh - 12px)!important;box-sizing:border-box;flex-direction:column;
+ /* Never interpolate fixed coordinates or width after viewport resize: the old transition:all exposed the previous desktop position. */
+ transition:none!important;
 }
 html[data-theme] #appShell #ai-assistant .ai-window-head{flex-shrink:0;min-height:56px;padding:8px 10px!important}
 html[data-theme] #appShell #ai-assistant .ai-window-head b{font-size:14px!important;line-height:1.3}
