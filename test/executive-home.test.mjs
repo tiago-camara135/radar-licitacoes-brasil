@@ -64,7 +64,9 @@ test('links oficiais não aceitam javascript e os textos são renderizados como 
  assert.match(js,/const n=document.createElement\(tag\)/);
  assert.match(js,/n\.textContent=String\(value\)/);
  assert.match(js,/a\.rel='noopener noreferrer'/);
- assert.match(js,/Nenhum prazo registrado nos próximos/);
+ assert.match(js,/Nenhum prazo disponível nos próximos/);
+ assert.match(js,/Prazos do Radar • oportunidades gerais/);
+ assert.match(js,/sem cálculo de aderência/);
 });
 
 
