@@ -541,17 +541,44 @@ try{
  await page.locator('.pb-dialog input[type="search"]').fill('Inteligência');
  await page.locator('.pb-dialog .pb-choice').filter({hasText:/^Inteligência$/}).click();
  await page.locator('#view-intelligence.active').waitFor({timeout});
- const intelResponse=page.waitForResponse(r=>r.url().includes('/api/dashboard/intelligence?'),{timeout});
- await page.locator('#pbNationalForm button[type="submit"]').click();
- assert.equal((await intelResponse).status(),200,'Intelligence API must respond');
+ // Automatic load on entering the intelligence view.
  await page.locator('#pbNationalResults .pb-metrics').waitFor({timeout});
+ const [drill]=await Promise.all([page.waitForResponse(r=>r.url().includes('/api/dashboard/intelligence?')&&r.url().includes('kind=due7'),{timeout}),page.locator('#pbNationalResults [data-kind="due7"]').click()]);assert.equal(drill.status(),200);
+ await page.locator('#pbNationalResults [data-kind="due7"][aria-pressed="true"]').waitFor({timeout});
  await page.locator('[data-pb-tab="contracts"]').click();
  assert.ok(await page.locator('#pbContractForm').isVisible(),'Contract form accessible; no external requests in CI');
+ // Deterministic network fixture: exercises rendering, recovery, deduplication and export
+ // without contacting PNCP or adding synthetic records to production.
+ const contractFixture={id:'fixture-1',object:'=1+1 QA contrato',org:'Órgão QA',uf:'RN',supplier_name:'Fornecedor QA',supplier:'12345678000195',value:100,published:'2026-01-01',end:'2027-01-01',url:'https://pncp.gov.br/app/contratos/12345678000195/2026/1'};
+ let failNext=true;
+ await page.route('**/api/dashboard/contracts?*',async route=>{
+   const p=Number(new URL(route.request().url()).searchParams.get('page'));
+   if(p===2&&failNext){failNext=false;await route.fulfill({status:503,contentType:'application/json',body:JSON.stringify({error:'PNCP temporariamente indisponível'})});return}
+   await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({items:p===1?[contractFixture]:[contractFixture,{...contractFixture,id:'fixture-2',object:'Segundo contrato QA',value:200}],coverage:{page:p,pages:[p],last_page:p,next_page:p+1,total_pages:2,failed_pages:[]},source:'Amostra de teste; cobertura parcial.'})});
+ });
+ await page.locator('#pbContractForm button[type="submit"]').click();
+ await page.locator('#pbContractResults .pb-contract').first().waitFor({timeout});
+ assert.equal(await page.locator('#pbContractResults .pb-contract').count(),1);
+ await page.locator('#pbNext').click();
+ await until(page,()=>document.querySelector('#pbContractStatus')?.textContent.includes('resultados anteriores preservados'));
+ assert.equal(await page.locator('#pbContractResults .pb-contract').count(),1);
+ await page.locator('#pbNext').click();
+ await until(page,()=>document.querySelectorAll('#pbContractResults .pb-contract').length===2);
+ assert.ok(await page.locator('#pbNext').isDisabled());
+ const [csv]=await Promise.all([page.waitForEvent('download',{timeout}),page.locator('#pbExport').click()]);
+ assert.equal(csv.suggestedFilename(),'radar-contratos-resultados-parciais.csv');
+ const csvStream=await csv.createReadStream();let csvText='';for await(const part of csvStream)csvText+=part.toString();
+ assert.ok(csvText.includes("'=1+1 QA contrato"),'CSV formula injection guard');
+ assert.ok(csvText.includes('Segundo contrato QA'));
+ assert.equal((csvText.match(/fixture-1/g)||[]).length,1,'CSV must deduplicate');
+ await page.unroute('**/api/dashboard/contracts?*');
+ note('Intelligence Pro: contract UI failure recovery, retry, deduplication and safe CSV export passed with isolated network fixture');
  await gotoSection(page,'home');
  await page.locator('#pbCustomize').click();
  await page.locator('.pb-dialog input[type="checkbox"]').first().uncheck();
  assert.equal(await page.locator('.rlb-home-recommendations').getAttribute('data-pb-hidden'),'true');
  await page.locator('.pb-dialog .pb-choice').filter({hasText:'Restaurar padrão'}).click();
+ await until(page,()=>document.querySelector('.pb-dialog')?.textContent.includes('Preferência sincronizada.'));
  await page.locator('.pb-dialog header button').click();
  assert.equal(await page.locator('.rlb-home-recommendations').getAttribute('data-pb-hidden'),'false');
  note('Pulse Business: global navigation, real national aggregation, contracts form and dashboard preference OK');
