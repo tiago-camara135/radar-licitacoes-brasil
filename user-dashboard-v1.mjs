@@ -82,7 +82,8 @@ async function documentHealth(uid){
 
 const deadlineSql=effectivePncpDeadline('m');
 const recommendationSql=`SELECT m.pncp_id,m.org_cnpj,m.year,m.sequence,m.modality_code,m.modality_name,m.object_text,m.org_name,m.municipality,m.uf,m.estimated_value,m.published_at,${deadlineSql} AS closes_at,m.pncp_url,m.origin_url,m.detected_at,
-  ARRAY_REMOVE(ARRAY_AGG(DISTINCT a.name),NULL) AS alert_names
+  ARRAY_REMOVE(ARRAY_AGG(DISTINCT a.name),NULL) AS alert_names,
+  JSONB_AGG(DISTINCT JSONB_BUILD_OBJECT('name',a.name,'keyword',a.keyword,'uf',a.uf,'municipality',a.municipality,'modality',a.modality_code,'org',a.org_name,'cnpj',a.org_cnpj,'min',a.min_value,'max',a.max_value)) AS matched_criteria
 FROM monitored_procurements m
 JOIN saved_alerts a ON a.user_id=$1 AND a.enabled=TRUE
  AND (a.keyword IS NULL OR a.keyword='' OR m.object_text ILIKE '%'||a.keyword||'%')
@@ -97,21 +98,30 @@ WHERE ${deadlineSql}>=NOW()
  AND ($2::text[] IS NULL OR UPPER(m.uf)=ANY($2::text[]))
 GROUP BY m.pncp_id,m.org_cnpj,m.year,m.sequence,m.modality_code,m.modality_name,m.object_text,m.org_name,m.municipality,m.uf,m.estimated_value,m.published_at,m.closes_at,m.pncp_url,m.origin_url,m.detected_at
 ORDER BY m.detected_at DESC NULLS LAST,m.pncp_id ASC LIMIT 120`;
+// Aderência is a transparent heuristic, never a prediction of award or a legal habilitation assessment.
 function fitFor(row,ready,geo,alerts){
-  const alertPoints=Math.min(60,48+Math.min(12,alerts.length*6));
-  const geoPoints=geo.scope==='brasil'?8:15;
-  const docsPoints=Math.round(Math.max(0,Math.min(100,ready.score))*0.25);
+  const matches=Array.isArray(row.matched_criteria)?row.matched_criteria:[];
+  const normalize=v=>String(v??'').trim().normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+  const object=normalize(row.object_text);
+  const exactKeywords=[...new Set(matches.map(x=>normalize(x.keyword)).filter(x=>x.length>=3&&object.includes(x)))];
+  const specific=matches.some(x=>String(x.uf||x.municipality||x.modality||x.org||x.cnpj||'').trim()||x.min!=null||x.max!=null);
+  const alertPoints=exactKeywords.length?Math.min(60,52+Math.min(8,(exactKeywords.length-1)*4)+(specific?8:0)):specific?38:alerts.length?22:0;
+  const regional=geo.scope!=='brasil'&&Array.isArray(geo.ufs)&&geo.ufs.includes(String(row.uf||'').toUpperCase());
+  const geoPoints=geo.scope==='brasil'?8:regional?15:0;
+  const docsPoints=Math.round(Math.max(0,Math.min(100,Number(ready.score)||0))*0.25);
   const score=Math.min(100,alertPoints+geoPoints+docsPoints);
   const reasons=[];
   if(alerts.length)reasons.push(`Alerta compatível: ${alerts.slice(0,2).join(' • ')}`);
-  if(geo.scope!=='brasil')reasons.push(`Localização dentro da abrangência: ${geoLabel(geo)}`);else reasons.push('Abrangência nacional selecionada');
+  if(exactKeywords.length)reasons.push('Palavras-chave encontradas no objeto: '+exactKeywords.slice(0,4).join(', '));
+  else reasons.push(specific?'Correspondência por outros filtros do alerta':'Alerta amplo: segmento não confirmado pelo objeto');
+  if(regional)reasons.push(`Localização dentro da abrangência: ${geoLabel(geo)}`);else if(geo.scope==='brasil')reasons.push('Abrangência nacional selecionada');
   reasons.push(`Prontidão documental básica: ${ready.score}%`);
-  return{score,reasons};
+  return{score,reasons,components:[{label:'Compatibilidade dos alertas',points:alertPoints,max:60},{label:'Abrangência geográfica',points:geoPoints,max:15},{label:'Documentação básica',points:docsPoints,max:25}],limitations:'Estimativa por alertas, localização e documentação básica. Não comprova habilitação, segmento empresarial ou chance de vitória; confira as exigências do edital.'};
 }
 async function recommendations(uid,docsMap,geo){
   const filterUfs=geo.scope==='brasil'?null:geo.ufs;
   const rows=(await pool.query(recommendationSql,[uid,filterUfs])).rows;
-  return rows.map(r=>{const ref=dateOnly(r.closes_at)||today(),ready=readinessFor(docsMap,ref),alerts=Array.isArray(r.alert_names)?r.alert_names.filter(Boolean):[],fit=fitFor(r,ready,geo,alerts);return{...r,estimated_value:r.estimated_value==null?null:Number(r.estimated_value),readiness:ready,fit,match_reason:alerts.length?`Corresponde a ${alerts.slice(0,2).join(' • ')}`:'Compatível com seus filtros'}}).sort((a,b)=>b.fit.score-a.fit.score||b.readiness.score-a.readiness.score||new Date(a.closes_at)-new Date(b.closes_at)).slice(0,60);
+  return rows.map(r=>{const ref=dateOnly(r.closes_at)||today(),ready=readinessFor(docsMap,ref),alerts=Array.isArray(r.alert_names)?r.alert_names.filter(Boolean):[],fit=fitFor(r,ready,geo,alerts);const {matched_criteria,...publicRow}=r;return{...publicRow,estimated_value:r.estimated_value==null?null:Number(r.estimated_value),readiness:ready,fit,match_reason:alerts.length?`Corresponde a ${alerts.slice(0,2).join(' • ')}`:'Compatível com seus filtros'}}).sort((a,b)=>b.fit.score-a.fit.score||b.readiness.score-a.readiness.score||new Date(a.closes_at)-new Date(b.closes_at)).slice(0,60);
 }
 async function tracking(uid){
   return qMaybe(`SELECT t.id,t.pncp_key,t.org_cnpj,t.year,t.sequence,t.status,t.notes,t.created_at,t.updated_at,m.pncp_id,m.modality_name,m.object_text,m.org_name,m.municipality,m.uf,m.estimated_value,${deadlineSql} AS closes_at,m.pncp_url,m.origin_url
@@ -194,4 +204,4 @@ export async function handleUserDashboardRoute(req,res,url){
   }catch(e){console.error('user dashboard v2:',e?.stack||e);json(res,e?.status||500,{error:e?.status?e.message:'Erro interno no dashboard.'});return true}
 }
 
-export const __test={STATUSES,WIDGETS,BASELINE,UFS,REGIONS,readinessFor,docState,normalizeGeo};
+export const __test={STATUSES,WIDGETS,BASELINE,UFS,REGIONS,readinessFor,docState,normalizeGeo,fitFor};
