@@ -886,6 +886,7 @@ function install(){
   document.addEventListener('keydown',e=>{if(e.key==='Escape'&&profileMenu.open){profileMenu.open=false;profileMenu.querySelector('summary').focus()}});
 
   ui.bell.addEventListener('click',()=>setOpen(!open));
+  document.addEventListener('radar:open-notifications',()=>{if(logged()){profileMenu.open=false;setOpen(true)}});
   ui.close.addEventListener('click',()=>setOpen(false));
   ui.all.addEventListener('click',()=>{filter='all';render()});
   ui.unread.addEventListener('click',()=>{filter='unread';render()});
