@@ -7,7 +7,7 @@ export function createPncpTransport({fetcher=(...args)=>fetch(...args),now=Date.
  function retryAfter(response,attempt){
   const raw=response?.headers?.get?.('retry-after');
   if(raw){const seconds=Number(raw),date=Date.parse(raw);const ms=Number.isFinite(seconds)?seconds*1000:date-now();if(Number.isFinite(ms)&&ms>0)return ms;}
-  return Math.min(1500*2**attempt,12000);
+  return response?.status===429?Math.min(6000*2**attempt,24000):Math.min(1500*2**attempt,12000);
  }
  async function turn(){
   const step=gate.then(async()=>{
@@ -31,22 +31,22 @@ export function createPncpTransport({fetcher=(...args)=>fetch(...args),now=Date.
   counters.requests++;
   try{
    const response=await fetcher(url,{headers:{accept:'application/json','user-agent':'RadarLicitacoesBrasil/4.2'},signal:controller.signal});
-   if(response.status===204){counters.successes++;penalty=Math.max(0,penalty-100);return {response,body:{data:[],totalPaginas:0,totalRegistros:0}};}
+   if(response.status===204){counters.successes++;penalty=Math.max(0,penalty-50);return {response,body:{data:[],totalPaginas:0,totalRegistros:0}};}
    let body;
    try{body=await response.json()}catch{if(response.ok)throw error('PNCP retornou JSON inválido',502,true);body=null;}
    if(!response.ok){
     const transient=response.status===429||response.status>=500||response.status===408;
     if(response.status===429)counters.rate_limited++;
-    if(transient){penalty=Math.min(2500,penalty+350);cooldown=Math.max(cooldown,now()+retryAfter(response,attempt));}
+    if(transient){penalty=response.status===429?Math.min(6000,Math.max(1500,penalty+750)):Math.min(6000,penalty+350);cooldown=Math.max(cooldown,now()+retryAfter(response,attempt));}
     throw error('PNCP HTTP '+response.status,response.status,transient);
    }
    if(!Array.isArray(body)&&!Array.isArray(body?.data))throw error('PNCP retornou resposta sem lista de registros',502,true);
-   counters.successes++;penalty=Math.max(0,penalty-100);
+   counters.successes++;penalty=Math.max(0,penalty-50);
    return {response,body};
   }catch(e){
    counters.failures++;
    if(e?.name==='AbortError'||e instanceof TypeError||e.retryable){
-    if(!e.status||e.status===502){penalty=Math.min(2500,penalty+250);cooldown=Math.max(cooldown,now()+Math.min(1000*2**attempt,8000));}
+    if(!e.status||e.status===502){penalty=Math.min(6000,penalty+250);cooldown=Math.max(cooldown,now()+Math.min(1000*2**attempt,8000));}
     e.retryable=true;
    }
    throw e;

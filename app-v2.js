@@ -909,7 +909,7 @@ function install(){
   });
   document.addEventListener('radar:home-rec-filter',event=>setRecommendationFilter(event.detail?.filter));
   const shell=$('#appShell');
-  new MutationObserver(()=>{if(!logged()){epoch++;setOpen(false);rows=[];filter='all';soundEnabled=false;ui.sound.textContent='Som desativado';ui.sound.setAttribute('aria-pressed','false');lastProfile=0;recCache=[];rotateRecommendations=false;cycleSelection=null;rotationHistory.clear();rotationCycle=0;recFilter='all';recInitialized=false;renderedRecSignature='';recPulse.clear();recommendationStatus('');ui.count.textContent='—';$('#revRecommendations')?.remove()}else profile()}).observe(shell,{attributes:true,attributeFilter:['class']});
+  new MutationObserver(()=>{if(!logged()){epoch++;setOpen(false);rows=[];ui.list.replaceChildren();ui.subtitle.textContent='Histórico dos alertas da sua conta';ui.message.textContent='';ui.count.hidden=false;filter='all';soundEnabled=false;ui.sound.textContent='Som desativado';ui.sound.setAttribute('aria-pressed','false');lastProfile=0;recCache=[];rotateRecommendations=false;cycleSelection=null;rotationHistory.clear();rotationCycle=0;recFilter='all';recInitialized=false;renderedRecSignature='';recPulse.clear();recommendationStatus('');ui.count.textContent='—';$('#revRecommendations')?.remove()}else profile()}).observe(shell,{attributes:true,attributeFilter:['class']});
   document.addEventListener('visibilitychange',()=>{if(!document.hidden&&logged()&&Date.now()-lastProfile>90000)profile()});
   if(logged())profile();
 }
@@ -963,10 +963,10 @@ async function markOne(id){
  }catch(e){if(logged()&&requestEpoch===epoch)ui.message.textContent=e.message}
 }
 async function markAll(){
-  if(!logged()||loading)return;ui.mark.disabled=true;
+  if(!logged()||loading)return;const requestEpoch=epoch;ui.mark.disabled=true;
   try{const controller=new AbortController(),t=setTimeout(()=>controller.abort(),12000);
     try{const r=await fetch('/api/notifications/read-all',{method:'POST',credentials:'same-origin',cache:'no-store',signal:controller.signal,headers:{'content-type':'application/json'},body:'{}'});
-      if(!r.ok)throw Error('Falha ao marcar notificações.');document.dispatchEvent(new CustomEvent('radar:notification-read',{detail:{all:true}}));await load()
+      if(!r.ok)throw Error('Falha ao marcar notificações.');if(!logged()||requestEpoch!==epoch)return;document.dispatchEvent(new CustomEvent('radar:notification-read',{detail:{all:true}}));await load()
     }finally{clearTimeout(t)}
   }catch(e){ui.message.textContent=e.message}finally{ui.mark.disabled=false}
 }

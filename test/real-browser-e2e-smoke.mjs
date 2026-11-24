@@ -322,6 +322,7 @@ try{
  assert.match(await balloon.textContent(),/Aquisição de combustível/);
  const stillUnread=await pool.query("SELECT COUNT(*)::int AS count FROM notification_deliveries WHERE user_id=$1 AND channel='onsite' AND read_at IS NULL",[userId]);
  assert.ok(stillUnread.rows[0].count>0,'Displaying a toast must not mark it as read');
+ const cursorTest=await page.evaluate(async()=>{const r=await fetch('/api/stability/notifications/onsite?limit=1');const d=await r.json();const id=d.items[0].id;const next=await fetch('/api/stability/notifications/onsite?limit=1&after='+encodeURIComponent(id));return {first:id,next:(await next.json()).items}});assert.ok(cursorTest.first);assert.ok(cursorTest.next.every(x=>BigInt(x.id)>BigInt(cursorTest.first)),'Onsite cursor cannot repeat the same unread record');
  await balloon.hover();
  await page.waitForTimeout(350);
  assert.equal(await balloon.isVisible(),true);

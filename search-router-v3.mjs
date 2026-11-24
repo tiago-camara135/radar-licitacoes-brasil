@@ -1,3 +1,4 @@
+import { effectivePncpDeadline } from './pncp-operational-date-v1.mjs';
 import { Pool } from 'pg';
 import { fetchPncpOpenSearch, normalizeSearchFilters, applySearchFilters, resultKey, pncpUrl, originUrl, municipalityOf, closingOf, pncpClientHealth, radarSearchTerms, textNorm } from './pncp-client-v3.mjs';
 
@@ -5,6 +6,10 @@ const PORT=Number(process.env.PORT||10000);
 const DATABASE_URL=process.env.DATABASE_URL||'';
 const pool=DATABASE_URL?new Pool({connectionString:DATABASE_URL,ssl:{rejectUnauthorized:false},max:3,idleTimeoutMillis:30000}):null;
 const cache=new Map();
+const deadlineSql=effectivePncpDeadline('m');
+// Preserve historical rows and use the same deadline semantics as the live feed and dashboard.
+const activeSource=`(SELECT raw,pncp_url,origin_url,detected_at,last_seen_at,published_at,uf,municipality,object_text,org_name,unit_name,pncp_id,modality_code,org_cnpj,estimated_value,${deadlineSql} AS closes_at FROM monitored_procurements m WHERE m.closes_at>=NOW()-INTERVAL '3 hours') AS active_source`;
+const deadlineSource=`(SELECT uf,last_seen_at,${deadlineSql} AS closes_at FROM monitored_procurements m) AS deadline_source`;
 let ready=false,refreshTimer=null,openRefreshRunning=false;
 let lastRemote={at:null,ok:null,errors:0,partial:true,count:0,strategy:'open-proposals-background'};
 let lastNationalRemote=null;
@@ -96,13 +101,13 @@ async function localSearch(filters,limit=5000){
   const maxRows=Math.min(Math.max(Number(limit)||5000,100),5000);
   params.push(maxRows);
   const order=f.order==='value_desc'?'estimated_value DESC NULLS LAST':f.order==='value_asc'?'estimated_value ASC NULLS LAST':f.order==='deadline'?'closes_at ASC NULLS LAST':'published_at DESC NULLS LAST, closes_at ASC NULLS LAST';
-  const r=await pool.query(`SELECT raw,pncp_url,origin_url,detected_at,last_seen_at FROM monitored_procurements WHERE ${where.join(' AND ')} ORDER BY ${order} LIMIT $${n}`,params);
+  const r=await pool.query(`SELECT raw,pncp_url,origin_url,detected_at,last_seen_at FROM ${activeSource} WHERE ${where.join(' AND ')} ORDER BY ${order} LIMIT $${n}`,params);
   const candidates=r.rows.map(row=>({...row.raw,_pncpUrl:row.pncp_url||pncpUrl(row.raw||{}),_originUrl:row.origin_url||originUrl(row.raw||{}),_sourcePlatform:sourcePlatform(row.raw||{}),_detectedAt:row.detected_at?new Date(row.detected_at).toISOString():null,_lastSeenAt:row.last_seen_at?new Date(row.last_seen_at).toISOString():null,_liveMonitor:true,_activeOpportunity:true}));
   return applySearchFilters(candidates,f);
 }
 
 function dbValues(x,historical=true){
-  const estimated=Number(x?.valorTotalEstimado),pub=validDate(x?.dataPublicacaoPncp),detected=historical?(pub||new Date(Date.now()-86400000).toISOString()):new Date().toISOString();
+  const rawValue=x?.valorTotalEstimado,estimated=rawValue==null||rawValue===''?NaN:Number(rawValue),pub=validDate(x?.dataPublicacaoPncp),detected=historical?(pub||new Date(Date.now()-86400000).toISOString()):new Date().toISOString();
   return [resultKey(x),digits(x?.orgaoEntidade?.cnpj).slice(0,14)||null,Number.isInteger(Number(x?.anoCompra))?Number(x.anoCompra):null,Number.isInteger(Number(x?.sequencialCompra))?Number(x.sequencialCompra):null,
     Number.isInteger(Number(x?._modalidadeConsultada||x?.modalidadeId))?Number(x?._modalidadeConsultada||x?.modalidadeId):null,clean(x?.modalidadeNome,180)||null,clean(x?.objetoCompra,4000)||null,clean(x?.orgaoEntidade?.razaoSocial,500)||null,
     clean(x?.unidadeOrgao?.nomeUnidade,500)||null,clean(municipalityOf(x),180)||null,clean(x?.unidadeOrgao?.ufSigla||x?.ufSigla,2).toUpperCase()||null,clean(x?.orgaoEntidade?.poderId,20)||null,clean(x?.orgaoEntidade?.esferaId,20)||null,
@@ -178,7 +183,7 @@ async function alertFeed(userId){
   const matches=[];
   for(const alert of a.rows){
     const filters={keyword:alert.keyword||'',uf:alert.uf||'',municipality:alert.municipality||'',municipalityIbge:alert.municipality_ibge||'',modality:alert.modality_code||'',org:alert.org_name||'',cnpj:alert.org_cnpj||'',minValue:alert.min_value,maxValue:alert.max_value,days:0,openOnly:true,order:'newest'};
-    const items=await localSearch(filters,5000).catch(()=>[]);
+    const items=await localSearch(filters,5000);
     for(const item of items.slice(0,100))matches.push({alert:{id:alert.id,name:alert.name},item});
   }
   const seen=new Set();
@@ -190,8 +195,8 @@ async function status(){
   if(pool){
     await init();
     const [t,s]=await Promise.all([
-      pool.query(`SELECT COUNT(*)::int total,COUNT(*) FILTER(WHERE closes_at>=NOW())::int active,COUNT(*) FILTER(WHERE closes_at<NOW())::int expired,COUNT(*) FILTER(WHERE closes_at IS NULL)::int no_deadline,MAX(last_seen_at) last_seen_at FROM monitored_procurements`),
-      pool.query(`SELECT uf,COUNT(*)::int count FROM monitored_procurements WHERE closes_at>=NOW() GROUP BY uf ORDER BY count DESC LIMIT 27`)
+      pool.query(`SELECT COUNT(*)::int total,COUNT(*) FILTER(WHERE closes_at>=NOW())::int active,COUNT(*) FILTER(WHERE closes_at<NOW())::int expired,COUNT(*) FILTER(WHERE closes_at IS NULL)::int no_deadline,MAX(last_seen_at) last_seen_at FROM ${deadlineSource}`),
+      pool.query(`SELECT uf,COUNT(*)::int count FROM ${deadlineSource} WHERE closes_at>=NOW() GROUP BY uf ORDER BY count DESC LIMIT 27`)
     ]);
     db={...t.rows[0],states:s.rows};
   }
