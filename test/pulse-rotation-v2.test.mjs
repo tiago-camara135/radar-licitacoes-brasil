@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
 const read=p=>readFileSync(new URL('../'+p,import.meta.url),'utf8');
-const js=read('app-v2.js'),html=read('app-v2.html'),css=read('app-v2.css'),brand=read('brand-logo-v1.css'),svg=read('rlb-brand-icon-v1.svg').trim();
+const js=read('app-v2.js'),html=read('app-v2.html'),css=read('app-v2.css'),brand=read('brand-logo-v1.css'),svg=read('rlb-brand-icon-v1.svg');
 const code=js.slice(js.indexOf('  const previous=new Set(cycleSelection||[]);'),js.indexOf("  const group=$('#rlbHomeRecommendationFilters');"));
 function simulate(n){
  const eligible=Array.from({length:n},(_,i)=>({id:String(i)}));
