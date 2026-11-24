@@ -328,6 +328,16 @@ try{
  assert.equal(dbTrack.rows[0]?.notes,notes,'Rapid note update remains committed');
  assert.ok(await page.locator('#view-operation .rev-calendar').count()===1,'Calendar present');
  note('Tracking status, private notes persistence and calendar OK');
+ await page.locator('[data-operation-mode="board"]').click();
+ await page.locator('.rp-kanban-column[data-stage="participando"] .rev-op-item').first().waitFor({timeout});
+ const boardCard=page.locator('.rp-kanban-column[data-stage="participando"] .rev-op-item').first();
+ assert.match(await boardCard.textContent(),/Aquisição de combustível/);
+ await boardCard.locator('select').selectOption('recurso');
+ await page.locator('.rp-kanban-column[data-stage="recurso"] .rev-op-item').first().waitFor({timeout});
+ await page.locator('.rp-kanban-column[data-stage="recurso"] .rev-op-item select').first().selectOption('participando');
+ await page.locator('.rp-kanban-column[data-stage="participando"] .rev-op-item').first().waitFor({timeout});
+ await page.locator('[data-operation-mode="list"]').click();
+ note('CRM Kanban uses private tracking data and persists stage movement OK');
 
  await gotoSection(page,'home');
  // A gravação em Minha Operação deve atualizar KPIs, panorama e prazos

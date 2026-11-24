@@ -851,7 +851,7 @@ let recFilter='all',recCache=[],recInitialized=false,renderedRecSignature='',rec
 let rotateRecommendations=false,cycleSelection=null,rotationCycle=0;
 const rotationHistory=new Map();
 const recKey=x=>[x?.org_cnpj,x?.year,x?.sequence].map(String).join('-');
-const recVersion=x=>JSON.stringify([x?.object_text,x?.closes_at,Number(x?.fit?.score),x?.modality_name]);
+const recVersion=x=>JSON.stringify([x?.object_text,x?.closes_at,Number(x?.fit?.score),x?.modality_name,x?.fit?.reasons,x?.fit?.components]);
 const ui={};
 function install(){
   const bar=$('#radarAccountControls');if(!bar)return;
@@ -1084,6 +1084,17 @@ function renderRecommendationItems(){
     }
     const why=Array.isArray(x.fit?.reasons)?x.fit.reasons.slice(0,2):[];
     if(why.length)info.append(el('small','rev-rec-why',why.join(' · ')));
+    if(Array.isArray(x.fit?.components)){
+      const details=el('details','rp-fit-details'),summary=el('summary','','Entenda a aderência');
+      details.append(summary);
+      for(const c of x.fit.components){
+        const line=el('div','rp-fit-component'),label=el('span','',c.label),points=el('b','',c.points+'/'+c.max);
+        line.append(label,points);details.append(line);
+      }
+      for(const reason of (x.fit.reasons||[]).slice(2))details.append(el('small','',reason));
+      details.append(el('p','rp-fit-note',x.fit.limitations||'Estimativa; consulte o edital.'));
+      info.append(details);
+    }
     const side=el('div','rev-rec-side');
     const score=Number(x.fit?.score);
     side.append(el('b','',Number.isFinite(score)?Math.round(Math.min(100,Math.max(0,score)))+'%':'—'),el('small','','aderência'));
@@ -1119,7 +1130,7 @@ const zone='America/Fortaleza';
 const dayKey=(v,type)=>{if(type==='document'&&typeof v==='string')return v.slice(0,10);const d=new Date(v);return Number.isNaN(d.getTime())?'':new Intl.DateTimeFormat('sv-SE',{timeZone:zone,year:'numeric',month:'2-digit',day:'2-digit'}).format(d)};
 const readable=v=>{const d=new Date(v);return Number.isNaN(d.getTime())?'Data não informada':new Intl.DateTimeFormat('pt-BR',{timeZone:zone,dateStyle:'short',timeStyle:'short'}).format(d)};
 const status={analisar:'Em análise',preparando_documentacao:'Preparando documentação',proposta_pronta:'Proposta pronta',participando:'Participando',recurso:'Em recurso',vencida:'Vencida',perdida:'Não vencida',arquivada:'Arquivada'};
-let overview=null,loading=false,filter='all',selected='',month=new Date().getMonth(),year=new Date().getFullYear(),generation=0;
+let overview=null,loading=false,filter='all',operationMode='list',selected='',month=new Date().getMonth(),year=new Date().getFullYear(),generation=0;
 const updateQueues=new Map();
 const ui={};
 function notice(txt,bad){const t=$('#toast');if(!t)return;t.textContent=txt;t.className='toast show'+(bad?' error':'');clearTimeout(notice.timer);notice.timer=setTimeout(()=>t.className='toast',3500)}
@@ -1211,7 +1222,14 @@ async function update(item,fields,button){
      ...('notes' in fields?{notes:fields.notes}:{})
    });
    if(!logged()||sessionGeneration!==generation)return;
-   if(fields.status!==undefined)item.status=fields.status;
+   if(fields.status!==undefined){
+     item.status=fields.status;
+     const card=button.closest('.rev-op-item'),board=card?.closest('.rp-kanban');
+     if(board){
+       const dest=board.querySelector('[data-stage="'+item.status+'"] .rp-kanban-cards');
+       if(dest){dest.append(card);updateBoardCounts(board)}
+     }
+   }
    if(fields.notes!==undefined)item.notes=fields.notes;
    // Não reconstrói a tela após cada gravação: preserva anotações ainda em edição.
    notice('Acompanhamento atualizado.');
@@ -1235,6 +1253,11 @@ function render(){
  for(const [value,label] of [['all','Todos os estágios'],['preparing','Preparando proposta'],['participating','Em participação'],['closed','Encerradas'],...Object.entries(status)]){const o=el('option','',label);o.value=value;select.append(o)}
  select.value=filter;select.addEventListener('change',()=>{filter=select.value;render()});
  const topline=el('div','rev-op-section-head');topline.append(el('strong','','Licitações acompanhadas ('+items.length+')'),select);main.append(topline);
+ const modes=el('div','rp-operation-modes');modes.setAttribute('role','group');modes.setAttribute('aria-label','Visualização da operação');
+ for(const [mode,label] of [['list','Lista'],['board','Kanban']]){
+   const b=el('button','rev-action',label);b.type='button';b.dataset.operationMode=mode;b.setAttribute('aria-pressed',String(operationMode===mode));b.addEventListener('click',()=>{operationMode=mode;render()});modes.append(b);
+ }
+ main.append(modes);
  const list=el('div','rev-op-items'),visible=items.filter(x=>{
    if(filter==='preparing')return ['preparando_documentacao','proposta_pronta'].includes(x.status);
    if(filter==='participating')return ['participando','recurso'].includes(x.status);
@@ -1242,14 +1265,31 @@ function render(){
    return filter==='all'||x.status===filter;
  });
  if(!visible.length)list.append(el('p','rev-op-empty','Nenhuma licitação neste estágio. Utilize “Acompanhar” no detalhe ou nas recomendações do Radar.'));
- for(const x of visible)list.append(itemCard(x));main.append(list);
+ if(operationMode==='board'&&visible.length){
+   list.classList.add('rp-kanban');
+   for(const [key,label] of Object.entries(status)){
+     const column=el('section','rp-kanban-column');column.dataset.stage=key;
+     const heading=el('div','rp-kanban-heading');heading.append(el('strong','',label),el('b','rp-kanban-count','0'));
+     const body=el('div','rp-kanban-cards');
+     column.append(heading,body);list.append(column);
+   }
+   for(const x of visible){const column=list.querySelector('[data-stage="'+(Object.hasOwn(status,x.status)?x.status:'analisar')+'"] .rp-kanban-cards');column?.append(itemCard(x))}
+   updateBoardCounts(list);
+ }else for(const x of visible)list.append(itemCard(x));main.append(list);
  const legend=el('p','rev-op-disclaimer','Datas de encerramento são as registradas na fonte consultada. Confirme sempre eventuais alterações no edital e no portal oficial.');
  right.append(calendar(),legend);grid.append(main,right);ui.root.append(grid);
+}
+function updateBoardCounts(board){
+ for(const col of board.querySelectorAll('.rp-kanban-column')){
+  const count=col.querySelectorAll('.rev-op-item').length;
+  col.querySelector('.rp-kanban-count').textContent=String(count);
+ }
 }
 function itemCard(x){
  const card=el('article','rev-op-item'),top=el('div','rev-op-item-top'),info=el('div','');
  info.append(el('strong','',x.object_text||x.pncp_key||'Licitação acompanhada'),el('small','',[x.modality_name,x.org_name,x.municipality,x.uf].filter(Boolean).join(' • ')));
  if(x.closes_at)info.append(el('small','rev-op-deadline','Encerramento informado: '+readable(x.closes_at)));
+ if(x.estimated_value!=null&&x.estimated_value!==''&&Number.isFinite(Number(x.estimated_value)))info.append(el('small','rp-estimated-value','Valor estimado na fonte: '+Number(x.estimated_value).toLocaleString('pt-BR',{style:'currency',currency:'BRL'})));
  top.append(info);
  const href=safeUrl(x.pncp_url);
  if(href){const a=el('a','rev-op-link','Abrir edital');a.href=href;a.target='_blank';a.rel='noopener noreferrer';top.append(a)}

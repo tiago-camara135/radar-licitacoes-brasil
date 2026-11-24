@@ -4337,3 +4337,26 @@ html[data-theme="dark"] #view-home #rlbHomeRefresh .pulse-refresh-radar{color:#3
 .customer-transparency-icon{background-image:var(--rp-icon-info)!important}
 @media(max-width:600px){#appShell.radar-layout #mainNav .nav-icon::after{width:23px;height:23px}#view-home .rlb-home-card-head h2::before{width:19px;height:19px;flex-basis:19px}}
 @media(prefers-reduced-motion:reduce){#appShell.radar-layout #mainNav .nav-icon::after{transition:none!important}}
+
+/* Radar Intelligence + CRM board: native disclosure and existing tracking actions. */
+#appShell .rp-fit-details{margin-top:5px;font-size:11px;color:var(--muted);max-width:100%}
+#appShell .rp-fit-details summary{cursor:pointer;color:var(--rp-accent,var(--brand));font-weight:700}
+#appShell .rp-fit-component{display:flex;justify-content:space-between;gap:8px;padding:4px 0;border-bottom:1px solid var(--line)}
+#appShell .rp-fit-component b{color:var(--text);white-space:nowrap}
+#appShell .rp-fit-note{font-size:11px;line-height:1.5;color:var(--muted);margin:5px 0}
+#appShell .rp-operation-modes{display:flex;gap:6px;margin:0 0 12px}
+#appShell .rp-operation-modes button[aria-pressed="true"]{border-color:var(--rp-accent,var(--brand));color:var(--rp-accent,var(--brand));background:var(--surface2)}
+#appShell .rev-op-items.rp-kanban{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(250px,295px);gap:12px;align-items:start;overflow-x:auto;max-width:100%;min-width:0;padding:3px 3px 12px;scroll-snap-type:x proximity}
+#appShell .rp-kanban-column{min-width:0;min-height:110px;padding:8px;border:1px solid var(--line);border-radius:12px;background:var(--surface2);scroll-snap-align:start}
+#appShell .rp-kanban-heading{display:flex;justify-content:space-between;gap:8px;align-items:center;padding:6px 4px 9px;border-bottom:2px solid var(--rp-info,var(--cyan));color:var(--text);font-size:12px}
+#appShell .rp-kanban-column[data-stage="vencida"] .rp-kanban-heading{border-color:var(--rp-success,var(--emerald))}
+#appShell .rp-kanban-column[data-stage="perdida"] .rp-kanban-heading{border-color:var(--rp-danger,var(--coral))}
+#appShell .rp-kanban-column[data-stage="recurso"] .rp-kanban-heading{border-color:var(--rp-warn,var(--cyan))}
+#appShell .rp-kanban-cards{display:grid;gap:8px;padding-top:8px}
+#appShell .rp-kanban .rev-op-item{min-width:0;padding:10px;overflow-wrap:anywhere;background:var(--surface)}
+#appShell .rp-kanban .rev-op-item-top,#appShell .rp-kanban .rev-op-item-controls{display:flex;flex-wrap:wrap;gap:8px}
+#appShell .rp-kanban .rev-op-item-controls select,#appShell .rp-kanban textarea{max-width:100%;min-width:0;width:100%}
+#appShell .rp-kanban .rev-op-item-top strong{font-size:13px}
+#appShell .rp-estimated-value{color:var(--muted)}
+#appShell .rev-op-list{min-width:0}
+@media(max-width:600px){#appShell .rev-op-items.rp-kanban{grid-auto-columns:minmax(220px,85%)}}
