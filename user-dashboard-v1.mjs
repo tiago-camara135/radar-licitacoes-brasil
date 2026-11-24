@@ -1,7 +1,7 @@
 import { Pool } from 'pg';
+import { createHash } from 'node:crypto';
 import { effectivePncpDeadline } from './pncp-operational-date-v1.mjs';
 
-const PORT=Number(process.env.PORT||10000);
 const DATABASE_URL=String(process.env.DATABASE_URL||'');
 const APP_ORIGIN=String(process.env.APP_ORIGIN||'');
 const pool=DATABASE_URL?new Pool({connectionString:DATABASE_URL,ssl:{rejectUnauthorized:false},max:3,idleTimeoutMillis:30000}):null;
@@ -26,7 +26,31 @@ const dateOnly=v=>{if(!v)return null;const s=String(v).slice(0,10);return /^\d{4
 const today=()=>new Intl.DateTimeFormat('en-CA',{timeZone:'America/Fortaleza',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
 function json(res,status,data){res.statusCode=status;res.setHeader('Content-Type','application/json; charset=utf-8');res.setHeader('Cache-Control','no-store');res.setHeader('X-Content-Type-Options','nosniff');res.setHeader('X-Frame-Options','DENY');res.setHeader('Referrer-Policy','strict-origin-when-cross-origin');res.end(JSON.stringify(data))}
 async function readJson(req,max=100000){let size=0,chunks=[];for await(const c of req){size+=c.length;if(size>max)throw Object.assign(new Error('Payload muito grande.'),{status:413});chunks.push(c)}if(!chunks.length)return{};try{return JSON.parse(Buffer.concat(chunks).toString('utf8'))}catch{throw Object.assign(new Error('JSON inválido.'),{status:400})}}
-async function authUser(req){try{const r=await fetch(`http://127.0.0.1:${PORT}/api/me`,{headers:{cookie:String(req.headers.cookie||'')},signal:AbortSignal.timeout(5000)});if(!r.ok)return null;return(await r.json().catch(()=>({}))).user||null}catch{return null}}
+// Internal dashboard authentication must not consume the shared loopback HTTP rate bucket.
+// Use the identical hashed session, expiration and active-account conditions as core /api/me.
+function sessionHash(cookie){
+  let token='';
+  for(const entry of String(cookie||'').split(';')){
+    const i=entry.indexOf('=');
+    if(i<1||entry.slice(0,i).trim()!=='radar_session')continue;
+    try{token=decodeURIComponent(entry.slice(i+1).trim())}catch{return null}
+  }
+  if(!/^[A-Za-z0-9_-]{43}$/.test(token))return null;
+  return createHash('sha256').update(token).digest('hex');
+}
+async function authUser(req){
+  const hash=sessionHash(req.headers.cookie);if(!hash)return null;
+  const r=await pool.query('SELECT u.id,u.email,u.role,u.active,u.created_at FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=$1 AND s.expires_at>NOW() AND u.active=TRUE LIMIT 1',[hash]);
+  return r.rows[0]||null;
+}
+// Preserve an independent authenticated rate limit without a shared localhost bottleneck.
+const dashboardRates=new Map();
+function allowDashboard(uid,now=Date.now()){
+  const key=String(uid);let entry=dashboardRates.get(key);
+  if(!entry||now-entry.at>=60000){entry={at:now,count:0};dashboardRates.set(key,entry)}
+  if(dashboardRates.size>1000)for(const [k,v] of dashboardRates)if(now-v.at>=60000)dashboardRates.delete(k);
+  return ++entry.count<=120;
+}
 function requestOrigin(req){const host=clean(req.headers.host,300),proto=clean(String(req.headers['x-forwarded-proto']||'').split(',')[0],10).toLowerCase()||((req.socket&&req.socket.encrypted)?'https':'http');if(!host||!['http','https'].includes(proto))return'';try{return new URL(`${proto}://${host}`).origin}catch{return''}}
 function configuredOrigins(){return [...new Set(APP_ORIGIN.split(',').map(x=>{try{return new URL(x.trim()).origin}catch{return''}}).filter(Boolean))]}
 function trustedOrigin(req){if(!['POST','PUT','PATCH','DELETE'].includes(String(req.method||'').toUpperCase()))return true;const raw=clean(req.headers.origin,500);if(!raw)return true;let origin='';try{origin=new URL(raw).origin}catch{return false}return origin===requestOrigin(req)||configuredOrigins().includes(origin)}
@@ -195,6 +219,7 @@ export async function handleUserDashboardRoute(req,res,url){
   try{
     await initUserDashboard();if(!trustedOrigin(req)){json(res,403,{error:'Origem não autorizada.',code:'origin_not_authorized'});return true}
     const user=await authUser(req);if(!user){json(res,401,{error:'Faça login para acessar seu dashboard.'});return true}
+    if(!allowDashboard(user.id)){res.setHeader('Retry-After','60');json(res,429,{error:'Muitas consultas ao dashboard. Tente novamente em instantes.'});return true}
     if(req.method==='GET'&&url.pathname==='/api/dashboard/overview'){json(res,200,await overview(user.id,user));return true}
     if(req.method==='GET'&&url.pathname==='/api/dashboard/tracking'){const items=await tracking(user.id);json(res,200,{items,funnel:funnel(items)});return true}
     if(req.method==='POST'&&url.pathname==='/api/dashboard/tracking'){json(res,200,{ok:true,item:await saveTracking(user.id,await readJson(req))});return true}
@@ -204,4 +229,4 @@ export async function handleUserDashboardRoute(req,res,url){
   }catch(e){console.error('user dashboard v2:',e?.stack||e);json(res,e?.status||500,{error:e?.status?e.message:'Erro interno no dashboard.'});return true}
 }
 
-export const __test={STATUSES,WIDGETS,BASELINE,UFS,REGIONS,readinessFor,docState,normalizeGeo,fitFor};
+export const __test={STATUSES,WIDGETS,BASELINE,UFS,REGIONS,readinessFor,docState,normalizeGeo,fitFor,sessionHash,allowDashboard};

@@ -51,6 +51,11 @@ try{
   assert.doesNotMatch(js,/Oportunidades para você/);
 
   r=await req('/api/dashboard/overview');assert.equal(r.status,401);
+  r=await get('/api/dashboard/overview','radar_session=%ZZ');assert.equal(r.status,401);
+  await db.query('UPDATE sessions SET expires_at=NOW()-INTERVAL \'1 minute\' WHERE user_id=$1',[u2]);
+  r=await get('/api/dashboard/overview',c2);assert.equal(r.status,401,'Expired sessions remain invalid');
+  await db.query('UPDATE users SET active=false WHERE id=$1',[u1]);
+  r=await get('/api/dashboard/overview',c1);assert.equal(r.status,401,'Disabled accounts remain invalid');
   console.log('backend dashboard smoke passed: APIs preserved, isolation/origin guard valid, visual Dashboard and Minha Operação absent');
 }finally{
   await db.query('DELETE FROM monitored_procurements WHERE pncp_id=$1',[pncpId]).catch(()=>{});

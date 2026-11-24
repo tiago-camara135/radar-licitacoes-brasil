@@ -599,18 +599,20 @@ try{
  // Avança apenas o relógio da aba isolada de QA: comprova o disparo real
  // do agendamento de cinco minutos sem esperar cinco minutos no CI.
  await gotoSection(page,'home');
- const scheduledOverview=page.waitForRequest(r=>r.url().includes('/api/dashboard/overview'),{timeout:11000});
- const scheduledFeed=page.waitForRequest(r=>r.url().includes('/api/live-feed?'),{timeout:11000});
+ const scheduledOverview=page.waitForResponse(r=>r.url().includes('/api/dashboard/overview'),{timeout:16000});
+ const scheduledFeed=page.waitForResponse(r=>r.url().includes('/api/live-feed?'),{timeout:16000});
  await page.evaluate(()=>{
    window.__qaOriginalDateNow=Date.now;
    Date.now=()=>window.__qaOriginalDateNow()+6*60*1000;
  });
  try{
-   await Promise.all([scheduledOverview,scheduledFeed]);
+   const [overviewResponse,feedResponse]=await Promise.all([scheduledOverview,scheduledFeed]);
+   assert.equal(overviewResponse.status(),200,'Scheduled overview HTTP '+overviewResponse.status()+': '+(await overviewResponse.text()).slice(0,160));
+   assert.equal(feedResponse.status(),200,'Scheduled feed HTTP '+feedResponse.status());
  }finally{
    await page.evaluate(()=>{Date.now=window.__qaOriginalDateNow;delete window.__qaOriginalDateNow});
  }
- await until(page,()=>document.querySelector('#rlbHomeLiveBar')?.dataset.state==='ready',15000);
+ await until(page,()=>document.querySelector('#rlbHomeLiveBar')?.dataset.state==='ready',15000).catch(async error=>{const details=await page.evaluate(()=>({state:document.querySelector('#rlbHomeLiveBar')?.dataset.state,label:document.querySelector('#rlbHomeLiveLabel')?.textContent,next:document.querySelector('#rlbHomeNextUpdate')?.textContent}));throw Error('Scheduled refresh did not settle: '+JSON.stringify(details),{cause:error})});
  assert.equal(await page.locator('#rlbHomeRefresh').isEnabled(),true);
  note('Five-minute scheduled refresh actually fires both real backend requests in Chrome OK');
 
