@@ -316,9 +316,23 @@ try{
  note('Successful consultation rotates compatible recommendations without false novelty');
 
 
+ await page.evaluate(()=>document.dispatchEvent(new CustomEvent('radar:notifications-refresh')));
+ await page.locator('#rlbNationalNoticeHost .rp-notice').first().waitFor({state:'visible',timeout});
+ const balloon=page.locator('#rlbNationalNoticeHost .rp-notice').first();
+ assert.match(await balloon.textContent(),/Aquisição de combustível/);
+ const stillUnread=await pool.query("SELECT COUNT(*)::int AS count FROM notification_deliveries WHERE user_id=$1 AND channel='onsite' AND read_at IS NULL",[userId]);
+ assert.ok(stillUnread.rows[0].count>0,'Displaying a toast must not mark it as read');
+ await balloon.hover();
+ await page.waitForTimeout(350);
+ assert.equal(await balloon.isVisible(),true);
+ await balloon.locator('.radar-notice-close').click();
+ assert.equal(await balloon.count(),0);
+ note('Personalized Pulse floating notice preserves unread status on dismissal OK');
  await page.locator('.rev-n-bell').click();
  await page.locator('#revNotifPanel:not([hidden])').waitFor({state:'visible',timeout});
  await until(page,()=>document.querySelector('#revNotifPanel .rev-n-list')?.textContent?.includes('Aquisição de combustível para a frota CI'),15000);
+ await page.locator('.rev-n-filter').filter({hasText:'Urgentes'}).click();
+ assert.equal(await page.locator('.rev-n-filter.active').textContent(),'Urgentes');
  await page.locator('.rev-n-filter').filter({hasText:'Não lidos'}).click();
  assert.ok(await page.locator('.rev-n-filter.active').filter({hasText:'Não lidos'}).count()===1,'Unread filter is selected');
  // O aviso flutuante pode marcar a entrega como lida antes da abertura da central.

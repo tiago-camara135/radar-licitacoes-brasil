@@ -846,7 +846,8 @@ const el=(tag,cls,txt)=>{const v=document.createElement(tag);if(cls)v.className=
 const logged=()=>!!$('#appShell')&&!$('#appShell').classList.contains('hidden');
 const safeUrl=raw=>{try{const u=new URL(raw);return ['http:','https:'].includes(u.protocol)&&!u.username&&!u.password?u.href:''}catch{return''}};
 const formatted=x=>{const d=new Date(x);return Number.isNaN(d.getTime())?'Data não informada':d.toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'})};
-let rows=[],filter='all',open=false,loading=false,lastProfile=0,epoch=0;
+let rows=[],filter='all',open=false,loading=false,lastProfile=0,epoch=0,soundEnabled=false;
+const urgentNotice=x=>{const t=Date.parse(x.payload?.closes_at||'');return Number.isFinite(t)&&t>=Date.now()&&t-Date.now()<=86400000};
 let recFilter='all',recCache=[],recInitialized=false,renderedRecSignature='',recPulse=new Map();
 let rotateRecommendations=false,cycleSelection=null,rotationCycle=0;
 const rotationHistory=new Map();
@@ -860,16 +861,19 @@ function install(){
   ui.count=el('span','rev-n-count','—');ui.count.setAttribute('aria-label','Contagem de notificações não lidas');ui.bell.append(ui.count);
   ui.panel=el('section','rev-n-panel');ui.panel.id='revNotifPanel';ui.panel.hidden=true;ui.panel.setAttribute('aria-label','Central de notificações');
   const head=el('div','rev-n-head'),title=el('div','');
-  title.append(el('strong','','Central de notificações'),el('small','','Histórico dos alertas da sua conta'));
+  ui.subtitle=el('small','','Histórico dos alertas da sua conta');title.append(el('strong','','Central de notificações'),ui.subtitle);
   ui.close=el('button','rev-n-close','×');ui.close.type='button';ui.close.setAttribute('aria-label','Fechar notificações');
   head.append(title,ui.close);
   const controls=el('div','rev-n-controls');
   ui.all=el('button','rev-n-filter active','Todos');ui.all.type='button';
   ui.unread=el('button','rev-n-filter','Não lidos');ui.unread.type='button';
   ui.mark=el('button','rev-n-mark','Marcar todas como lidas');ui.mark.type='button';
-  controls.append(ui.all,ui.unread,ui.mark);
+  ui.urgent=el('button','rev-n-filter','Urgentes');ui.urgent.type='button';
+  ui.sound=el('button','rp-n-sound','Som desativado');ui.sound.type='button';ui.sound.setAttribute('aria-pressed','false');
+  controls.append(ui.all,ui.unread,ui.urgent);
+  const actions=el('div','rp-n-actions');actions.append(ui.mark,ui.sound);
   ui.list=el('div','rev-n-list');ui.message=el('p','rev-n-message','Carregando…');ui.message.setAttribute('role','status');
-  ui.panel.append(head,controls,ui.message,ui.list);ui.wrap.append(ui.bell,ui.panel);bar.insertBefore(ui.wrap,$('#radarAccount'));
+  ui.panel.append(head,controls,actions,ui.message,ui.list,el('footer','rp-n-footer','Monitoramento Radar Pulse • histórico recente'));ui.wrap.append(ui.bell,ui.panel);bar.insertBefore(ui.wrap,$('#radarAccount'));
   ui.bell.setAttribute('aria-label','Notificações');ui.bell.title='Notificações';
   const profileMenu=$('#radarAccount');
   $('#pulseHeaderSearch').addEventListener('click',()=>{
@@ -885,6 +889,10 @@ function install(){
   ui.close.addEventListener('click',()=>setOpen(false));
   ui.all.addEventListener('click',()=>{filter='all';render()});
   ui.unread.addEventListener('click',()=>{filter='unread';render()});
+  ui.urgent.addEventListener('click',()=>{filter='urgent';render()});
+  ui.sound.addEventListener('click',()=>{soundEnabled=!soundEnabled;ui.sound.textContent=soundEnabled?'Som ativado':'Som desativado';ui.sound.setAttribute('aria-pressed',String(soundEnabled));document.dispatchEvent(new CustomEvent('radar:notification-sound',{detail:{enabled:soundEnabled}}))});
+  document.addEventListener('radar:notification-read',e=>{if(!logged())return;const ids=new Set((e.detail?.ids||[]).map(String));rows=rows.map(x=>e.detail?.all||ids.has(String(x.id))?{...x,read_at:x.read_at||new Date().toISOString()}:x);if(open)render();profile()});
+  setInterval(()=>{if(logged()&&!document.hidden){if(open)load();else profile()}},60000);
   ui.mark.addEventListener('click',markAll);
   document.addEventListener('keydown',e=>{if(e.key==='Escape'&&open){setOpen(false);ui.bell.focus()}});
   document.addEventListener('pointerdown',e=>{if(open&&!ui.wrap.contains(e.target))setOpen(false)});
@@ -901,7 +909,7 @@ function install(){
   });
   document.addEventListener('radar:home-rec-filter',event=>setRecommendationFilter(event.detail?.filter));
   const shell=$('#appShell');
-  new MutationObserver(()=>{if(!logged()){epoch++;setOpen(false);rows=[];lastProfile=0;recCache=[];rotateRecommendations=false;cycleSelection=null;rotationHistory.clear();rotationCycle=0;recFilter='all';recInitialized=false;renderedRecSignature='';recPulse.clear();recommendationStatus('');ui.count.textContent='—';$('#revRecommendations')?.remove()}else profile()}).observe(shell,{attributes:true,attributeFilter:['class']});
+  new MutationObserver(()=>{if(!logged()){epoch++;setOpen(false);rows=[];filter='all';soundEnabled=false;ui.sound.textContent='Som desativado';ui.sound.setAttribute('aria-pressed','false');lastProfile=0;recCache=[];rotateRecommendations=false;cycleSelection=null;rotationHistory.clear();rotationCycle=0;recFilter='all';recInitialized=false;renderedRecSignature='';recPulse.clear();recommendationStatus('');ui.count.textContent='—';$('#revRecommendations')?.remove()}else profile()}).observe(shell,{attributes:true,attributeFilter:['class']});
   document.addEventListener('visibilitychange',()=>{if(!document.hidden&&logged()&&Date.now()-lastProfile>90000)profile()});
   if(logged())profile();
 }
@@ -911,7 +919,7 @@ async function profile(){
   try{const controller=new AbortController(),t=setTimeout(()=>controller.abort(),12000);
     try{const r=await fetch('/api/notifications/profile',{credentials:'same-origin',cache:'no-store',signal:controller.signal});
       if(!r.ok)throw Error('Sem contagem');const d=await r.json();if(!logged()||requestEpoch!==epoch)return;const n=Math.max(0,Number(d.unread_count||0));
-      ui.count.textContent=n>99?'99+':String(n);lastProfile=Date.now();
+      ui.count.textContent=n>99?'99+':String(n);ui.count.hidden=n===0;ui.subtitle.textContent=n+' notificação(ões) não lida(s)';ui.bell.setAttribute('aria-label','Notificações: '+n+' não lidas');lastProfile=Date.now();
     }finally{clearTimeout(t)}
   }catch{if(logged()&&requestEpoch===epoch)ui.count.textContent='—'}
 }
@@ -928,27 +936,37 @@ async function load(){
   }finally{clearTimeout(t);loading=false}
 }
 function render(){
-  ui.all.classList.toggle('active',filter==='all');ui.unread.classList.toggle('active',filter==='unread');
+  for(const [button,value] of [[ui.all,'all'],[ui.unread,'unread'],[ui.urgent,'urgent']]){button.classList.toggle('active',filter===value);button.setAttribute('aria-pressed',String(filter===value))}
   ui.list.replaceChildren();
-  const visible=rows.filter(x=>filter!=='unread'||!x.read_at);
-  ui.message.textContent=visible.length?'Exibindo '+visible.length+' notificação(ões) recentes.':'Nenhum alerta '+(filter==='unread'?'não lido.':'registrado neste histórico.');
+  const visible=rows.filter(x=>filter==='all'||(filter==='unread'&&!x.read_at)||(filter==='urgent'&&urgentNotice(x)));
+  ui.message.textContent=visible.length?'Exibindo '+visible.length+' notificação(ões) recentes.':'Nenhum alerta '+(filter==='unread'?'não lido.':filter==='urgent'?'com prazo em até 24h.':'registrado neste histórico.');
   for(const item of visible){
-    const payload=item.payload||{},card=el('article','rev-n-item'+(item.read_at?'':' unread'));
-    const flag=el('span','rev-n-flag',item.read_at?'Lida':'Não lida');
-    const name=el('strong','',payload.object||'Nova oportunidade relacionada ao seu alerta');
-    const org=el('small','',String(payload.org||'Órgão não informado')+' • '+String(payload.municipality||'Brasil')+(payload.uf?'/'+payload.uf:''));
-    const line=el('div','rev-n-line'),stamp=el('time','',formatted(item.created_at));
-    line.append(stamp);
+    const payload=item.payload||{},urgent=urgentNotice(item),card=el('article','rev-n-item'+(item.read_at?'':' unread'));card.dataset.kind=urgent?'urgent':'new';
+    const head=el('div','rp-n-item-head'),icon=el('span','rp-n-item-icon');icon.setAttribute('aria-hidden','true');
+    head.append(icon,el('span','rev-n-flag',urgent?'Prazo em até 24h':'Oportunidade compatível'),el('span','rp-n-read',item.read_at?'Lida':'Não lida'));
+    const name=el('strong','',payload.object||'Nova oportunidade relacionada ao seu alerta');name.title=name.textContent;
+    const org=el('small','',[payload.modality,payload.org,[payload.municipality,payload.uf].filter(Boolean).join('/')].filter(Boolean).join(' • '));
+    const line=el('div','rev-n-line'),stamp=el('time','',formatted(item.created_at));line.append(stamp);
     const url=safeUrl(payload.pncp_url)||safeUrl(payload.origin_url);
-    if(url){const a=el('a','','Ver edital');a.href=url;a.target='_blank';a.rel='noopener noreferrer';line.append(a)}
-    card.append(flag,name,org,line);ui.list.append(card);
+    if(url){const link=el('a','','Ver oportunidade ↗');link.href=url;link.target='_blank';link.rel='noopener noreferrer';line.append(link);if(!item.read_at)link.addEventListener('click',()=>markOne(item.id))}
+    card.append(head,name,org);
+    if(item.alert_name||payload.alert_name)card.append(el('span','rp-n-alert',item.alert_name||payload.alert_name));
+    card.append(line);
+    if(!item.read_at){const mark=el('button','rp-n-read-one','Marcar como lida');mark.type='button';mark.addEventListener('click',async()=>{mark.disabled=true;await markOne(item.id);mark.disabled=false});card.append(mark)}
+    ui.list.append(card);
   }
+}
+async function markOne(id){
+ const requestEpoch=epoch;
+ try{const r=await fetch('/api/stability/notifications/onsite/'+encodeURIComponent(id)+'/read',{method:'POST',credentials:'same-origin',headers:{'content-type':'application/json'},body:'{}'});
+ if(!r.ok)throw Error('Falha ao confirmar leitura.');if(logged()&&requestEpoch===epoch)document.dispatchEvent(new CustomEvent('radar:notification-read',{detail:{ids:[String(id)]}}));
+ }catch(e){if(logged()&&requestEpoch===epoch)ui.message.textContent=e.message}
 }
 async function markAll(){
   if(!logged()||loading)return;ui.mark.disabled=true;
   try{const controller=new AbortController(),t=setTimeout(()=>controller.abort(),12000);
     try{const r=await fetch('/api/notifications/read-all',{method:'POST',credentials:'same-origin',cache:'no-store',signal:controller.signal,headers:{'content-type':'application/json'},body:'{}'});
-      if(!r.ok)throw Error('Falha ao marcar notificações.');await load()
+      if(!r.ok)throw Error('Falha ao marcar notificações.');document.dispatchEvent(new CustomEvent('radar:notification-read',{detail:{all:true}}));await load()
     }finally{clearTimeout(t)}
   }catch(e){ui.message.textContent=e.message}finally{ui.mark.disabled=false}
 }

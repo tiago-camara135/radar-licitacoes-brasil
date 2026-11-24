@@ -230,3 +230,63 @@ html[data-theme="light"] #authScreen .auth-home-demo-panel .demo-user-msg{
 html[data-theme="light"] #authScreen .auth-home-demo-panel .demo-ai-msg>span{
  color:#FFFFFF!important;background:var(--rp-button)!important;
 }
+
+/* Pulse notification center and personalized floating cards. */
+html[data-theme] #rlbNationalNoticeHost{position:fixed!important;inset:auto max(16px,env(safe-area-inset-right)) max(18px,env(safe-area-inset-bottom)) auto!important;width:min(410px,calc(100vw - 32px))!important;z-index:1600!important;display:grid!important;gap:10px!important;pointer-events:none!important;}
+html[data-theme] #rlbNationalNoticeHost:empty{display:none!important}
+html[data-theme] #rlbNationalNoticeHost .radar-notice.rp-notice{
+ --notice-accent:var(--rp-success);--notice-soft:var(--rp-green-tile);--notice-icon:var(--rp-icon-radar);
+ position:relative!important;inset:auto!important;width:100%!important;max-width:100%!important;box-sizing:border-box!important;display:grid!important;grid-template-columns:minmax(0,1fr)!important;gap:9px!important;
+ padding:15px 16px 16px!important;border:1px solid var(--pulse-edge)!important;border-radius:16px!important;background:var(--pulse-paper)!important;color:var(--pulse-ink)!important;box-shadow:var(--rp-shadow-raised)!important;overflow:hidden!important;pointer-events:auto!important;
+ animation:rpNoticeEnter .22s ease-out both!important;font-size:13px!important;line-height:1.45!important;
+}
+html[data-theme] #rlbNationalNoticeHost .rp-notice[data-kind="urgent"]{--notice-accent:var(--rp-warn);--notice-soft:var(--rp-amber-tile);--notice-icon:var(--rp-icon-calendarAmber)}
+#rlbNationalNoticeHost .rp-notice-header{display:grid;grid-template-columns:42px minmax(0,1fr) 32px;gap:10px;align-items:center}
+#rlbNationalNoticeHost .rp-notice-icon,#appShell #revNotifPanel .rp-n-item-icon{display:block;width:42px;height:42px;border-radius:12px;background:var(--notice-icon) center/66% no-repeat,var(--notice-soft);border:1px solid color-mix(in srgb,var(--notice-accent) 22%,var(--pulse-edge))}
+#rlbNationalNoticeHost .rp-notice-heading{display:grid;gap:2px;min-width:0}
+#rlbNationalNoticeHost .rp-notice-brand{font-size:10px;font-weight:800;letter-spacing:.1em;color:var(--notice-accent)}
+#rlbNationalNoticeHost .rp-notice-type{font-size:13px;font-weight:750;color:var(--pulse-ink)}
+html[data-theme] #rlbNationalNoticeHost .rp-notice .radar-notice-close{position:static!important;inset:auto!important;width:32px!important;height:32px!important;display:grid!important;place-items:center!important;padding:0!important;border-radius:9px!important;background:var(--pulse-inset)!important;border:1px solid var(--pulse-edge)!important;color:var(--pulse-ink)!important;font-size:22px!important;cursor:pointer}
+html[data-theme] #rlbNationalNoticeHost .rp-notice .radar-notice-title{display:-webkit-box!important;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;grid-column:auto!important;margin:0!important;color:var(--pulse-ink)!important;font-size:14px!important;line-height:1.4!important;overflow-wrap:anywhere}
+html[data-theme] #rlbNationalNoticeHost .rp-notice :is(.radar-notice-meta,.rp-notice-org,.rp-notice-group,.rp-notice-status){color:var(--pulse-secondary)!important;font-size:12px!important;grid-column:auto!important;overflow-wrap:anywhere;line-height:1.4}
+#rlbNationalNoticeHost .rp-notice-status:empty{display:none}
+html[data-theme] #rlbNationalNoticeHost .rp-notice .radar-notice-alert{justify-self:start;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--notice-accent)!important;background:var(--notice-soft)!important;border-radius:7px!important;padding:4px 8px!important;font-size:11px!important}
+html[data-theme] #rlbNationalNoticeHost .rp-notice .radar-notice-footer{display:flex!important;flex-wrap:wrap;gap:8px!important;grid-column:auto!important;margin:2px 0 0!important;align-items:stretch}
+html[data-theme] #rlbNationalNoticeHost .rp-notice :is(.radar-notice-link,.rp-notice-mark){flex:1 1 130px;display:flex!important;align-items:center;justify-content:center;padding:8px 10px!important;border-radius:9px!important;min-height:38px;font-size:12px!important;font-weight:700!important;text-decoration:none!important;cursor:pointer}
+html[data-theme] #rlbNationalNoticeHost .rp-notice .radar-notice-link{color:white!important;background:var(--rp-track)!important;border:1px solid transparent!important}
+html[data-theme] #rlbNationalNoticeHost .rp-notice .rp-notice-mark{color:var(--pulse-ink)!important;background:var(--pulse-inset)!important;border:1px solid var(--pulse-edge)!important}
+#rlbNationalNoticeHost .rp-notice-progress{position:absolute;inset:auto 0 0;height:4px;background:var(--pulse-inset);overflow:hidden}
+#rlbNationalNoticeHost .rp-notice-progress-bar{height:100%;background:var(--notice-accent);transform-origin:left;transform:scaleX(1)}
+#rlbNationalNoticeHost :is(button,a):focus-visible{outline:2px solid var(--rp-focus);outline-offset:2px}
+html[data-theme] #appShell #revNotifPanel{width:min(420px,calc(100vw - 20px))!important;padding:15px!important;border-radius:16px!important;box-shadow:var(--rp-shadow-raised)!important;max-height:min(75dvh,620px);overflow:auto}
+#appShell #revNotifPanel .rev-n-head{align-items:center;padding:0 0 12px;border-bottom:1px solid var(--pulse-edge)}
+#appShell #revNotifPanel .rev-n-head strong{font-size:16px;color:var(--pulse-ink)}
+#appShell #revNotifPanel .rev-n-head small{font-size:12px;color:var(--pulse-secondary)}
+#appShell #revNotifPanel .rev-n-head::before{content:'';flex:0 0 38px;width:38px;height:38px;border-radius:11px;background:var(--rp-icon-bell) center/65% no-repeat,var(--rp-green-tile)}
+#appShell #revNotifPanel .rev-n-head>div{flex:1;min-width:0}
+#appShell #revNotifPanel .rev-n-controls{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px;margin:10px 0 6px}
+#appShell #revNotifPanel .rev-n-filter{font-size:12px;padding:8px 4px;border-radius:9px;min-height:35px;color:var(--pulse-ink);background:var(--pulse-inset)}
+#appShell #revNotifPanel .rev-n-filter.active{background:var(--rp-button)!important;color:white!important;border-color:transparent}
+#appShell #revNotifPanel .rp-n-actions{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+#appShell #revNotifPanel :is(.rev-n-mark,.rp-n-sound,.rp-n-read-one){margin:0;padding:7px 9px;border-radius:8px;border:1px solid var(--pulse-edge);background:var(--pulse-paper);color:var(--rp-accent);font-size:11px;font-weight:700;cursor:pointer}
+#appShell #revNotifPanel .rev-n-message{font-size:12px;color:var(--pulse-secondary);margin:10px 0}
+#appShell #revNotifPanel .rev-n-list{max-height:min(45dvh,400px);gap:9px;padding-right:2px}
+#appShell #revNotifPanel .rev-n-item{--notice-accent:var(--rp-success);--notice-soft:var(--rp-green-tile);--notice-icon:var(--rp-icon-radar);background:var(--rp-raised);border:1px solid var(--pulse-edge);border-radius:12px;padding:11px;gap:7px;color:var(--pulse-ink)}
+#appShell #revNotifPanel .rev-n-item[data-kind="urgent"]{--notice-accent:var(--rp-warn);--notice-soft:var(--rp-amber-tile);--notice-icon:var(--rp-icon-calendarAmber)}
+#appShell #revNotifPanel .rev-n-item.unread{border-inline-start:3px solid var(--notice-accent)}
+#appShell #revNotifPanel .rp-n-item-head{display:flex;gap:7px;align-items:center}
+#appShell #revNotifPanel .rp-n-item-icon{width:30px;height:30px;flex:0 0 30px;border-radius:8px}
+#appShell #revNotifPanel .rev-n-flag{font-size:11px;color:var(--notice-accent);font-weight:750}
+#appShell #revNotifPanel .rp-n-read{margin-left:auto;font-size:10px;color:var(--pulse-secondary);white-space:nowrap}
+#appShell #revNotifPanel .rev-n-item.unread .rp-n-read::before{content:'';display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--rp-info);margin-right:4px}
+#appShell #revNotifPanel .rev-n-item strong{font-size:13px;color:var(--pulse-ink);overflow-wrap:anywhere}
+#appShell #revNotifPanel .rev-n-item small,#appShell #revNotifPanel .rev-n-line{font-size:11px;color:var(--pulse-secondary)}
+#appShell #revNotifPanel .rev-n-line{flex-wrap:wrap}
+#appShell #revNotifPanel .rev-n-line a{color:var(--rp-info)}
+#appShell #revNotifPanel .rp-n-alert{justify-self:start;background:var(--notice-soft);color:var(--notice-accent);padding:3px 7px;border-radius:6px;font-size:11px;overflow-wrap:anywhere;max-width:100%}
+#appShell #revNotifPanel .rp-n-read-one{justify-self:end}
+#appShell #revNotifPanel .rp-n-footer{border-top:1px solid var(--pulse-edge);margin-top:12px;padding-top:10px;text-align:center;font-size:11px;color:var(--pulse-secondary)}
+#appShell .rev-n-count[hidden]{display:none!important}
+@keyframes rpNoticeEnter{from{opacity:0;transform:translateY(9px)}to{opacity:1;transform:none}}
+@media(max-width:540px){html[data-theme] #rlbNationalNoticeHost{inset:auto 10px max(10px,env(safe-area-inset-bottom)) 10px!important;width:auto!important}html[data-theme] #appShell #revNotifPanel{position:fixed!important;left:10px!important;right:10px!important;top:70px!important;width:auto!important;max-width:none!important}}
+@media(prefers-reduced-motion:reduce){html[data-theme] #rlbNationalNoticeHost .rp-notice{animation:none!important}.rp-notice-progress-bar{transition:none!important}}
