@@ -539,7 +539,7 @@ try{
  await page.keyboard.press('Control+k');
  await page.locator('.pb-dialog[open]').waitFor({timeout});
  await page.locator('.pb-dialog input[type="search"]').fill('Inteligência');
- await page.locator('.pb-dialog .pb-choice').filter({hasText:'Inteligência'}).click();
+ await page.locator('.pb-dialog .pb-choice').filter({hasText:/^Inteligência$/}).click();
  await page.locator('#view-intelligence.active').waitFor({timeout});
  const intelResponse=page.waitForResponse(r=>r.url().includes('/api/dashboard/intelligence?'),{timeout});
  await page.locator('#pbNationalForm button[type="submit"]').click();
