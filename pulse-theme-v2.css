@@ -1,0 +1,148 @@
+/* Radar Pulse 2.0 — Arctic Pro / Deep Ocean. Semantic tokens, isolated from data and routes. */
+html[data-theme="light"]{
+ --pulse-page:#F0F5FA;--pulse-paper:#FFFFFF;--pulse-inset:#EAF1F8;--pulse-edge:#CDDCE9;
+ --pulse-ink:#142C46;--pulse-secondary:#49627B;--pulse-brand:#087477;--pulse-selected:#086BA6;
+ --rp-accent:#087477;--rp-info:#086BB0;--rp-success:#08784E;--rp-violet:#7943C2;--rp-warn:#925008;--rp-danger:#B52948;
+ --rp-raised:#F8FBFE;--rp-field:#F8FAFD;--rp-focus:#087477;
+ --rp-shadow:0 5px 18px #20486b0b,0 1px 3px #20486b0b;--rp-shadow-raised:0 12px 28px #20486b15;
+ --rp-header:#FFFFFF;--rp-highlight:#FFFFFF;--rp-hero:linear-gradient(145deg,#E8F7FB,#DCEBF9 75%,#E4F8F2);
+ --rp-hero-ink:#16324B;--rp-hero-muted:#405D73;--rp-hero-accent:#087477;--rp-demo:#FFFFFF;--rp-demo-soft:#EAF3FA;
+ --rp-button:#086BA6;--rp-button-end:#07588F;--rp-button-text:#FFFFFF;
+ --rp-track:#08784E;--rp-track-end:#07613F;--rp-ai:#7943C2;--rp-ai-end:#6435A4;
+ --rp-blue-tile:#E2F2FF;--rp-green-tile:#DEF7ED;--rp-purple-tile:#F0E8FF;--rp-amber-tile:#FFF0D9;
+ --rp-kpi-text:#142C46;--rp-kpi-muted:#49627B;
+ --rp-login-bg:radial-gradient(ellipse at 12% 8%,#DAF3EF 0,transparent 38%),radial-gradient(ellipse at 90% 12%,#E1EEFD 0,transparent 42%),var(--pulse-page);
+}
+html[data-theme="dark"]{
+ --pulse-page:#091322;--pulse-paper:#111F35;--pulse-inset:#172940;--pulse-edge:#30475F;
+ --pulse-ink:#EDF5FF;--pulse-secondary:#AEC4DA;--pulse-brand:#28E6CD;--pulse-selected:#145E83;
+ --rp-accent:#28E6CD;--rp-info:#3AC9FF;--rp-success:#43F3A5;--rp-violet:#B78AFF;--rp-warn:#FFBF47;--rp-danger:#FF849A;
+ --rp-raised:#14253D;--rp-field:#0D1B2E;--rp-focus:#28E6CD;
+ --rp-shadow:0 5px 20px #020A1750,0 1px 0 #FFFFFF08 inset;--rp-shadow-raised:0 12px 32px #0006;
+ --rp-header:#101D30;--rp-highlight:#233C55;--rp-hero:linear-gradient(145deg,#071828,#102942 65%,#0C3D3D);
+ --rp-hero-ink:#EDF5FF;--rp-hero-muted:#ABC9DD;--rp-hero-accent:#28E6CD;--rp-demo:#0D1B2E;--rp-demo-soft:#172940;
+ --rp-button:#0A65BA;--rp-button-end:#084D91;--rp-button-text:#FFFFFF;
+ --rp-track:#087B50;--rp-track-end:#086342;--rp-ai:#7440B9;--rp-ai-end:#5B3293;
+ --rp-blue-tile:#07314B;--rp-green-tile:#073C32;--rp-purple-tile:#29234C;--rp-amber-tile:#3B2D20;
+ --rp-kpi-text:#F4F9FF;--rp-kpi-muted:#C0D2E7;
+ --rp-login-bg:radial-gradient(ellipse at 12% 8%,#0B353B 0,transparent 35%),radial-gradient(ellipse at 90% 12%,#142746 0,transparent 40%),var(--pulse-page);
+}
+/* Map legacy module tokens to the same semantic palette. */
+html[data-theme],html[data-theme] :is(#appShell,#authScreen){
+ --bg:var(--pulse-page);--bg2:var(--pulse-inset);--surface:var(--pulse-paper);--surface2:var(--pulse-inset);--surface3:var(--rp-raised);
+ --text:var(--pulse-ink);--muted:var(--pulse-secondary);--line:var(--pulse-edge);--line2:var(--pulse-edge);
+ --emerald:var(--rp-success);--cyan:var(--rp-info);--purple:var(--rp-violet);--coral:var(--rp-danger);
+ --brand:var(--rp-accent);--brand-soft:var(--pulse-inset);--electric:var(--rp-accent);--header:var(--rp-header);
+ --shadow:var(--rp-shadow);--shadow2:var(--rp-shadow-raised);--radar-canvas:var(--pulse-page);--radar-paper:var(--pulse-paper);
+ --radar-text:var(--pulse-ink);--radar-muted:var(--pulse-secondary);--radar-line:var(--pulse-edge);--radar-soft:var(--pulse-inset);
+ --radar-blue:var(--rp-info);--radar-green:var(--rp-success);--rlb-interaction-accent:var(--rp-focus);
+ --radar-showcase:var(--rp-demo-soft);--radar-navy:var(--rp-demo);--radar-showcase-accent:var(--rp-hero-accent);--radar-showcase-muted:var(--rp-hero-muted);
+}
+html[data-theme] body{background:var(--pulse-page);color:var(--pulse-ink)}
+html[data-theme] #appShell{background:var(--pulse-page)!important;color:var(--pulse-ink)}
+html[data-theme] #appShell.radar-layout .sidebar{background:var(--rp-header)!important;border-color:var(--pulse-edge)!important;box-shadow:var(--rp-shadow)}
+html[data-theme] #appShell.radar-layout #mainNav{background:var(--pulse-paper)!important;border-color:var(--pulse-edge)!important;box-shadow:var(--rp-shadow)}
+html[data-theme] #appShell.radar-layout #mainNav button.active{background:var(--pulse-selected)!important;color:white!important;box-shadow:inset 0 0 0 1px #ffffff24,0 3px 12px color-mix(in srgb,var(--rp-accent) 18%,transparent)!important}
+html[data-theme] #appShell.radar-layout #mainNav button:not(.active):hover{background:var(--pulse-inset)!important}
+html[data-theme] #appShell #radarAccount>div,html[data-theme] #appShell #revNotifPanel{background:var(--pulse-paper)!important;color:var(--pulse-ink)!important;border-color:var(--pulse-edge)!important;box-shadow:var(--rp-shadow-raised)}
+/* Real card surfaces and compact hierarchy across the authenticated modules. */
+html[data-theme] #appShell :is(.glass-panel,.radar-panel,.search-console,.results-panel,.radar-detail-card,.rev-op-card,.rev-calendar,.channel-card,.section-intro,.hab-company-card,.hab-upload-card,.hab-docs-panel,.hab-doc-card,.acc-panel,.acc-card,.ai-window,.rev-n-panel,.rlb-home-card){
+ background-color:var(--pulse-paper)!important;color:var(--pulse-ink);border-color:var(--pulse-edge)!important;box-shadow:var(--rp-shadow);
+}
+html[data-theme] #appShell :is(.stack-item,.result-item,.rev-op-item,.rev-n-item,.acc-stat-row,.hab-upload-row,.tai-detail-row){
+ background-color:var(--rp-raised);border-color:var(--pulse-edge);color:var(--pulse-ink);
+}
+html[data-theme] #appShell :is(.acc-table,.rev-cal-grid,.hab-docs-panel,.radar-results-list,.radar-detail-card) :is(th,td){border-color:var(--pulse-edge)}
+html[data-theme] #appShell :is(.acc-table,.radar-detail-card) th{background:var(--pulse-inset);color:var(--pulse-ink)}
+html[data-theme] #appShell :is(.acc-table,.radar-detail-card) tbody tr:hover{background:var(--pulse-inset)}
+html[data-theme] :is(#appShell,#authScreen) :is(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]),select,textarea){
+ background-color:var(--rp-field);color:var(--pulse-ink);border-color:var(--pulse-edge);accent-color:var(--rp-accent);
+}
+html[data-theme] :is(#appShell,#authScreen) :is(input,textarea)::placeholder{color:var(--pulse-secondary);opacity:.85}
+html[data-theme] :is(#appShell,#authScreen) :is(button,a,summary,select,input,textarea):focus-visible{outline-color:var(--rp-focus)}
+html[data-theme] :is(#appShell,#authScreen) :is(.btn,.radar-button,.rev-track-button,.rev-action,.auth-tabs button,.pulse-appearance button){transition:background-color .18s ease,border-color .18s ease,box-shadow .18s ease,color .18s ease,transform .18s ease}
+html[data-theme] :is(#appShell,#authScreen) :is(.btn.primary,#authSubmit,.radar-search-submit){background:linear-gradient(135deg,var(--rp-button),var(--rp-button-end))!important;color:var(--rp-button-text)!important;border-color:transparent!important;box-shadow:0 4px 12px color-mix(in srgb,var(--rp-button) 22%,transparent)}
+html[data-theme] #appShell :is(.rev-track-button,[data-rev-track]){background:linear-gradient(135deg,var(--rp-track),var(--rp-track-end))!important;color:#fff!important;border-color:transparent!important}
+html[data-theme] #appShell :is(.ai-fab,.radar-analysis-actions button.primary){background:linear-gradient(135deg,var(--rp-ai),var(--rp-ai-end))!important;color:#fff!important}
+html[data-theme] :is(#appShell,#authScreen) :is(.btn,.radar-button,.rev-track-button,.rev-action):hover:not(:disabled){box-shadow:var(--rp-shadow-raised);filter:brightness(1.06)}
+html[data-theme] :is(#appShell,#authScreen) :is(.btn,.radar-button,.rev-track-button,.rev-action):active:not(:disabled){transform:translateY(1px)}
+html[data-theme] :is(#appShell,#authScreen) button:disabled{cursor:not-allowed}
+html[data-theme] #appShell #view-home{
+ --pulse-canvas:var(--pulse-page);--pulse-panel:var(--pulse-paper);--pulse-line:var(--pulse-edge);--pulse-text:var(--pulse-ink);--pulse-muted:var(--pulse-secondary);
+ --pulse-cyan:var(--rp-info);--pulse-mint:var(--rp-success);--pulse-violet:var(--rp-violet);--pulse-amber:var(--rp-warn);
+ --pulse-kpi-blue:var(--rp-blue-tile);--pulse-kpi-green:var(--rp-green-tile);--pulse-kpi-violet:var(--rp-purple-tile);--pulse-kpi-amber:var(--rp-amber-tile);
+ --rlb-home-ink:var(--pulse-ink);--rlb-home-muted:var(--pulse-secondary);--rlb-home-surface:var(--pulse-paper);--rlb-home-soft:var(--pulse-inset);--rlb-home-border:var(--pulse-edge);
+ --rlb-pulse-accent:var(--rp-accent);--rlb-pulse-primary:var(--rp-info);--rlb-pulse-border:var(--pulse-edge);
+ --rlb-home-chart-blue:var(--rp-info);--rlb-home-chart-green:var(--rp-success);--rlb-home-chart-violet:var(--rp-violet);
+ --rlb-pulse-kpi-ink:var(--rp-kpi-text);--rlb-pulse-kpi-muted:var(--rp-kpi-muted);
+}
+html[data-theme] #appShell #view-home #revSummary .rev-stat:nth-child(1){--tile:var(--rp-blue-tile);--signal:var(--rp-info)}
+html[data-theme] #appShell #view-home #revSummary .rev-stat:nth-child(2){--tile:var(--rp-green-tile);--signal:var(--rp-success)}
+html[data-theme] #appShell #view-home #revSummary .rev-stat:nth-child(3){--tile:var(--rp-purple-tile);--signal:var(--rp-violet)}
+html[data-theme] #appShell #view-home #revSummary .rev-stat:nth-child(4){--tile:var(--rp-amber-tile);--signal:var(--rp-warn)}
+html[data-theme] #appShell #view-home #revSummary .rev-stat{
+ background-color:var(--tile)!important;background-image:linear-gradient(140deg,color-mix(in srgb,var(--signal) 8%,var(--tile)),var(--tile) 65%)!important;
+ color:var(--rp-kpi-text)!important;border-radius:13px;box-shadow:var(--rp-shadow);transition:box-shadow .2s ease,border-color .2s ease,transform .2s ease;
+}
+html[data-theme] #appShell #view-home #revSummary .rev-stat :is(.rev-label,.rev-value){color:var(--rp-kpi-text)!important}
+html[data-theme] #appShell #view-home #revSummary .rev-stat .rev-sub{color:var(--rp-kpi-muted)!important}
+html[data-theme] #appShell #view-home #revSummary .rev-stat:hover{box-shadow:var(--rp-shadow-raised)}
+html[data-theme] #appShell #view-home .rlb-live-bar{background:var(--pulse-paper);border-color:var(--pulse-edge);box-shadow:var(--rp-shadow);border-radius:13px}
+html[data-theme] #appShell #view-home .rlb-live-identity strong{color:var(--rp-accent)}
+html[data-theme] #appShell #view-home .rlb-live-next{color:var(--rp-accent)}
+html[data-theme] #appShell #view-home .rlb-home-card{border-radius:14px}
+html[data-theme] #appShell #view-home #rlbHomeRecommendations .rev-rec{background:var(--pulse-paper)!important;transition:background-color .16s ease}
+html[data-theme] #appShell #view-home #rlbHomeRecommendations .rev-rec:hover{background:var(--rp-raised)!important}
+html[data-theme] #appShell #view-home #rlbHomeRecommendations .rev-rec[data-pulse-state]{background:var(--rp-blue-tile)!important}
+html[data-theme] #appShell #view-home .rlb-home-deadline[data-urgency="critical"] .rlb-home-date{outline:1px solid var(--rp-warn);outline-offset:-1px}
+html[data-theme] #appShell #view-home .rlb-home-deadline[data-urgency="critical"] .rlb-home-deadline-status{color:var(--rp-warn)!important;background:var(--rp-amber-tile)!important}
+html[data-theme] #appShell #view-home .rlb-home-filter-group button.active{background:var(--rp-green-tile)!important;border-color:var(--rp-success)!important;color:var(--rp-success)!important}
+/* Public page: separate hero and demonstration surfaces for both modes. */
+html[data-theme] #authScreen{background:var(--rp-login-bg)!important;color:var(--pulse-ink)}
+html[data-theme] #authScreen .auth-home-grid{border-color:var(--pulse-edge)!important;box-shadow:var(--rp-shadow-raised)!important}
+html[data-theme] #authScreen .auth-home-grid .auth-copy,html[data-theme] #authScreen .auth-home-capability-hero{
+ background:var(--rp-hero)!important;color:var(--rp-hero-ink)!important;border-color:var(--pulse-edge)
+}
+html[data-theme] #authScreen .auth-home-grid .auth-copy :is(h1,p),html[data-theme] #authScreen .auth-home-capability-hero :is(h2,h3){color:var(--rp-hero-ink)!important}
+html[data-theme] #authScreen .auth-home-grid .auth-copy p,html[data-theme] #authScreen .auth-home-capability-hero>p{color:var(--rp-hero-muted)!important}
+html[data-theme] #authScreen .auth-home-copy-inner h1 em{color:var(--rp-hero-accent);background:none;-webkit-text-fill-color:currentColor}
+html[data-theme] #authScreen :is(.auth-home-product-preview,.auth-home-demo-window,.auth-home-demo-panel,.auth-home-demo-window-top,.auth-home-mini-feed){
+ background:var(--rp-demo)!important;color:var(--pulse-ink)!important;border-color:var(--pulse-edge)!important;box-shadow:var(--rp-shadow);
+}
+html[data-theme] #authScreen :is(.auth-home-preview-search,.auth-home-preview-main article,.auth-home-preview-side>div,.auth-home-capability-stats>div,.auth-home-trust-row span){
+ background:var(--rp-demo-soft)!important;border-color:var(--pulse-edge)!important;color:var(--pulse-secondary)!important;
+}
+html[data-theme] #authScreen :is(.auth-home-preview-top,.auth-home-preview-main,.auth-home-preview-side,.auth-home-mini-feed,.auth-home-demo-window-top) b{color:var(--pulse-ink)!important}
+html[data-theme] #authScreen :is(.auth-home-preview-top,.auth-home-preview-main,.auth-home-preview-side,.auth-home-mini-feed) small{color:var(--pulse-secondary)!important}
+html[data-theme] #authScreen :is(.auth-home-preview-label,.auth-home-capability-topline>small,.auth-home-capability-topline>b,.auth-home-demo-window-top>span){color:var(--rp-hero-accent)!important}
+html[data-theme] #authScreen .auth-home-secondary{color:var(--rp-hero-ink)!important;border-color:var(--pulse-edge)!important;background:var(--rp-demo-soft)!important}
+html[data-theme] #authScreen .auth-home-primary{background:linear-gradient(135deg,var(--rp-button),var(--rp-button-end))!important;color:white!important}
+html[data-theme] #authScreen .auth-home-card{background:var(--pulse-paper)!important}
+html[data-theme] #authScreen :is(.customer-step,.customer-transparency,.customer-faq-list details,.auth-home-capability-card,.auth-home-service-strip>div,.auth-home-demo,.auth-home-positioning,.auth-home-steps>div,.auth-home-trust-band){background:var(--pulse-paper)!important;color:var(--pulse-ink);border-color:var(--pulse-edge)!important;box-shadow:var(--rp-shadow)}
+html[data-theme="light"] #authScreen .auth-home-demo-panel :is(.demo-toolbar,.demo-search,.demo-module-title,.demo-ai-head,.demo-panel-enter article){background:var(--rp-demo-soft);color:var(--pulse-ink);border-color:var(--pulse-edge)}
+/* Native controls and miniature previews. Existing single-click toggle remains available. */
+.pulse-appearance{min-width:0;margin-top:14px;padding-top:10px;border-top:1px solid var(--pulse-edge);color:var(--pulse-ink)}
+.pulse-appearance-title{display:block;font-size:11px;font-weight:750;margin-bottom:7px}
+.pulse-appearance-options{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;min-width:0}
+.pulse-appearance-options button{display:grid;justify-items:center;gap:4px;min-width:0;min-height:50px;padding:5px 3px;border:1px solid var(--pulse-edge);border-radius:9px;background:var(--rp-field);color:var(--pulse-secondary);font-size:10px;font-weight:700;cursor:pointer}
+.pulse-appearance-options button[aria-pressed="true"]{border-color:var(--rp-focus);box-shadow:inset 0 0 0 1px var(--rp-focus);color:var(--pulse-ink);background:var(--pulse-inset)}
+.pulse-theme-preview{position:relative;display:block;width:34px;height:21px;border:1px solid #7892a9;border-radius:4px;overflow:hidden;background:#eaf1f8}
+.pulse-theme-preview::before{content:"";position:absolute;top:3px;left:3px;bottom:3px;width:6px;border-radius:2px;background:#a8c0d6}
+.pulse-theme-preview::after{content:"";position:absolute;top:4px;left:12px;right:3px;height:5px;border-radius:1px;background:#0b8194;box-shadow:0 7px 0 #b3cbe0}
+.pulse-theme-preview[data-preview="dark"]{background:#091322}
+.pulse-theme-preview[data-preview="dark"]::before{background:#30475f}
+.pulse-theme-preview[data-preview="dark"]::after{background:#28e6cd;box-shadow:0 7px 0 #36526c}
+.pulse-theme-preview[data-preview="auto"]{background:linear-gradient(90deg,#eaf1f8 50%,#091322 50%)}
+.pulse-theme-preview[data-preview="auto"]::before{background:#a8c0d6}
+.pulse-theme-preview[data-preview="auto"]::after{background:linear-gradient(90deg,#087477 50%,#28e6cd 50%);box-shadow:0 7px 0 #7892a9}
+#radarAccount .pulse-appearance{margin-top:4px;padding-top:7px}
+#radarAccount .pulse-appearance-options button{min-height:50px;width:100%}
+@media(max-width:600px){.pulse-appearance-options{gap:5px}.pulse-appearance-options button{min-height:44px}}
+@media(prefers-reduced-motion:no-preference){
+ html[data-theme] :is(#appShell,#authScreen),html[data-theme] #appShell :is(.sidebar,.rlb-home-card,.rlb-live-bar,.rev-stat),html[data-theme] #authScreen :is(.auth-home-card,.auth-home-grid){transition:background-color .18s ease,color .18s ease,border-color .18s ease}
+ #view-home .rlb-live-bar[data-state="loading"] .rlb-live-led{animation:rpConsultPulse 1.2s ease-in-out infinite}
+ #view-home .rlb-home-deadline[data-urgency="critical"] .rlb-home-date{animation:rpUrgentEnter .7s ease-out 1}
+ @keyframes rpConsultPulse{50%{opacity:.45}}
+ @keyframes rpUrgentEnter{from{box-shadow:0 0 0 3px color-mix(in srgb,var(--rp-warn) 32%,transparent)}to{box-shadow:none}}
+}
+@media(prefers-reduced-motion:reduce){.pulse-appearance button,#view-home .rlb-live-led,#view-home .rev-value,#view-home .rlb-home-date{animation:none!important;transition:none!important}}

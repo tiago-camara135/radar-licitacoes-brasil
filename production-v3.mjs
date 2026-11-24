@@ -13,6 +13,7 @@ const headerModel1Css=nativeReadFileSync(new URL('./header-model1.css',import.me
 const authHomeV1=nativeReadFileSync(new URL('./auth-home-v1.js',import.meta.url),'utf8');
 const authHomeCss=nativeReadFileSync(new URL('./auth-home-v1.css',import.meta.url),'utf8');
 const authHomeProductCss=nativeReadFileSync(new URL('./auth-home-product-v2.css',import.meta.url),'utf8');
+const pulseThemeCss=nativeReadFileSync(new URL('./pulse-theme-v2.css',import.meta.url),'utf8');
 const roleNavGuardV1=nativeReadFileSync(new URL('./role-nav-guard-v1.js',import.meta.url),'utf8');
 const adminControlCenterJs=nativeReadFileSync(new URL('./admin-control-center.js',import.meta.url),'utf8');
 const adminControlCenterCss=nativeReadFileSync(new URL('./admin-control-center.css',import.meta.url),'utf8');
@@ -119,7 +120,7 @@ fs.readFileSync=function patchedReadFileSync(path,...args){
   }
   if(value.endsWith('/app-v2.css')||value.endsWith('\\app-v2.css')){
     const source=Buffer.isBuffer(data)?data.toString('utf8'):String(data);
-    const finalCss=source+'\n'+runtimeCss+'\n'+aiUiCss+'\n'+headerModel1Css+'\n'+authHomeCss+'\n'+authHomeProductCss+'\n'+publicSiteConfigCss+'\n'+adminControlCenterCss;
+    const finalCss=source+'\n'+runtimeCss+'\n'+aiUiCss+'\n'+headerModel1Css+'\n'+authHomeCss+'\n'+authHomeProductCss+'\n'+publicSiteConfigCss+'\n'+adminControlCenterCss+'\n'+pulseThemeCss;
     return Buffer.isBuffer(data)?Buffer.from(finalCss):finalCss;
   }
   return data;

@@ -59,6 +59,24 @@ try{
  const publicAfter=await page.locator('html').getAttribute('data-theme');
  assert.notEqual(publicAfter,before,'Public theme toggle works');
  note('Public login page and theme switch OK');
+ // New selector is real, persistent, and tracks the system only in Auto.
+ const publicAppearance=page.locator('#authScreen .pulse-appearance');
+ await publicAppearance.locator('[data-pulse-theme="light"]').click();
+ assert.equal(await page.locator('html').getAttribute('data-theme'),'light');
+ await publicAppearance.locator('[data-pulse-theme="dark"]').click();
+ assert.equal(await page.locator('html').getAttribute('data-theme'),'dark');
+ await page.emulateMedia({colorScheme:'light'});
+ await publicAppearance.locator('[data-pulse-theme="auto"]').click();
+ assert.equal(await page.locator('html').getAttribute('data-theme'),'light');
+ await page.emulateMedia({colorScheme:'dark'});
+ await page.waitForFunction(()=>document.documentElement.dataset.theme==='dark');
+ assert.equal(await page.evaluate(()=>localStorage.getItem('rlb-theme-v2')),'auto');
+ await page.reload({waitUntil:'domcontentloaded'});
+ await page.waitForFunction(()=>document.documentElement.dataset.themePreference==='auto');
+ assert.equal(await page.locator('html').getAttribute('data-theme'),'dark');
+ assert.equal(await publicAppearance.locator('[data-pulse-theme="auto"]').getAttribute('aria-pressed'),'true');
+ await publicAppearance.locator('[data-pulse-theme="light"]').click();
+ note('Pulse 2.0 appearance selector: light/dark/auto, system changes and reload persistence OK');
 
  userId=await register(page,email);
  await until(page,()=>!!document.querySelector('#revSummary .rev-value') && Array.from(document.querySelectorAll('#revSummary .rev-value')).every(e=>e.textContent.trim()!=='—'));
@@ -81,6 +99,13 @@ try{
  const changed=await page.locator('html').getAttribute('data-theme');
  assert.notEqual(inTheme,changed,'Authenticated theme control works');
  note('Registration, authenticated dashboard, four metrics, user role and theme OK');
+ await page.locator('#radarAccount summary').click();
+ const internalAppearance=page.locator('#radarAccount .pulse-appearance');
+ await internalAppearance.locator('[data-pulse-theme="light"]').click();
+ assert.equal(await page.locator('html').getAttribute('data-theme'),'light');
+ assert.equal(await internalAppearance.locator('[data-pulse-theme="light"]').getAttribute('aria-pressed'),'true');
+ await page.keyboard.press('Escape');
+ note('Pulse 2.0 authenticated appearance controls OK');
 
  // Corrige o "quadrado azul" sem remover o foco visível para teclado.
  await gotoSection(page,'radar');

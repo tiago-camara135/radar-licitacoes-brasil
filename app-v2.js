@@ -21,11 +21,17 @@ function fillSelects(){for(const id of ['searchUf','alertUf']){const e=$('#'+id)
 function initTheme() {
   const buttons = $$('#radarTheme, #radarPublicTheme');
   const systemTheme = matchMedia('(prefers-color-scheme: dark)');
-  let preference;
-  try { preference = localStorage.getItem('rlb-theme-v2'); } catch {}
+  const choices = $$('[data-pulse-theme]');
+  const normalizePreference = value => ['light','dark','auto'].includes(value) ? value : 'auto';
+  let preference = 'auto';
+  try { preference = normalizePreference(localStorage.getItem('rlb-theme-v2')); } catch {}
   const render = () => {
-    const dark = preference === 'dark' || (preference !== 'light' && systemTheme.matches);
+    const dark = preference === 'dark' || (preference === 'auto' && systemTheme.matches);
     document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+    document.documentElement.dataset.themePreference = preference;
+    const meta = $('meta[name="theme-color"]');
+    if(meta)meta.content=dark?'#091322':'#F0F5FA';
+    choices.forEach(choice=>choice.setAttribute('aria-pressed',String(choice.dataset.pulseTheme===preference)));
     const label = dark ? 'Ativar tema claro' : 'Ativar tema escuro';
     buttons.forEach(button => {
       button.setAttribute('aria-label', label);
@@ -34,13 +40,16 @@ function initTheme() {
       $('[data-theme-moon]', button).toggleAttribute('hidden', dark);
     });
   };
-  const toggleTheme = () => {
-    preference = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+  const chooseTheme = next => {
+    preference = normalizePreference(next);
     try { localStorage.setItem('rlb-theme-v2', preference); } catch {}
     render();
   };
+  const toggleTheme = () => chooseTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark');
   buttons.forEach(button => button.addEventListener('click', toggleTheme));
-  systemTheme.addEventListener('change', render);
+  choices.forEach(choice=>choice.addEventListener('click',()=>chooseTheme(choice.dataset.pulseTheme)));
+  systemTheme.addEventListener('change',()=>{if(preference==='auto')render()});
+  window.addEventListener('storage',event=>{if(event.key==='rlb-theme-v2'||event.key===null){preference=normalizePreference(event.newValue);render()}});
   render();
 }
 
@@ -733,6 +742,15 @@ if(window.__radarEvolutionSummary)return;window.__radarEvolutionSummary=true;
 const $=(s,r=document)=>r.querySelector(s);
 const el=(tag,cls,text)=>{const a=document.createElement(tag);if(cls)a.className=cls;if(text!==undefined)a.textContent=String(text);return a};
 const number=v=>Number.isFinite(Number(v))&&v!==undefined&&v!==null?Number(v).toLocaleString('pt-BR'):'—';
+function renderMetric(node,value){
+ const next=number(value),previous=node.textContent;
+ if(previous===next)return;
+ node.textContent=next;
+ // Animate the change, never interpolate or fabricate the real indicator value.
+ if(previous!=='—'&&next!=='—'&&!matchMedia('(prefers-reduced-motion: reduce)').matches&&typeof node.animate==='function'){
+  node.animate([{opacity:.55,transform:'translateY(3px)'},{opacity:1,transform:'translateY(0)'}],{duration:220,easing:'ease-out'});
+ }
+}
 let busy=false,lastLoad=0,lastIdentity='',epoch=0,queuedForce=false;
 const ui={};
 function logged(){return !!$('#appShell')&&!$('#appShell').classList.contains('hidden')}
@@ -771,7 +789,7 @@ function install(){
    if(!logged()||!event.detail)return;
    const metrics=event.detail.metrics||{};
    ['new_matches_today','recommended_high','tracked_active','upcoming_7d'].forEach((key,i)=>{
-     ui.values[i].textContent=number(metrics[key]);
+     renderMetric(ui.values[i],metrics[key]);
    });
    lastIdentity=identity();
    lastLoad=Date.now();
@@ -790,7 +808,7 @@ async function load(force){
    if(!r.ok)throw Error(r.status===401?'Sessão expirada. Entre novamente.':'Não foi possível consultar os indicadores.');
    const d=await r.json(),m=d.metrics||{};if(!logged()||requestEpoch!==epoch)return;
    if(!Array.isArray(d.recommendations))throw Error('Consulta de recomendações incompleta.');
-   ['new_matches_today','recommended_high','tracked_active','upcoming_7d'].forEach((k,i)=>ui.values[i].textContent=number(m[k]));
+   ['new_matches_today','recommended_high','tracked_active','upcoming_7d'].forEach((k,i)=>renderMetric(ui.values[i],m[k]));
    const priorities=Array.isArray(d.priorities)?d.priorities:[];
    const critical=priorities.filter(x=>x&&['high','critical'].includes(x.tone)).length;
    ui.next.textContent=critical?critical+' prioridade(s) para revisar.':'Nenhuma prioridade crítica identificada nos dados cadastrados.';
