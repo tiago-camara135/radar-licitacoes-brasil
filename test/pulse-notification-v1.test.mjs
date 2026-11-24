@@ -15,7 +15,7 @@ test('popup budget is five minutes and shared browser storage survives reloads',
  assert.match(js,/localStorage\.setItem\(storageKey\(\)/);assert.match(js,/navigator\.locks\.request/);
 });
 test('read occurs only on explicit action, session state cleared on logout, safe official links',()=>{
- const code=js.slice(js.indexOf('function displayNext()'),js.indexOf('function digestFrom'));
+ const code=js.slice(js.indexOf('function displayNext(group)'),js.indexOf('function digestFrom'));
  assert.doesNotMatch(code,/append\(card\);markRows/);assert.match(code,/mark\.addEventListener\('click'/);assert.match(js,/accountScope='';lastPopupAt=0/);assert.match(js,/!u\.username&&!u\.password/);
  assert.match(app,/radar:notification-read/);assert.match(app,/ui\.urgent/);
 });
