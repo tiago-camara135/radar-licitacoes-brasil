@@ -6,7 +6,18 @@ const DATABASE_URL=process.env.DATABASE_URL||'';
 const pool=DATABASE_URL?new Pool({connectionString:DATABASE_URL,ssl:{rejectUnauthorized:false},max:3,idleTimeoutMillis:30000}):null;
 const cache=new Map();
 let ready=false,refreshTimer=null,openRefreshRunning=false;
-let lastRemote={at:null,ok:null,errors:0,partial:false,count:0,strategy:'open-proposals-background'};
+let lastRemote={at:null,ok:null,errors:0,partial:true,count:0,strategy:'open-proposals-background'};
+let lastNationalRemote=null;
+const NATIONAL_FRESH_MS=10*60*1000;
+// Filtered searches cannot establish the coverage of the nationwide index.
+function nationalCoverage(snapshot,now=Date.now()){
+ const at=snapshot?.at||null,timestamp=at?Date.parse(at):NaN;
+ const stale=!Number.isFinite(timestamp)||now-timestamp>NATIONAL_FRESH_MS;
+ const successful=Number(snapshot?.successful_modalities||0);
+ const failed=Number(snapshot?.failed_modalities||0);
+ const state=!snapshot?'initializing':snapshot.ok===false?'unavailable':stale?'stale':snapshot.partial||failed>0||successful<14?'partial':'current';
+ return {state,partial:state!=='current',at,successful_modalities:successful,failed_modalities:failed};
+}
 const digits=v=>String(v??'').replace(/\D/g,'');
 const clean=(v,n=500)=>String(v??'').trim().slice(0,n);
 const validDate=v=>{if(!v)return null;const t=Date.parse(v);return Number.isFinite(t)?new Date(t).toISOString():null};
@@ -110,26 +121,29 @@ async function persistRemote(items){
     await client.query('COMMIT');
   }catch(e){try{await client.query('ROLLBACK')}catch{}throw e}finally{client.release()}
 }
-async function refreshOpenIndex(filters={}){
+async function refreshOpenIndex(filters={}, {national=false}={}){
   if(openRefreshRunning)return false;
   openRefreshRunning=true;
   try{
     const remote=await fetchPncpOpenSearch({...filters,openOnly:true});
     await persistRemote(remote.items);
-    lastRemote={at:new Date().toISOString(),ok:true,errors:remote.errors.length,partial:remote.partial,count:remote.items.length,strategy:'open-proposals-background',successful_modalities:remote.successfulModalities,failed_modalities:remote.failedModalities};
+    lastRemote={at:new Date().toISOString(),ok:remote.successfulModalities>0,errors:remote.errors.length,partial:Boolean(remote.partial)||remote.successfulModalities===0,count:remote.items.length,strategy:'open-proposals-background',successful_modalities:remote.successfulModalities,failed_modalities:remote.failedModalities};
+    if(national)lastNationalRemote=lastRemote;
     cache.clear();
     console.log(`search router v4 open refresh: modalities=${remote.successfulModalities}/14 items=${remote.items.length} errors=${remote.failedModalities} partial=${Boolean(remote.partial)}`);
     return true;
   }catch(e){
     lastRemote={at:new Date().toISOString(),ok:false,errors:1,partial:true,count:0,strategy:'open-proposals-background',message:clean(e?.message||'PNCP indisponível',180)};
+    if(national)lastNationalRemote=lastRemote;
+    cache.clear();
     console.warn('search router v4 open refresh deferred:',e?.message||e);
     return false;
   }finally{openRefreshRunning=false}
 }
 function scheduleOpenRefresh(){
   if(refreshTimer)return;
-  setTimeout(()=>refreshOpenIndex({days:0}).catch(()=>{}),2500).unref?.();
-  refreshTimer=setInterval(()=>refreshOpenIndex({days:0}).catch(()=>{}),300000);
+  setTimeout(()=>refreshOpenIndex({days:0},{national:true}).catch(()=>{}),2500).unref?.();
+  refreshTimer=setInterval(()=>refreshOpenIndex({days:0},{national:true}).catch(()=>{}),300000);
   refreshTimer.unref?.();
 }
 
@@ -140,7 +154,8 @@ async function searchCore(filters){
   const items=await localSearch(f,5000);
   refreshOpenIndex(f).catch(()=>{});
   const platforms=[...new Set(items.map(x=>x?._sourcePlatform).filter(Boolean))].slice(0,12);
-  const data={items,source:'PNCP sincronizado + base monitorada RLB',strategy:'active-local-first',active_only:true,remote_refresh:'background',platforms,partial:false,local_count:items.length,remote_count:lastRemote.count||0,query_ms:Date.now()-started,fetched_at:new Date().toISOString()};
+  const coverage=nationalCoverage(lastNationalRemote);
+  const data={items,source:'PNCP sincronizado + base monitorada RLB',strategy:'active-local-first',active_only:true,remote_refresh:'background',platforms,partial:coverage.partial,coverage,local_count:items.length,remote_count:lastRemote.count||0,query_ms:Date.now()-started,fetched_at:new Date().toISOString()};
   cache.set(key,{at:Date.now(),data});
   return data;
 }
@@ -169,7 +184,7 @@ async function status(){
     ]);
     db={...t.rows[0],states:s.rows};
   }
-  return {ok:true,version:'4.0',search_strategy:'active-local-first',active_only:true,database:db,pncp:pncpClientHealth(),last_remote:lastRemote};
+  return {ok:true,version:'4.0',search_strategy:'active-local-first',active_only:true,database:db,pncp:pncpClientHealth(),last_remote:lastRemote,national_coverage:nationalCoverage(lastNationalRemote)};
 }
 
 export async function initSearchRouterV3(){await init();scheduleOpenRefresh();console.log('search router v4 ready: active-only local-first search + PNCP open-proposal background refresh')}
