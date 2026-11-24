@@ -27,6 +27,7 @@ try{
   assert.equal(d1.user.id,u1);assert.ok(d1.recommendations.some(x=>x.pncp_id===pncpId));assert.equal(d1.metrics.active_alerts,1);
 
   r=await post('/api/dashboard/preferences',{geo:{scope:'ufs',ufs:['RN']}},c1);assert.equal(r.status,200);
+  r=await post('/api/dashboard/preferences',{pulse_layout:{hidden:['recent','invalid'],order:['quick','quick','agenda']}},c1);assert.equal(r.status,200);const prefs=(await r.json()).preferences;assert.deepEqual(prefs.geo.ufs,['RN']);assert.deepEqual(prefs.pulse_layout.hidden,['recent']);assert.equal(prefs.pulse_layout.order[0],'quick');
   r=await get('/api/dashboard/overview',c1);assert.equal(r.status,200);const rn=await r.json();assert.ok(rn.recommendations.some(x=>x.pncp_id===pncpId));
 
   r=await get('/api/dashboard/overview',c2);assert.equal(r.status,200);const d2=await r.json();assert.equal(d2.recommendations.some(x=>x.pncp_id===pncpId),false);assert.ok(d2.national_preview.opportunities.some(x=>x.pncp_id===pncpId));assert.ok(d2.national_preview.deadlines.some(x=>x.pncp_key===cnpj+'-'+year+'-'+sequence));assert.equal(d2.metrics.tracked_active,0);assert.equal(d2.tracking.length,0);

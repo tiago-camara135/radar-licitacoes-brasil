@@ -541,10 +541,11 @@ try{
  await page.locator('.pb-dialog input[type="search"]').fill('Inteligência');
  await page.locator('.pb-dialog .pb-choice').filter({hasText:/^Inteligência$/}).click();
  await page.locator('#view-intelligence.active').waitFor({timeout});
- const intelResponse=page.waitForResponse(r=>r.url().includes('/api/dashboard/intelligence?'),{timeout});
- await page.locator('#pbNationalForm button[type="submit"]').click();
- assert.equal((await intelResponse).status(),200,'Intelligence API must respond');
+ // Automatic load on entering the intelligence view.
  await page.locator('#pbNationalResults .pb-metrics').waitFor({timeout});
+ await page.locator('#pbNationalResults .pb-metrics').waitFor({timeout});
+ const [drill]=await Promise.all([page.waitForResponse(r=>r.url().includes('/api/dashboard/intelligence?')&&r.url().includes('kind=due7'),{timeout}),page.locator('#pbNationalResults [data-kind="due7"]').click()]);assert.equal(drill.status(),200);
+ await page.locator('#pbNationalResults [data-kind="due7"][aria-pressed="true"]').waitFor({timeout});
  await page.locator('[data-pb-tab="contracts"]').click();
  assert.ok(await page.locator('#pbContractForm').isVisible(),'Contract form accessible; no external requests in CI');
  await gotoSection(page,'home');
@@ -552,6 +553,7 @@ try{
  await page.locator('.pb-dialog input[type="checkbox"]').first().uncheck();
  assert.equal(await page.locator('.rlb-home-recommendations').getAttribute('data-pb-hidden'),'true');
  await page.locator('.pb-dialog .pb-choice').filter({hasText:'Restaurar padrão'}).click();
+ await until(page,()=>document.querySelector('.pb-dialog')?.textContent.includes('Preferência sincronizada.'));
  await page.locator('.pb-dialog header button').click();
  assert.equal(await page.locator('.rlb-home-recommendations').getAttribute('data-pb-hidden'),'false');
  note('Pulse Business: global navigation, real national aggregation, contracts form and dashboard preference OK');

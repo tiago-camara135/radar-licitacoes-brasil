@@ -7,6 +7,11 @@ const DATABASE_URL=String(process.env.DATABASE_URL||'');
 const APP_ORIGIN=String(process.env.APP_ORIGIN||'');
 const pool=DATABASE_URL?new Pool({connectionString:DATABASE_URL,ssl:{rejectUnauthorized:false},max:3,idleTimeoutMillis:30000}):null;
 const STATUSES=new Set(['analisar','preparando_documentacao','proposta_pronta','participando','recurso','vencida','perdida','arquivada']);
+const PULSE_WIDGETS=['recommendations','agenda','tracking','recent','quick'];
+function normalizePulseLayout(value){
+ const raw=value&&typeof value==='object'?value:{};
+ return {hidden:[...new Set((Array.isArray(raw.hidden)?raw.hidden:[]).filter(x=>PULSE_WIDGETS.includes(x)))],order:[...new Set([...(Array.isArray(raw.order)?raw.order:[]).filter(x=>PULSE_WIDGETS.includes(x)),...PULSE_WIDGETS])]};
+}
 const WIDGETS=new Set(['recommendations','priorities','agenda','habilitation','tracking','funnel','ai']);
 const BASELINE=[['cartao_cnpj','Cartão do CNPJ'],['contrato_social','Contrato Social'],['federal','Certidão Federal'],['fgts','CRF do FGTS'],['cndt','CNDT'],['estadual','Certidão Estadual'],['municipal','Certidão Municipal'],['falencia','Certidão de Falência'],['balanco','Balanço Patrimonial']];
 const NO_NATURAL_EXPIRY=new Set(['cartao_cnpj','contrato_social']);
@@ -220,11 +225,12 @@ async function saveTracking(uid,b){
   const r=await pool.query(`INSERT INTO user_tender_tracking(user_id,pncp_key,org_cnpj,year,sequence,status,notes) VALUES($1,$2,$3,$4,$5,$6,$7) ON CONFLICT(user_id,pncp_key) DO UPDATE SET status=EXCLUDED.status,notes=COALESCE(EXCLUDED.notes,user_tender_tracking.notes),updated_at=NOW() RETURNING *`,[uid,key,cnpj,year,sequence,status,b.notes===undefined?null:clean(b.notes,1500)]);return r.rows[0];
 }
 async function savePreferences(uid,b){
-  const current=await preferences(uid);
-  const hidden=b.hidden_widgets===undefined?current.hidden_widgets:[...new Set(Array.isArray(b.hidden_widgets)?b.hidden_widgets.map(x=>clean(x,60)).filter(x=>WIDGETS.has(x)):[])];
-  const geo=b.geo===undefined?current.geo:normalizeGeo(b.geo);
-  const config={hidden_widgets:hidden,geo};
-  await pool.query(`INSERT INTO user_dashboard_preferences(user_id,config) VALUES($1,$2) ON CONFLICT(user_id) DO UPDATE SET config=EXCLUDED.config,updated_at=NOW()`,[uid,JSON.stringify(config)]);return config;
+ const patch={};
+ if(b.hidden_widgets!==undefined)patch.hidden_widgets=[...new Set(Array.isArray(b.hidden_widgets)?b.hidden_widgets.map(x=>clean(x,60)).filter(x=>WIDGETS.has(x)):[])];
+ if(b.geo!==undefined)patch.geo=normalizeGeo(b.geo);
+ if(b.pulse_layout!==undefined)patch.pulse_layout=normalizePulseLayout(b.pulse_layout);
+ await pool.query(`INSERT INTO user_dashboard_preferences(user_id,config) VALUES($1,$2::jsonb) ON CONFLICT(user_id) DO UPDATE SET config=user_dashboard_preferences.config||EXCLUDED.config,updated_at=NOW()`,[uid,JSON.stringify(patch)]);
+ return preferences(uid);
 }
 
 export async function handleUserDashboardRoute(req,res,url){
@@ -245,4 +251,4 @@ export async function handleUserDashboardRoute(req,res,url){
   }catch(e){console.error('user dashboard v2:',e?.stack||e);json(res,e?.status||500,{error:e?.status?e.message:'Erro interno no dashboard.'});return true}
 }
 
-export const __test={STATUSES,WIDGETS,BASELINE,UFS,REGIONS,readinessFor,docState,normalizeGeo,fitFor,sessionHash,allowDashboard,agenda};
+export const __test={STATUSES,WIDGETS,BASELINE,UFS,REGIONS,readinessFor,docState,normalizeGeo,fitFor,sessionHash,allowDashboard,agenda,normalizePulseLayout};
