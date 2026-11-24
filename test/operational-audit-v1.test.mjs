@@ -11,7 +11,7 @@ test('unread queue supports cursor without removing history or crossing accounts
  const s=read('production-v21.mjs'),o=read('onsite-notifications-v3.js');
  assert.match(s,/d.user_id=\$1 AND d.channel='onsite'/);
  assert.match(s,/d.id>\$3::bigint/);
- assert.match(o,/afterId=String\(batch\[batch.length-1\].id\)/);
+ assert.match(o,/rememberPopup\(group.lastId\)/);assert.match(s,/d.created_at>=NOW\(\)-INTERVAL '10 minutes'/);
  assert.match(o,/revision!==readRevision/);
  assert.match(o,/epoch\+\+;afterId='0'/);
 });

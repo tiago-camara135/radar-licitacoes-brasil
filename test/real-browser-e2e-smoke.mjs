@@ -214,7 +214,8 @@ try{
  await pool.query("INSERT INTO monitored_procurements(pncp_id,org_cnpj,year,sequence,modality_code,modality_name,object_text,org_name,municipality,uf,estimated_value,published_at,closes_at,pncp_url,raw,detected_at,last_seen_at) VALUES($1,$2,$3,$4,6,'Pregão - Eletrônico',$5,'Prefeitura QA','Natal','RN',140000,NOW(),$6,$7,$8::jsonb,NOW(),NOW())",[pncpId,cnpj,year,sequence,object,closes,'https://pncp.gov.br/app/editais/'+cnpj+'/'+year+'/'+sequence,JSON.stringify(raw)]);
  const notificationPayload={object,org:'Prefeitura QA',municipality:'Natal',uf:'RN',pncp_url:'https://pncp.gov.br/app/editais/'+cnpj+'/'+year+'/'+sequence};
  await pool.query("INSERT INTO notification_deliveries(user_id,alert_id,pncp_id,channel,status,payload,created_at,sent_at) VALUES($1,$2,$3,'onsite','sent',$4::jsonb,NOW(),NOW())",[userId,alertId,pncpId,JSON.stringify(notificationPayload)]);
-
+ for(let n=1;n<=4;n++)await pool.query("INSERT INTO notification_deliveries(user_id,alert_id,pncp_id,channel,status,payload,created_at,sent_at) VALUES($1,$2,$3,'onsite','sent',$4::jsonb,NOW(),NOW())",[userId,alertId,pncpId+'-digest-'+n,JSON.stringify({...notificationPayload,object:'Outro alerta QA '+n})]);
+ await pool.query("INSERT INTO notification_deliveries(user_id,alert_id,pncp_id,channel,status,payload,created_at,sent_at) VALUES($1,$2,$3,'onsite','sent',$4::jsonb,NOW()-INTERVAL '1 day',NOW()-INTERVAL '1 day')",[userId,alertId,pncpId+'-old',JSON.stringify({...notificationPayload,object:'Histórico antigo QA'})]);
  await gotoSection(page,'home');
  const expired={...raw,objetoCompra:'Licitação encerrada CI '+token,dataEncerramentoProposta:new Date(Date.now()-2*86400000).toISOString()};
  await page.evaluate(items=>document.dispatchEvent(new CustomEvent('radar:live-feed',{detail:{items}})),[raw,expired]);
@@ -319,7 +320,7 @@ try{
  await page.evaluate(()=>document.dispatchEvent(new CustomEvent('radar:notifications-refresh')));
  await page.locator('#rlbNationalNoticeHost .rp-notice').first().waitFor({state:'visible',timeout});
  const balloon=page.locator('#rlbNationalNoticeHost .rp-notice').first();
- assert.match(await balloon.textContent(),/Aquisição de combustível/);
+ assert.match(await balloon.textContent(),/5 novos alertas para sua conta/);
  const stillUnread=await pool.query("SELECT COUNT(*)::int AS count FROM notification_deliveries WHERE user_id=$1 AND channel='onsite' AND read_at IS NULL",[userId]);
  assert.ok(stillUnread.rows[0].count>0,'Displaying a toast must not mark it as read');
  const cursorTest=await page.evaluate(async()=>{const r=await fetch('/api/stability/notifications/onsite?limit=1');const d=await r.json();const id=d.items[0].id;const next=await fetch('/api/stability/notifications/onsite?limit=1&after='+encodeURIComponent(id));return {first:id,next:(await next.json()).items}});assert.ok(cursorTest.first);assert.ok(cursorTest.next.every(x=>BigInt(x.id)>BigInt(cursorTest.first)),'Onsite cursor cannot repeat the same unread record');
@@ -328,7 +329,13 @@ try{
  assert.equal(await balloon.isVisible(),true);
  await balloon.locator('.radar-notice-close').click();
  assert.equal(await balloon.count(),0);
- note('Personalized Pulse floating notice preserves unread status on dismissal OK');
+ await pool.query("INSERT INTO notification_deliveries(user_id,alert_id,pncp_id,channel,status,payload,created_at,sent_at) VALUES($1,$2,$3,'onsite','sent',$4::jsonb,NOW(),NOW())",[userId,alertId,pncpId+'-after',JSON.stringify({...notificationPayload,object:'Novo alerta durante intervalo QA'})]);
+ await page.evaluate(()=>document.dispatchEvent(new CustomEvent('radar:notifications-refresh')));
+ await page.waitForTimeout(1500);
+ assert.equal(await balloon.count(),0,'Closing a digest or receiving another alert cannot start a toast chain');
+ const digestStored=await page.evaluate(id=>JSON.parse(localStorage.getItem('rlb-popup-digest-v1:'+id)||'null'),String(userId));
+ assert.ok(digestStored?.lastPopupAt&&digestStored?.afterId,'Per-account popup budget persisted');
+ note('Personalized Pulse consolidated notification excludes old history, preserves unread state and prevents rapid replay OK');
  await page.locator('.rev-n-bell').click();
  await page.locator('#revNotifPanel:not([hidden])').waitFor({state:'visible',timeout});
  await until(page,()=>document.querySelector('#revNotifPanel .rev-n-list')?.textContent?.includes('Aquisição de combustível para a frota CI'),15000);
