@@ -226,6 +226,19 @@ try{
  assert.ok(!(await page.locator('#rlbHomeRecent').textContent()).includes('Licitação encerrada CI'),'Current-deadline filter excludes expired tenders');
  await page.locator('#rlbHomeRecentFilters [data-home-feed="all"]').click();
  note('Recent feed toggles use real closing dates; no simulated opportunity numbers OK');
+ // Validate the exact empty-account scenario from the home dashboard.
+ await pool.query('UPDATE saved_alerts SET enabled=false WHERE id=$1 AND user_id=$2',[alertId,userId]);
+ const publicSnapshot=await page.evaluate(async()=>{const r=await fetch('/api/dashboard/overview');if(!r.ok)throw Error('Preview HTTP '+r.status);const data=await r.json();document.dispatchEvent(new CustomEvent('radar:overview',{detail:data}));return data});
+ assert.equal(publicSnapshot.recommendations.length,0);
+ assert.ok(publicSnapshot.national_preview.opportunities.some(x=>x.pncp_id===pncpId));
+ await page.locator('#revRecommendations .rev-rec[data-source="national"]').first().waitFor({state:'visible',timeout});
+ assert.equal(await page.locator('#revRecommendations .rlb-fit-meter').count(),0,'General preview cannot show fabricated adherence');
+ assert.match(await page.locator('#rlbHomeDeadlines').textContent(),/Prazos do Radar/);
+ assert.equal(await page.locator('#rlbHomePanorama .pulse-stage-chart').count(),0,'General preview must not fabricate tracking');
+ await pool.query('UPDATE saved_alerts SET enabled=true WHERE id=$1 AND user_id=$2',[alertId,userId]);
+ await page.evaluate(async()=>{const r=await fetch('/api/dashboard/overview');if(!r.ok)throw Error('Personal overview HTTP '+r.status);document.dispatchEvent(new CustomEvent('radar:overview',{detail:await r.json()}))});
+ await page.locator('#revRecommendations .rev-rec:not([data-source]) .rlb-fit-meter').first().waitFor({state:'visible',timeout});
+ note('Unconfigured home shows genuine general opportunities and deadlines, then personal recommendations after alert activation OK');
  const recentHref=await page.locator('#rlbHomeRecent a.rlb-home-table-open').first().getAttribute('href');
  assert.ok(recentHref?.startsWith('https://pncp.gov.br/app/editais/'),'Recent item links to official PNCP');
  await page.locator('#rlbHomeRefresh').click();

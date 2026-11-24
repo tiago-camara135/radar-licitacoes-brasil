@@ -37,7 +37,7 @@ test('etapa 2: polling real do dashboard a cada cinco minutos, sem inventar lici
 
 
 test('etapa 3: novas licitações vêm de comparação real entre snapshots, nunca da carga inicial',()=>{
- assert.match(js,/let recFilter='all',recCache=\[\],recInitialized=false/);
+ assert.match(js,/let recFilter='all',recCache=\[\],nationalCache=\[\],activeAlerts=0,recInitialized=false/);
  assert.match(js,/if\(recInitialized\)\{/);
  assert.match(js,/if\(!before\.has\(key\)\)\{recPulse\.set\(key,'new'\)/);
  assert.match(js,/renderedRecSignature===signature&&target\.querySelector\('\.rev-recs-list'\)/);
@@ -69,7 +69,7 @@ test('etapa 4: urgência usa datas reais e aderência usa score existente',()=>{
 test('estabilidade: urgência muda ao atravessar 48h/24h e não mistura contas',()=>{
  assert.match(js,/const urgencyTier=x=>\{/);
  assert.match(js,/remaining<=86400000\?'24h':remaining<=48\*3600000\?'48h':'normal'/);
- assert.match(js,/JSON\.stringify\(\[deadlinePeriod,today,events\.map/);
+ assert.match(js,/JSON\.stringify\(\[deadlinePeriod,today,nationalOnly,events\.map/);
  assert.match(js,/agendaInitialized=false;agendaSeen\.clear\(\);agendaPulse\.clear\(\)/);
  assert.match(js,/recentInitialized=false;recentSeen\.clear\(\);recentPulse\.clear\(\)/);
  assert.match(js,/if\(noticeTimer\)clearTimeout\(noticeTimer\)/);

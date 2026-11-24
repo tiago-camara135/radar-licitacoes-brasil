@@ -148,9 +148,9 @@ async function recommendations(uid,docsMap,geo){
   return rows.map(r=>{const ref=dateOnly(r.closes_at)||today(),ready=readinessFor(docsMap,ref),alerts=Array.isArray(r.alert_names)?r.alert_names.filter(Boolean):[],fit=fitFor(r,ready,geo,alerts);const {matched_criteria,...publicRow}=r;return{...publicRow,estimated_value:r.estimated_value==null?null:Number(r.estimated_value),readiness:ready,fit,match_reason:alerts.length?`Corresponde a ${alerts.slice(0,2).join(' • ')}`:'Compatível com seus filtros'}}).sort((a,b)=>b.fit.score-a.fit.score||b.readiness.score-a.readiness.score||new Date(a.closes_at)-new Date(b.closes_at)).slice(0,60);
 }
 async function tracking(uid){
-  return qMaybe(`SELECT t.id,t.pncp_key,t.org_cnpj,t.year,t.sequence,t.status,t.notes,t.created_at,t.updated_at,m.pncp_id,m.modality_name,m.object_text,m.org_name,m.municipality,m.uf,m.estimated_value,${deadlineSql} AS closes_at,m.pncp_url,m.origin_url
+  return (await pool.query(`SELECT t.id,t.pncp_key,t.org_cnpj,t.year,t.sequence,t.status,t.notes,t.created_at,t.updated_at,m.pncp_id,m.modality_name,m.object_text,m.org_name,m.municipality,m.uf,m.estimated_value,${deadlineSql} AS closes_at,m.pncp_url,m.origin_url
   FROM user_tender_tracking t LEFT JOIN monitored_procurements m ON m.org_cnpj=t.org_cnpj AND m.year=t.year AND m.sequence=t.sequence
-  WHERE t.user_id=$1 ORDER BY CASE t.status WHEN 'participando' THEN 1 WHEN 'proposta_pronta' THEN 2 WHEN 'preparando_documentacao' THEN 3 WHEN 'analisar' THEN 4 WHEN 'recurso' THEN 5 ELSE 9 END,t.updated_at DESC`,[uid]);
+  WHERE t.user_id=$1 ORDER BY CASE t.status WHEN 'participando' THEN 1 WHEN 'proposta_pronta' THEN 2 WHEN 'preparando_documentacao' THEN 3 WHEN 'analisar' THEN 4 WHEN 'recurso' THEN 5 ELSE 9 END,t.updated_at DESC`,[uid])).rows;
 }
 async function recentAi(uid){
   if(!await tableExists('tender_intelligence_analyses'))return[];
@@ -162,9 +162,9 @@ function funnel(items){const counts={analisar:0,preparando_documentacao:0,propos
 function agenda(recs,tracked,health){
   const events=[],seen=new Set();
   for(const t of tracked){if(t.closes_at&&new Date(t.closes_at)>=new Date()&&!seen.has(t.pncp_key)){seen.add(t.pncp_key);events.push({type:'session',date:t.closes_at,title:t.object_text||'Licitação acompanhada',subtitle:[t.modality_name,t.org_name,t.municipality,t.uf].filter(Boolean).join(' • '),pncp_key:t.pncp_key,status:t.status})}}
-  for(const r of recs){const key=`${r.org_cnpj}-${r.year}-${r.sequence}`;if(r.closes_at&&new Date(r.closes_at)>=new Date()&&!seen.has(key)){const days=(new Date(r.closes_at)-new Date())/86400000;if(days<=7){seen.add(key);events.push({type:'opportunity',date:r.closes_at,title:r.object_text||'Oportunidade recomendada',subtitle:[r.modality_name,r.org_name,r.municipality,r.uf].filter(Boolean).join(' • '),pncp_key:key})}}}
+  for(const r of recs){const key=`${r.org_cnpj}-${r.year}-${r.sequence}`;if(r.closes_at&&new Date(r.closes_at)>=new Date()&&!seen.has(key)){const days=(new Date(r.closes_at)-new Date())/86400000;if(days<=30){seen.add(key);events.push({type:'opportunity',date:r.closes_at,title:r.object_text||'Oportunidade recomendada',subtitle:[r.modality_name,r.org_name,r.municipality,r.uf].filter(Boolean).join(' • '),pncp_key:key})}}}
   for(const d of health.next){if(d.days<=30)events.push({type:'document',date:d.expiry_date,title:d.label,subtitle:d.days<0?'Documento vencido':d.days===0?'Vence hoje':`Vence em ${d.days} dia(s)`})}
-  return events.sort((a,b)=>new Date(a.date)-new Date(b.date)).slice(0,16);
+  return events.sort((a,b)=>new Date(a.date)-new Date(b.date));
 }
 function priorities({alertsCount,health,tracked,ai,company}){
   const out=[];
@@ -179,21 +179,34 @@ function priorities({alertsCount,health,tracked,ai,company}){
   return out.slice(0,6);
 }
 
+// Public opportunities are separate from personal recommendations and tracking.
+async function nationalPreview(geo){
+ const ufs=geo.scope==='brasil'?null:geo.ufs;
+ const {rows}=await pool.query(`WITH active AS (
+ SELECT m.pncp_id,m.org_cnpj,m.year,m.sequence,m.object_text,m.org_name,m.municipality,m.uf,m.modality_name,m.pncp_url,m.detected_at,${deadlineSql} AS closes_at
+ FROM monitored_procurements m WHERE m.closes_at>=NOW()-INTERVAL '3 hours' AND ($1::text[] IS NULL OR UPPER(m.uf)=ANY($1::text[]))
+ ), recent AS (SELECT *, 'recent' AS preview_type FROM active WHERE closes_at>=NOW() ORDER BY detected_at DESC NULLS LAST,pncp_id LIMIT 6),
+ due AS (SELECT *, 'deadline' AS preview_type FROM active WHERE closes_at>=NOW() AND closes_at<=NOW()+INTERVAL '30 days' ORDER BY closes_at,pncp_id LIMIT 8)
+ SELECT * FROM recent UNION ALL SELECT * FROM due`,[ufs]);
+ const opportunities=rows.filter(r=>r.preview_type==='recent');
+ const deadlines=rows.filter(r=>r.preview_type==='deadline').map(r=>({type:'national',date:r.closes_at,title:r.object_text,subtitle:[r.modality_name,r.org_name,r.municipality,r.uf].filter(Boolean).join(' • '),pncp_key:[r.org_cnpj,r.year,r.sequence].join('-'),pncp_url:r.pncp_url}));
+ return {opportunities,deadlines,scope:geoLabel(geo)};
+}
 async function overview(uid,user){
   const [prefs,health,tracked,ai,alertRows,companyRows]=await Promise.all([
     preferences(uid),
     documentHealth(uid),
     tracking(uid),
     recentAi(uid),
-    qMaybe(`SELECT COUNT(*)::int total,COUNT(*) FILTER(WHERE enabled)::int active FROM saved_alerts WHERE user_id=$1`,[uid],[{total:0,active:0}]),
+    pool.query(`SELECT COUNT(*)::int total,COUNT(*) FILTER(WHERE enabled)::int active FROM saved_alerts WHERE user_id=$1`,[uid]).then(r=>r.rows),
     qMaybe('SELECT cnpj,legal_name,trade_name,state,municipality,contact_name FROM company_profiles WHERE user_id=$1 LIMIT 1',[uid])
   ]);
-  const geo=prefs.geo,recs=await recommendations(uid,health.map,geo),alerts=alertRows[0]||{},company=companyRows[0]||null;
+  const geo=prefs.geo,[recs,national]=await Promise.all([recommendations(uid,health.map,geo),nationalPreview(geo)]),alerts=alertRows[0]||{},company=companyRows[0]||null;
   const todayStart=Date.parse(today()+'T00:00:00-03:00'),matchedToday=recs.filter(x=>new Date(x.detected_at).getTime()>=todayStart).length,highReady=recs.filter(x=>x.fit.score>=85).length;
   const events=agenda(recs,tracked,health),upcoming7=events.filter(x=>['session','opportunity'].includes(x.type)&&new Date(x.date)-new Date()<=7*86400000&&new Date(x.date)>=new Date()).length;
   const pr=priorities({alertsCount:num(alerts.active),health,tracked,ai,company});
   const activeTracked=tracked.filter(x=>!['vencida','perdida','arquivada'].includes(x.status)).length;
-  return{generated_at:new Date().toISOString(),user:{id:user.id,email:user.email,display_name:company?.contact_name||company?.trade_name||company?.legal_name||String(user.email||'Usuário').split('@')[0],company},metrics:{new_matches_today:matchedToday,recommended_high:highReady,tracked_active:activeTracked,upcoming_7d:upcoming7,documents_risk:health.expired+health.due30,critical_actions:pr.filter(x=>['critical','high'].includes(x.tone)).length,active_alerts:num(alerts.active)},recommendations:recs,priorities:pr,agenda:events,habilitation:{score:health.score,baseline_count:health.baseline_count,present:health.present,missing:health.missing,expired:health.expired,due7:health.due7,due30:health.due30,next:health.next},tracking:tracked,funnel:funnel(tracked),recent_ai:ai,preferences:prefs,geo:{...geo,label:geoLabel(geo)}};
+  return{generated_at:new Date().toISOString(),user:{id:user.id,email:user.email,display_name:company?.contact_name||company?.trade_name||company?.legal_name||String(user.email||'Usuário').split('@')[0],company},metrics:{new_matches_today:matchedToday,recommended_high:highReady,tracked_active:activeTracked,upcoming_7d:upcoming7,documents_risk:health.expired+health.due30,critical_actions:pr.filter(x=>['critical','high'].includes(x.tone)).length,active_alerts:num(alerts.active)},recommendations:recs,national_preview:national,priorities:pr,agenda:events,habilitation:{score:health.score,baseline_count:health.baseline_count,present:health.present,missing:health.missing,expired:health.expired,due7:health.due7,due30:health.due30,next:health.next},tracking:tracked,funnel:funnel(tracked),recent_ai:ai,preferences:prefs,geo:{...geo,label:geoLabel(geo)}};
 }
 
 async function saveTracking(uid,b){
@@ -229,4 +242,4 @@ export async function handleUserDashboardRoute(req,res,url){
   }catch(e){console.error('user dashboard v2:',e?.stack||e);json(res,e?.status||500,{error:e?.status?e.message:'Erro interno no dashboard.'});return true}
 }
 
-export const __test={STATUSES,WIDGETS,BASELINE,UFS,REGIONS,readinessFor,docState,normalizeGeo,fitFor,sessionHash,allowDashboard};
+export const __test={STATUSES,WIDGETS,BASELINE,UFS,REGIONS,readinessFor,docState,normalizeGeo,fitFor,sessionHash,allowDashboard,agenda};

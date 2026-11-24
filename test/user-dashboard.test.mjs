@@ -76,3 +76,5 @@ test('dashboard rate limits are isolated per authenticated account and reset aft
  assert.equal(__test.allowDashboard('test-B',100000),true);
  assert.equal(__test.allowDashboard('test-A',160000),true);
 });
+
+test('agenda includes personal recommendations across 30 days and does not invent tracking',()=>{const now=Date.now();const rows=[{org_cnpj:'1',year:2026,sequence:1,closes_at:new Date(now+20*86400000).toISOString()},{org_cnpj:'1',year:2026,sequence:2,closes_at:new Date(now+31*86400000).toISOString()}];const events=__test.agenda(rows,[],{next:[]});assert.equal(events.length,1);assert.equal(events[0].type,'opportunity');assert.equal(events[0].pncp_key,'1-2026-1')});

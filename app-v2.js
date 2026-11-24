@@ -729,7 +729,7 @@ function startRadarDashboard() {
 
 async function loadAlertsPage(){await Promise.allSettled([loadAlerts(),loadNotifications()])}
 async function loadAlerts(){const root=$('#alertsList');try{const d=await api('/api/alerts');const items=d.items||[];if(root)root.innerHTML=items.map(a=>`<div class="stack-item"><div class="stack-copy"><b>${esc(a.name)}</b><span>${esc([a.keyword,a.uf,a.municipality,a.modality_code&&'Modalidade '+a.modality_code].filter(Boolean).join(' • ')||'Alerta amplo')}</span></div><div class="stack-actions"><button class="btn ghost compact" data-toggle-alert="${a.id}" data-enabled="${a.enabled}">${a.enabled?'Pausar':'Ativar'}</button><button class="btn danger compact" data-delete-alert="${a.id}">Excluir</button></div></div>`).join('')||'<div class="empty-state">Você ainda não criou alertas.</div>'}catch(e){if(root)root.innerHTML=`<div class="empty-state">${esc(e.message)}</div>`}}
-async function createAlert(){try{await api('/api/alerts',{method:'POST',body:JSON.stringify({name:$('#alertName')?.value.trim(),keyword:$('#alertKeyword')?.value.trim(),uf:$('#alertUf')?.value,modality_code:$('#alertModality')?.value||null,enabled:true})});toast('Alerta criado.');if($('#alertName'))$('#alertName').value='';if($('#alertKeyword'))$('#alertKeyword').value='';await loadAlerts()}catch(e){toast(e.message,true)}}
+async function createAlert(){try{await api('/api/alerts',{method:'POST',body:JSON.stringify({name:$('#alertName')?.value.trim(),keyword:$('#alertKeyword')?.value.trim(),uf:$('#alertUf')?.value,modality_code:$('#alertModality')?.value||null,enabled:true})});toast('Alerta criado.');document.dispatchEvent(new CustomEvent('radar:overview-refresh-request'));if($('#alertName'))$('#alertName').value='';if($('#alertKeyword'))$('#alertKeyword').value='';await loadAlerts()}catch(e){toast(e.message,true)}}
 async function loadNotifications(){const root=$('#notificationProfile');try{const d=await api('/api/notifications/profile');const p=d.profile||{},providers=d.providers||{};const card=(kind,label,value,verified,configured)=>`<div class="channel-card"><div class="channel-head"><div><h3>${label}</h3><p>${verified?'Verificado':'Não verificado'}${value?' • '+esc(value):''}</p></div><span class="badge">${configured?'Disponível':'Pendente no servidor'}</span></div><div class="channel-grid"><input id="notif-${kind}" value="${esc(value||'')}" placeholder="${kind==='email'?'email@empresa.com.br':'(11) 99999-9999'}"><button class="btn ghost compact" data-request-verify="${kind}" ${configured?'':'disabled'}>Verificar</button></div>${configured?'':`<div class="provider-note">O provedor externo deste canal ainda não está configurado.</div>`}<div class="channel-grid section-gap"><input id="code-${kind}" placeholder="Código"><button class="btn ghost compact" data-confirm-verify="${kind}" ${configured?'':'disabled'}>Confirmar</button></div>${kind==='email'&&verified&&configured?'<button class="btn ghost compact section-gap" data-test-notification="email">Enviar e-mail de teste</button>':''}</div>`;if(root)root.innerHTML=`<div class="channel-card"><div class="channel-head"><div><h3>Radar no site</h3><p>Notificações internas disponíveis.</p></div><span class="badge">Ativo</span></div></div>${card('email','E-mail',p.email,p.email_verified,providers.email?.configured)}${card('whatsapp','WhatsApp',p.whatsapp_e164,p.whatsapp_verified,providers.whatsapp?.verification_configured)}`}catch(e){if(root)root.innerHTML=`<div class="empty-state">${esc(e.message)}</div>`}}
 async function requestVerify(kind){try{const d=await api('/api/notifications/verify/request',{method:'POST',body:JSON.stringify({channel:kind,destination:$('#notif-'+kind)?.value.trim()})});toast(d.message||'Código enviado.')}catch(e){toast(e.message,true)}}
 async function confirmVerify(kind){try{await api('/api/notifications/verify/confirm',{method:'POST',body:JSON.stringify({channel:kind,code:$('#code-'+kind)?.value.trim()})});toast('Canal confirmado.');await loadNotifications()}catch(e){toast(e.message,true)}}
@@ -740,7 +740,7 @@ function aiMsg(role,text){const root=$('#aiMessages');root?.querySelector('.empt
 async function sendAi(){const text=$('#aiPrompt')?.value.trim();if(!text)return;if($('#aiPrompt'))$('#aiPrompt').value='';aiMsg('user',text);if($('#aiSend'))$('#aiSend').disabled=true;try{const d=await api('/api/ai-rlb/chat',{method:'POST',body:JSON.stringify({message:text,use_web:true}),timeoutMs:60000});aiMsg('assistant',String(d.answer||d.response||d.content||d.message||d.text||'Resposta recebida.'))}catch(e){aiMsg('assistant','Erro: '+e.message)}finally{if($('#aiSend'))$('#aiSend').disabled=false}}
 async function loadAdmin(){if(state.user?.role!=='admin')return;try{const [s,u,a]=await Promise.all([api('/api/admin/stats'),api('/api/admin/users'),api('/api/admin/audit')]);const st=s.stats||{};if($('#adminUsers'))$('#adminUsers').textContent=st.users?.total??'—';if($('#adminActive'))$('#adminActive').textContent=st.users?.active??'—';if($('#adminAlerts'))$('#adminAlerts').textContent=st.alerts?.enabled??'—';if($('#adminDocs'))$('#adminDocs').textContent=st.documents?.count??'—';if($('#adminUsersList'))$('#adminUsersList').innerHTML=(u.items||[]).map(x=>`<div class="stack-item admin-row"><div class="stack-copy"><b>${esc(x.email)}</b><span>${esc(x.role)} • ${x.active?'ativo':'inativo'}</span></div><select data-role-user="${x.id}" ${x.id==state.user.id?'disabled':''}><option value="user" ${x.role==='user'?'selected':''}>Usuário</option><option value="admin" ${x.role==='admin'?'selected':''}>Admin</option></select><button class="btn ghost compact" data-active-user="${x.id}" data-active="${x.active}" ${x.id==state.user.id?'disabled':''}>${x.active?'Desativar':'Ativar'}</button></div>`).join('');if($('#adminAuditList'))$('#adminAuditList').innerHTML=(a.items||[]).slice(0,60).map(x=>`<div class="stack-item"><div class="stack-copy"><b>${esc(x.action)}</b><span>${esc(x.email||'sistema')} • ${esc(when(x.created_at))}</span></div></div>`).join('')||'<div class="empty-state">Sem eventos recentes.</div>'}catch(e){toast(e.message,true)}}
 async function patchUser(id,p){try{await api('/api/admin/users/'+id,{method:'PATCH',body:JSON.stringify(p)});toast('Usuário atualizado.');await loadAdmin()}catch(e){toast(e.message,true)}}
-function bind(){fillSelects();initTheme();bindRadarMenu();$('#tabLogin')?.addEventListener('click',()=>authMode('login'));$('#tabRegister')?.addEventListener('click',()=>authMode('register'));$('#authForm')?.addEventListener('submit',submitAuth);$('#logoutBtn')?.addEventListener('click',logout);document.addEventListener('click',e=>{const b=e.target.closest('[data-view]');if(b&&!b.classList.contains('hidden')&&b.dataset.view)show(b.dataset.view)});bindRadarDashboard();$('#refreshLive')?.addEventListener('click',refreshLive);$('#liveScope')?.addEventListener('change',renderLive);$('#createAlertBtn')?.addEventListener('click',createAlert);$('#alertsList')?.addEventListener('click',async e=>{const d=e.target.closest('[data-delete-alert]'),t=e.target.closest('[data-toggle-alert]');if(d&&confirm('Excluir este alerta?')){await api('/api/alerts/'+d.dataset.deleteAlert,{method:'DELETE',body:'{}'});loadAlerts()}if(t){await api('/api/alerts/'+t.dataset.toggleAlert,{method:'PATCH',body:JSON.stringify({enabled:t.dataset.enabled!=='true'})});loadAlerts()}});$('#notificationProfile')?.addEventListener('click',e=>{const r=e.target.closest('[data-request-verify]'),c=e.target.closest('[data-confirm-verify]');if(r)requestVerify(r.dataset.requestVerify);if(c)confirmVerify(c.dataset.confirmVerify);const t=e.target.closest('[data-test-notification]');if(t){t.disabled=true;api('/api/notifications/test',{method:'POST',body:JSON.stringify({channel:t.dataset.testNotification})}).then(()=>toast('E-mail de teste enviado. Confira sua caixa de entrada.')).catch(err=>toast(err.message,true)).finally(()=>t.disabled=false)}});$('#docInput')?.addEventListener('change',e=>uploadDoc(e.target.files?.[0]));$('#documentsList')?.addEventListener('click',async e=>{const b=e.target.closest('[data-delete-doc]');if(b&&confirm('Excluir este documento?')){await api('/api/documents/'+b.dataset.deleteDoc,{method:'DELETE',body:'{}'});loadDocuments()}});$('#aiSend')?.addEventListener('click',sendAi);$('#aiPrompt')?.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendAi()}});$('#adminUsersList')?.addEventListener('change',e=>{const s=e.target.closest('[data-role-user]');if(s)patchUser(s.dataset.roleUser,{role:s.value})});$('#adminUsersList')?.addEventListener('click',e=>{const b=e.target.closest('[data-active-user]');if(b)patchUser(b.dataset.activeUser,{active:b.dataset.active!=='true'})});window.addEventListener('focus',()=>state.user&&state.view==='radar'&&refreshLive());document.addEventListener('visibilitychange',()=>!document.hidden&&state.user&&state.view==='radar'&&refreshLive())}
+function bind(){fillSelects();initTheme();bindRadarMenu();$('#tabLogin')?.addEventListener('click',()=>authMode('login'));$('#tabRegister')?.addEventListener('click',()=>authMode('register'));$('#authForm')?.addEventListener('submit',submitAuth);$('#logoutBtn')?.addEventListener('click',logout);document.addEventListener('click',e=>{const b=e.target.closest('[data-view]');if(b&&!b.classList.contains('hidden')&&b.dataset.view)show(b.dataset.view)});bindRadarDashboard();$('#refreshLive')?.addEventListener('click',refreshLive);$('#liveScope')?.addEventListener('change',renderLive);$('#createAlertBtn')?.addEventListener('click',createAlert);$('#alertsList')?.addEventListener('click',async e=>{const d=e.target.closest('[data-delete-alert]'),t=e.target.closest('[data-toggle-alert]');if(d&&confirm('Excluir este alerta?')){await api('/api/alerts/'+d.dataset.deleteAlert,{method:'DELETE',body:'{}'});loadAlerts();document.dispatchEvent(new CustomEvent('radar:overview-refresh-request'))}if(t){await api('/api/alerts/'+t.dataset.toggleAlert,{method:'PATCH',body:JSON.stringify({enabled:t.dataset.enabled!=='true'})});loadAlerts();document.dispatchEvent(new CustomEvent('radar:overview-refresh-request'))}});$('#notificationProfile')?.addEventListener('click',e=>{const r=e.target.closest('[data-request-verify]'),c=e.target.closest('[data-confirm-verify]');if(r)requestVerify(r.dataset.requestVerify);if(c)confirmVerify(c.dataset.confirmVerify);const t=e.target.closest('[data-test-notification]');if(t){t.disabled=true;api('/api/notifications/test',{method:'POST',body:JSON.stringify({channel:t.dataset.testNotification})}).then(()=>toast('E-mail de teste enviado. Confira sua caixa de entrada.')).catch(err=>toast(err.message,true)).finally(()=>t.disabled=false)}});$('#docInput')?.addEventListener('change',e=>uploadDoc(e.target.files?.[0]));$('#documentsList')?.addEventListener('click',async e=>{const b=e.target.closest('[data-delete-doc]');if(b&&confirm('Excluir este documento?')){await api('/api/documents/'+b.dataset.deleteDoc,{method:'DELETE',body:'{}'});loadDocuments()}});$('#aiSend')?.addEventListener('click',sendAi);$('#aiPrompt')?.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendAi()}});$('#adminUsersList')?.addEventListener('change',e=>{const s=e.target.closest('[data-role-user]');if(s)patchUser(s.dataset.roleUser,{role:s.value})});$('#adminUsersList')?.addEventListener('click',e=>{const b=e.target.closest('[data-active-user]');if(b)patchUser(b.dataset.activeUser,{active:b.dataset.active!=='true'})});window.addEventListener('focus',()=>state.user&&state.view==='radar'&&refreshLive());document.addEventListener('visibilitychange',()=>!document.hidden&&state.user&&state.view==='radar'&&refreshLive())}
 async function boot(){try{bind();const m=$('#runtimeMessage');if(m){m.textContent='Interface carregada.';m.classList.add('ok')}await checkSession()}catch(e){console.error('RLB boot fatal:',e);const m=$('#runtimeMessage');if(m){m.textContent='Falha ao iniciar a interface. Atualize a página.';m.classList.remove('ok')}const a=$('#authMessage');if(a)a.textContent='Falha ao iniciar a interface.'}}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 })();
@@ -848,7 +848,7 @@ const safeUrl=raw=>{try{const u=new URL(raw);return ['http:','https:'].includes(
 const formatted=x=>{const d=new Date(x);return Number.isNaN(d.getTime())?'Data não informada':d.toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'})};
 let rows=[],filter='all',open=false,loading=false,lastProfile=0,epoch=0,soundEnabled=false;
 const urgentNotice=x=>{const t=Date.parse(x.payload?.closes_at||'');return Number.isFinite(t)&&t>=Date.now()&&t-Date.now()<=86400000};
-let recFilter='all',recCache=[],recInitialized=false,renderedRecSignature='',recPulse=new Map();
+let recFilter='all',recCache=[],nationalCache=[],activeAlerts=0,recInitialized=false,renderedRecSignature='',recPulse=new Map();
 let rotateRecommendations=false,cycleSelection=null,rotationCycle=0;
 const rotationHistory=new Map();
 const recKey=x=>[x?.org_cnpj,x?.year,x?.sequence].map(String).join('-');
@@ -910,7 +910,7 @@ function install(){
   });
   document.addEventListener('radar:home-rec-filter',event=>setRecommendationFilter(event.detail?.filter));
   const shell=$('#appShell');
-  new MutationObserver(()=>{if(!logged()){epoch++;setOpen(false);rows=[];ui.list.replaceChildren();ui.subtitle.textContent='Histórico dos alertas da sua conta';ui.message.textContent='';ui.count.hidden=false;filter='all';soundEnabled=false;ui.sound.textContent='Som desativado';ui.sound.setAttribute('aria-pressed','false');lastProfile=0;recCache=[];rotateRecommendations=false;cycleSelection=null;rotationHistory.clear();rotationCycle=0;recFilter='all';recInitialized=false;renderedRecSignature='';recPulse.clear();recommendationStatus('');ui.count.textContent='—';$('#revRecommendations')?.remove()}else profile()}).observe(shell,{attributes:true,attributeFilter:['class']});
+  new MutationObserver(()=>{if(!logged()){epoch++;setOpen(false);rows=[];ui.list.replaceChildren();ui.subtitle.textContent='Histórico dos alertas da sua conta';ui.message.textContent='';ui.count.hidden=false;filter='all';soundEnabled=false;ui.sound.textContent='Som desativado';ui.sound.setAttribute('aria-pressed','false');lastProfile=0;recCache=[];nationalCache=[];activeAlerts=0;rotateRecommendations=false;cycleSelection=null;rotationHistory.clear();rotationCycle=0;recFilter='all';recInitialized=false;renderedRecSignature='';recPulse.clear();recommendationStatus('');ui.count.textContent='—';$('#revRecommendations')?.remove()}else profile()}).observe(shell,{attributes:true,attributeFilter:['class']});
   document.addEventListener('visibilitychange',()=>{if(!document.hidden&&logged()&&Date.now()-lastProfile>90000)profile()});
   if(logged())profile();
 }
@@ -998,6 +998,8 @@ function recommendations(d){
   }
   recInitialized=true;
   recCache=incoming;
+  nationalCache=Array.isArray(d.national_preview?.opportunities)?d.national_preview.opportunities:[];
+  activeAlerts=Number(d.metrics?.active_alerts||0);
   if(added||changed)document.dispatchEvent(new CustomEvent('radar:pulse-updates',{
     detail:{source:'recommendations',added,changed}
   }));
@@ -1065,14 +1067,34 @@ function renderRecommendationItems(){
     return Number.isFinite(remaining)&&remaining>=0?
       remaining<=86400000?'24h':remaining<=48*3600000?'48h':'normal':'past';
   };
-  const signature=JSON.stringify([recFilter,recs.map(x=>[recKey(x),recVersion(x),urgencyTier(x)])]);
+  const fallback=!recCache.length&&recFilter==='all'?nationalCache.filter(x=>new Date(x.closes_at).getTime()>=now).slice(0,3):[];
+  const signature=JSON.stringify([recFilter,activeAlerts,recs.map(x=>[recKey(x),recVersion(x),urgencyTier(x)]),fallback.map(x=>[recKey(x),recVersion(x)])]);
   if(renderedRecSignature===signature&&target.querySelector('.rev-recs-list'))return;
   renderedRecSignature=signature;
   target.replaceChildren();
   if(!recs.length){
+    recommendationStatus('');
     target.append(el('p','rev-recs-empty',recFilter==='all'?
-      'Configure alertas com palavras-chave para receber recomendações.':
-      'Nenhuma recomendação atende a este filtro. Selecione “Todas” para ver as demais.'));
+      (activeAlerts?'Nenhuma oportunidade corresponde aos seus alertas ativos nesta consulta.':'Configure alertas com palavras-chave para receber recomendações personalizadas.'):
+      'Nenhuma recomendação pessoal atende a este filtro. Selecione “Todas” para ver as demais.'));
+    if(recFilter==='all'){
+      const setup=el('button','rev-action','Configurar alertas');setup.type='button';setup.addEventListener('click',()=>$('#mainNav [data-view="alerts"]')?.click());target.append(setup);
+    }
+    if(fallback.length){
+      target.append(el('p','rlb-home-legal','Oportunidades do Radar • seleção geral, sem cálculo de aderência'));
+      const list=el('div','rev-recs-list');target.append(list);
+      for(const x of fallback){
+        const card=el('article','rev-rec'),info=el('div','rev-rec-main'),side=el('div','rev-rec-side'),icon=el('span','pulse-rec-icon');
+        card.dataset.cnpj=String(x.org_cnpj||'');card.dataset.year=String(x.year||'');card.dataset.seq=String(x.sequence||'');card.dataset.source='national';
+        icon.dataset.icon='document';icon.setAttribute('aria-hidden','true');
+        info.append(el('strong','',x.object_text||'Oportunidade sem descrição'),el('small','',[x.modality_name,x.municipality,x.uf].filter(Boolean).join(' • ')));
+        info.append(el('small','rev-rec-why','Prazo: '+formatted(x.closes_at)));
+        side.append(el('small','','Seleção geral'));
+        const url=safeUrl(x.pncp_url);if(url){const link=el('a','','Abrir PNCP');link.href=url;link.target='_blank';link.rel='noopener noreferrer';side.append(link)}
+        card.append(icon,info,side);list.append(card);
+      }
+      document.dispatchEvent(new CustomEvent('radar:recommendations-rendered'));
+    }
     return;
   }
   const list=el('div','rev-recs-list');target.append(list);
@@ -1328,7 +1350,9 @@ function calendar(){
  const g=el('div','rev-cal-grid');
  for(const day of ['D','S','T','Q','Q','S','S'])g.append(el('b','rev-cal-week',day));
  const offset=new Date(year,month,1).getDay(),days=new Date(year,month+1,0).getDate();
- const events=Array.isArray(overview.agenda)?overview.agenda:[];
+ const personalEvents=Array.isArray(overview.agenda)?overview.agenda:[];
+ const events=personalEvents.length?personalEvents:(overview.national_preview?.deadlines||[]);
+ if(!personalEvents.length&&events.length)box.append(el('p','rlb-home-legal','Prazos gerais do Radar. Nenhuma oportunidade está sendo acompanhada automaticamente.'));
  const counts=new Map();for(const e of events){const k=dayKey(e.date,e.type);if(k)counts.set(k,(counts.get(k)||0)+1)}
  for(let i=0;i<offset;i++)g.append(el('span','rev-cal-blank',''));
  for(let i=1;i<=days;i++){
@@ -1344,7 +1368,7 @@ function calendar(){
  if(!selectedEvents.length)list.append(el('p','rev-op-empty','Nenhum prazo cadastrado para este período.'));
  for(const e of selectedEvents.slice(0,20)){
   const item=el('div','rev-cal-event');
-  item.append(el('b','',e.type==='document'?'Vencimento documental':'Prazo informado da oportunidade'),el('span','',e.title||'Evento'),el('small','',e.type==='document'?String(e.date).slice(0,10):readable(e.date)));
+  item.append(el('b','',e.type==='document'?'Vencimento documental':e.type==='national'?'Prazo geral do Radar':'Prazo informado da oportunidade'),el('span','',e.title||'Evento'),el('small','',e.type==='document'?String(e.date).slice(0,10):readable(e.date)));
   list.append(item);
  }
  box.append(list);return box;
@@ -1552,15 +1576,18 @@ function renderDeadlines(data){
   const start=new Date(),today=isoFmt.format(start);
   const endDate=new Date(start.getTime()+(deadlinePeriod+1)*86400000);
   const lastDay=isoFmt.format(endDate);
-  const events=allEvents.map(e=>({...e,parsed:dateOf(e.date,e.type)}))
+  let events=allEvents.map(e=>({...e,parsed:dateOf(e.date,e.type)}))
     .filter(e=>e.parsed&&(e.type==='document'?
       (isoFmt.format(e.parsed)>=today&&isoFmt.format(e.parsed)<=lastDay):
       (e.parsed>=start&&e.parsed.getTime()-start.getTime()<=deadlinePeriod*86400000)))
     .sort((a,b)=>a.parsed-b.parsed).slice(0,4);
-  const signature=JSON.stringify([deadlinePeriod,today,events.map(x=>[agendaKey(x),agendaVersion(x)])]);
+  const nationalOnly=!events.length;
+  if(nationalOnly)events=(data?.national_preview?.deadlines||[]).map(e=>({...e,parsed:dateOf(e.date,e.type)})).filter(e=>e.parsed&&e.parsed>=start&&e.parsed.getTime()-start.getTime()<=deadlinePeriod*86400000).slice(0,4);
+  const signature=JSON.stringify([deadlinePeriod,today,nationalOnly,events.map(x=>[agendaKey(x),agendaVersion(x)])]);
   if(signature===renderedAgendaSignature&&list.querySelector('.rlb-home-deadline'))return;
   renderedAgendaSignature=signature;list.replaceChildren();
-  if(!events.length){list.append(cardEmpty('Nenhum prazo registrado nos próximos '+deadlinePeriod+' dias.'));return}
+  if(!events.length){list.append(cardEmpty('Nenhum prazo disponível nos próximos '+deadlinePeriod+' dias nesta consulta.'));return}
+  if(nationalOnly)list.append(element('p','rlb-home-legal','Prazos do Radar • oportunidades gerais, não acompanhadas pela sua conta.'));
   for(const event of events){
     const row=element('article','rlb-home-deadline');row.setAttribute('role','listitem');
     const pulse=agendaPulse.get(agendaKey(event));
@@ -1578,6 +1605,7 @@ function renderDeadlines(data){
     row.dataset.urgency=diff<=1?'critical':diff<=3?'soon':'normal';
     right.textContent=diff===0?'Hoje':diff===1?'Amanhã':diff<=7?'Em '+diff+' dias':dateTimeFmt.format(event.parsed);
     if(diff<=1)right.dataset.urgent='true';
+    if(event.type==='national'){const url=safeUrl(event.pncp_url);if(url){const link=element('a','rlb-home-action-text','Abrir PNCP ↗');link.href=url;link.target='_blank';link.rel='noopener noreferrer';body.append(link)}}
     row.append(stamp,body,right);list.append(row);
   }
   list.append(element('p','rlb-home-legal','Prazos provenientes dos dados monitorados. Confirme alterações na fonte oficial.'));
@@ -1595,8 +1623,8 @@ function renderPanorama(data){
   const sum=groups.reduce((n,g)=>n+g.count,0);
   if(!sum){
     const info=element('div','rlb-home-no-data');
-    info.append(cardEmpty('Você ainda não acompanha licitações. Salve uma oportunidade para começar a visualizar seu panorama.'));
-    const action=element('button','rlb-home-action-text','Buscar oportunidades');action.type='button';action.dataset.homeAction='radar';info.append(action);
+    info.append(cardEmpty('Você ainda não acompanha licitações. Use Acompanhar em uma oportunidade para iniciar sua operação.'));
+    const action=element('button','rlb-home-action-text','Buscar oportunidades');action.type='button';action.dataset.homeAction='radar';info.append(action);const operation=element('button','rlb-home-action-text','Minha Operação');operation.type='button';operation.dataset.homeAction='operation';info.append(operation);
     root.append(info);return;
   }
   const chart=element('div','pulse-stage-chart');

@@ -40,7 +40,7 @@ test('frontend script cache keys identify the deployed revisions',()=>{
 test('dashboard loads independent account summaries concurrently',()=>{
   const backend=read('user-dashboard-v1.mjs');
   assert.ok(backend.includes('const [prefs,health,tracked,ai,alertRows,companyRows]=await Promise.all(['));
-  assert.ok(backend.includes('recs=await recommendations(uid,health.map,geo)'));
+  assert.ok(backend.includes('[recs,national]=await Promise.all([recommendations(uid,health.map,geo),nationalPreview(geo)])'));
 });
 
 test('secondary account and habilitation screens bound API wait time',()=>{
