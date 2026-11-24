@@ -68,21 +68,21 @@ function applyWindowPosition(pos,save=false){
 function sizeWindow(){
   if(!win)return;
   const {w,h}=viewport();
-  let ww=348;
-  let wh=560;
+  let ww=420;
+  let wh=620;
 
   if(w<=620){
-    ww=Math.max(286,w-16);
-    wh=Math.min(h-16,500);
+    ww=w-16;
+    wh=Math.min(h-16,620);
   }else if(w<=1100||h<=760){
-    ww=318;
-    wh=Math.min(h-20,490);
+    ww=380;
+    wh=Math.min(h-20,560);
   }else if(w<=1440||h<=900){
-    ww=332;
-    wh=Math.min(h-24,520);
+    ww=400;
+    wh=Math.min(h-24,600);
   }else if(w>=1800&&h>=1000){
-    ww=356;
-    wh=570;
+    ww=440;
+    wh=640;
   }
 
   ww=Math.min(ww,w-16);

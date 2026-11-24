@@ -63,3 +63,16 @@ test('recommendation and tracking backend remains deterministic and user-scoped'
   assert.match(backend,/geo:normalizeGeo\(config\.geo\)/);
   assert.doesNotMatch(backend,/Math\.random\(/);
 });
+
+test('dashboard session authentication matches core SHA256 and rejects malformed cookies',()=>{
+ const token='a'.repeat(43),hash=__test.sessionHash('other=1; radar_session='+token);
+ assert.match(hash,/^[a-f0-9]{64}$/);assert.equal(__test.sessionHash('radar_session=%ZZ'),null);
+ assert.equal(__test.sessionHash('radar_session=short'),null);assert.equal(__test.sessionHash('other=1'),null);
+ const s=read('user-dashboard-v1.mjs');assert.match(s,/s\.token_hash=\$1 AND s\.expires_at>NOW\(\) AND u\.active=TRUE/);assert.doesNotMatch(s,/127\.0\.0\.1.*api\/me/);
+});
+test('dashboard rate limits are isolated per authenticated account and reset after one minute',()=>{
+ for(let i=0;i<120;i++)assert.equal(__test.allowDashboard('test-A',100000),true);
+ assert.equal(__test.allowDashboard('test-A',100000),false);
+ assert.equal(__test.allowDashboard('test-B',100000),true);
+ assert.equal(__test.allowDashboard('test-A',160000),true);
+});

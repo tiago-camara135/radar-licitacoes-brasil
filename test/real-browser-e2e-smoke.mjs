@@ -534,6 +534,39 @@ try{
    }
  }
  note('Executive home and Radar search responsive 320/390/768/1024/1440px, both themes OK');
+ // Cover the remaining account views and short landscape viewport, without contacting external providers.
+ for(const [width,height] of [[320,700],[768,600],[1280,550]]){
+   await page.setViewportSize({width,height});
+   for(const theme of ['light','dark']){
+     await page.evaluate(next=>{document.documentElement.dataset.theme=next},theme);
+     for(const view of ['saved','saved-searches','alerts','documents','operation','habilitation']){
+       if(!await page.locator('#mainNav [data-view="'+view+'"]').count())continue;
+       await gotoSection(page,view);
+       const rect=await page.locator('#view-'+view+'.active').boundingBox();
+       assert.ok(rect&&rect.x>=-5&&rect.x+rect.width<=width+6,'Module outside viewport '+view+' '+theme+' '+width+' '+JSON.stringify(rect));
+     }
+     await gotoSection(page,'home');
+     await page.locator('#radarAccount summary').click();
+     const profileBox=await page.locator('#radarAccount[open]>div').boundingBox();
+     assert.ok(profileBox&&profileBox.x>=-4&&profileBox.x+profileBox.width<=width+4&&profileBox.y+profileBox.height<=height+5,'Profile menu outside viewport '+width+' '+JSON.stringify(profileBox));
+     await page.keyboard.press('Escape');
+     await page.locator('.rev-n-bell').click();
+     const noticeBox=await page.locator('#revNotifPanel').boundingBox();
+     assert.ok(noticeBox&&noticeBox.x>=-4&&noticeBox.x+noticeBox.width<=width+4&&noticeBox.y+noticeBox.height<=height+5,'Notifications outside viewport '+width+' '+JSON.stringify(noticeBox));
+     await page.keyboard.press('Escape');
+   }
+ }
+ await page.setViewportSize({width:740,height:390});
+ await gotoSection(page,'home');
+ await page.locator('.ai-fab').click();
+ await page.locator('#ai-assistant.ai-widget-open .ai-window').waitFor({state:'visible',timeout});
+ const landscape=await page.evaluate(()=>{const win=document.querySelector('#ai-assistant .ai-window'),prompt=document.querySelector('#aiPrompt'),r=win.getBoundingClientRect(),p=prompt.getBoundingClientRect();return {x:r.x,y:r.y,right:r.right,bottom:r.bottom,promptBottom:p.bottom,font:parseFloat(getComputedStyle(prompt).fontSize),width:innerWidth,height:innerHeight}});
+ assert.ok(landscape.x>=-1&&landscape.y>=-1&&landscape.right<=landscape.width+1&&landscape.bottom<=landscape.height+1&&landscape.promptBottom<=landscape.height+1&&landscape.font>=14,'Landscape AI clipping or tiny input '+JSON.stringify(landscape));
+ await page.locator('#ai-assistant .ai-close').click();
+ await page.setViewportSize({width:1366,height:768});
+ await gotoSection(page,'home');
+ note('Pulse layout audit: account views, bounded dropdowns and landscape IA-RLB typography OK');
+
 
  // A paleta deve alterar cores computadas dos quatro KPIs quando o tema muda.
  const themePalettes=[];
@@ -566,18 +599,20 @@ try{
  // Avança apenas o relógio da aba isolada de QA: comprova o disparo real
  // do agendamento de cinco minutos sem esperar cinco minutos no CI.
  await gotoSection(page,'home');
- const scheduledOverview=page.waitForRequest(r=>r.url().includes('/api/dashboard/overview'),{timeout:11000});
- const scheduledFeed=page.waitForRequest(r=>r.url().includes('/api/live-feed?'),{timeout:11000});
+ const scheduledOverview=page.waitForResponse(r=>r.url().includes('/api/dashboard/overview'),{timeout:16000});
+ const scheduledFeed=page.waitForResponse(r=>r.url().includes('/api/live-feed?'),{timeout:16000});
  await page.evaluate(()=>{
    window.__qaOriginalDateNow=Date.now;
    Date.now=()=>window.__qaOriginalDateNow()+6*60*1000;
  });
  try{
-   await Promise.all([scheduledOverview,scheduledFeed]);
+   const [overviewResponse,feedResponse]=await Promise.all([scheduledOverview,scheduledFeed]);
+   assert.equal(overviewResponse.status(),200,'Scheduled overview HTTP '+overviewResponse.status()+': '+(await overviewResponse.text()).slice(0,160));
+   assert.equal(feedResponse.status(),200,'Scheduled feed HTTP '+feedResponse.status());
  }finally{
    await page.evaluate(()=>{Date.now=window.__qaOriginalDateNow;delete window.__qaOriginalDateNow});
  }
- await until(page,()=>document.querySelector('#rlbHomeLiveBar')?.dataset.state==='ready',15000);
+ await until(page,()=>document.querySelector('#rlbHomeLiveBar')?.dataset.state==='ready',15000).catch(async error=>{const details=await page.evaluate(()=>({state:document.querySelector('#rlbHomeLiveBar')?.dataset.state,label:document.querySelector('#rlbHomeLiveLabel')?.textContent,next:document.querySelector('#rlbHomeNextUpdate')?.textContent}));throw Error('Scheduled refresh did not settle: '+JSON.stringify(details),{cause:error})});
  assert.equal(await page.locator('#rlbHomeRefresh').isEnabled(),true);
  note('Five-minute scheduled refresh actually fires both real backend requests in Chrome OK');
 
