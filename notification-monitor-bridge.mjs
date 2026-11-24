@@ -31,9 +31,9 @@ async function scan(){
   running=true;
   try{
     await initState();
-    const s=await pool.query('SELECT last_detected_at,last_pncp_id FROM notification_monitor_state WHERE id=1');
+    const s=await pool.query('SELECT last_detected_at::text AS last_detected_at,last_pncp_id FROM notification_monitor_state WHERE id=1');
     const last=s.rows[0]||{};
-    const r=await pool.query(`SELECT pncp_id,raw,detected_at FROM monitored_procurements
+    const r=await pool.query(`SELECT pncp_id,raw,detected_at::text AS detected_at FROM monitored_procurements
       WHERE detected_at>$1 OR (detected_at=$1 AND pncp_id>$2)
       ORDER BY detected_at ASC,pncp_id ASC LIMIT 100`,[last.last_detected_at||new Date(0),last.last_pncp_id||'']);
     if(r.rows.length){

@@ -1,3 +1,4 @@
+import { pncpDeadline } from './pncp-operational-date-v1.mjs';
 import crypto from 'node:crypto';
 import { Pool } from 'pg';
 
@@ -42,7 +43,7 @@ const ufOf=x=>clean(x?.unidadeOrgao?.ufSigla||x?.ufSigla||'',2).toUpperCase();
 const orgOf=x=>clean(x?.orgaoEntidade?.razaoSocial||'',500);
 const cnpjOf=x=>digits(x?.orgaoEntidade?.cnpj).slice(0,14);
 const objectOf=x=>clean(x?.objetoCompra||'',4000);
-const closeOf=x=>x?.dataEncerramentoProposta||x?.dataFimRecebimentoProposta||null;
+const closeOf=x=>pncpDeadline(x?.dataEncerramentoProposta||x?.dataFimRecebimentoProposta||null);
 const idOf=x=>clean(x?.numeroControlePNCP||[cnpjOf(x),x?.anoCompra||'',x?.sequencialCompra||'',x?._modalidadeConsultada||''].join('-'),180);
 function pncpUrl(x){
   const supplied=safeUrl(x?._pncpUrl);if(supplied)return supplied;
@@ -207,10 +208,11 @@ function alertMatches(a,x){
   const code=Number(x?._modalidadeConsultada||x?.modalidadeId||x?.codigoModalidadeContratacao);if(a.modality_code&&Number(a.modality_code)!==code)return false;
   if(a.org_name&&!norm([orgOf(x),x?.unidadeOrgao?.nomeUnidade].filter(Boolean).join(' ')).includes(norm(a.org_name)))return false;
   if(a.org_cnpj&&digits(a.org_cnpj)!==cnpjOf(x))return false;
-  const value=Number(x?.valorTotalEstimado);if(a.min_value!==null&&a.min_value!==undefined&&Number.isFinite(value)&&value<Number(a.min_value))return false;if(a.max_value!==null&&a.max_value!==undefined&&Number.isFinite(value)&&value>Number(a.max_value))return false;
+  const value=knownEstimate(x);if(a.min_value!=null&&(value==null||value<Number(a.min_value)))return false;if(a.max_value!=null&&(value==null||value>Number(a.max_value)))return false;
   return true;
 }
-function payloadFor(a,x){return {alert_name:a.name,pncp_id:idOf(x),modality:modalityOf(x),object:objectOf(x),org:orgOf(x)||'Órgão não informado',municipality:municipalityOf(x),uf:ufOf(x),estimated_value:Number.isFinite(Number(x?.valorTotalEstimado))?Number(x.valorTotalEstimado):null,published_at:x?.dataPublicacaoPncp||null,closes_at:closeOf(x),pncp_url:pncpUrl(x),origin_url:safeUrl(x?._originUrl||x?.linkSistemaOrigem||x?.linkProcessoEletronico||''),detected_at:x?._detectedAt||new Date().toISOString()}}
+function knownEstimate(x){const v=x?.valorTotalEstimado;return v==null||v===''?null:Number.isFinite(Number(v))?Number(v):null}
+function payloadFor(a,x){return {alert_name:a.name,pncp_id:idOf(x),modality:modalityOf(x),object:objectOf(x),org:orgOf(x)||'Órgão não informado',municipality:municipalityOf(x),uf:ufOf(x),estimated_value:knownEstimate(x),published_at:x?.dataPublicacaoPncp||null,closes_at:closeOf(x),pncp_url:pncpUrl(x),origin_url:safeUrl(x?._originUrl||x?.linkSistemaOrigem||x?.linkProcessoEletronico||''),detected_at:x?._detectedAt||new Date().toISOString()}}
 async function insertDelivery({userId,alertId,pncpId,channel,status,payload}){
   await pool.query(`INSERT INTO notification_deliveries(user_id,alert_id,pncp_id,channel,status,payload,sent_at)
     VALUES($1,$2,$3,$4,$5,$6,CASE WHEN $5='sent' THEN NOW() ELSE NULL END)
@@ -228,6 +230,7 @@ export async function processProcurementNotifications(items=[]){
     WHERE a.enabled=TRUE AND u.active=TRUE`);
   let matched=0,queued=0;
   for(const x of items){
+    const deadline=Date.parse(closeOf(x)||'');if(!Number.isFinite(deadline)||deadline<Date.now())continue;
     for(const a of r.rows){
       if(!alertMatches(a,x))continue;matched+=1;const payload=payloadFor(a,x),pncpId=payload.pncp_id;
       if(a.onsite_enabled){await insertDelivery({userId:a.user_id,alertId:a.id,pncpId,channel:'onsite',status:'sent',payload});queued+=1}
