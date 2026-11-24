@@ -1,5 +1,6 @@
 import crypto from 'node:crypto';
 import { Pool } from 'pg';
+import { requestManualLiveScan } from './live-monitor-v5.mjs';
 
 const DATABASE_URL=process.env.DATABASE_URL||'';
 const APP_ORIGIN=process.env.APP_ORIGIN||'';
@@ -174,26 +175,7 @@ async function monitorData(cookie=''){
 
 function ymd(d=new Date()){return d.toISOString().slice(0,10).replaceAll('-','')}
 function procurementKey(x,code){const supplied=clean(x?.numeroControlePNCP,180);if(supplied)return supplied;const c=digits(x?.orgaoEntidade?.cnpj).slice(0,14),y=Number(x?.anoCompra),s=Number(x?.sequencialCompra);return c&&y&&s?`${c}-${y}-${s}-${code}`:null}
-async function manualScan(){
-  const results=[];let scanned=0,inserted=0;
-  for(let code=1;code<=14;code++){
-    try{
-      const p=new URLSearchParams({dataInicial:ymd(),dataFinal:ymd(),codigoModalidadeContratacao:String(code),pagina:'1',tamanhoPagina:'50'});
-      const r=await fetch(`${PNCP_BASE_URL}/v1/contratacoes/publicacao?${p}`,{headers:{accept:'application/json','user-agent':'RadarLicitacoesBrasil-Admin/1.0'},signal:AbortSignal.timeout(9000)});
-      const body=r.status===204?{}:await r.json().catch(()=>({}));const items=Array.isArray(body?.data)?body.data:Array.isArray(body)?body:[];scanned+=items.length;
-      if(!r.ok&&r.status!==204){results.push({code,ok:false,status:r.status});continue}
-      for(const x of items){const key=procurementKey(x,code);if(!key)continue;const cnpj=digits(x?.orgaoEntidade?.cnpj).slice(0,14)||null,year=Number(x?.anoCompra)||null,seq=Number(x?.sequencialCompra)||null,estimated=Number(x?.valorTotalEstimado);const municipality=clean(x?.unidadeOrgao?.municipioNome||x?.unidadeOrgao?.nomeMunicipio||x?.municipioNome,180)||null,uf=clean(x?.unidadeOrgao?.ufSigla||x?.ufSigla,2).toUpperCase()||null;const pncpUrl=cnpj&&year&&seq?`https://pncp.gov.br/app/editais/${cnpj}/${year}/${seq}`:null;
-        const q=await pool.query(`INSERT INTO monitored_procurements(pncp_id,org_cnpj,year,sequence,modality_code,modality_name,object_text,org_name,unit_name,municipality,uf,power_id,sphere_id,estimated_value,published_at,closes_at,pncp_url,origin_url,raw,detected_at,last_seen_at)
-          VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,NOW(),NOW()) ON CONFLICT(pncp_id) DO UPDATE SET raw=EXCLUDED.raw,last_seen_at=NOW() RETURNING (xmax=0) inserted`,[
-          key,cnpj,year,seq,code,clean(x?.modalidadeNome,180)||null,clean(x?.objetoCompra,4000)||null,clean(x?.orgaoEntidade?.razaoSocial,500)||null,clean(x?.unidadeOrgao?.nomeUnidade,500)||null,municipality,uf,clean(x?.orgaoEntidade?.poderId,20)||null,clean(x?.orgaoEntidade?.esferaId,20)||null,Number.isFinite(estimated)?estimated:null,x?.dataPublicacaoPncp||null,x?.dataEncerramentoProposta||x?.dataFimRecebimentoProposta||null,pncpUrl,null,x]);
-        if(q.rows[0]?.inserted)inserted++;
-      }
-      results.push({code,ok:true,status:r.status,count:items.length});
-    }catch(e){results.push({code,ok:false,error:clean(e?.message,120)})}
-    await sleep(120);
-  }
-  return {ok:results.some(x=>x.ok),scanned,inserted,modalities_ok:results.filter(x=>x.ok).length,errors:results.filter(x=>!x.ok)};
-}
+async function manualScan(){return requestManualLiveScan()}
 
 async function notificationData(){
   const [summary,channels,recent]=await Promise.all([
