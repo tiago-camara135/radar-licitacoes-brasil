@@ -521,6 +521,15 @@ try{
  await assertLightContrast('#radarMenuToggle','#radarMenuToggle','Mobile menu control');
  await assertLightContrast('#mainNav button.active','#mainNav button.active','Active mobile navigation');
  note('Arctic Pro: mobile navigation contrast OK');
+ await page.setViewportSize({width:1440,height:900});
+ await gotoSection(page,'home');
+ await page.locator('#pulseRailToggle').click();
+ const expandedRail=await page.locator('#mainNav').boundingBox(),expandedHome=await page.locator('#view-home').boundingBox();
+ assert.ok(expandedRail.width>=204&&expandedRail.x+expandedRail.width<=expandedHome.x,'Expanded rail must not overlap content');
+ assert.equal(await page.locator('#pulseRailToggle').getAttribute('aria-expanded'),'true');
+ await page.locator('#pulseRailToggle').click();
+ assert.equal(await page.locator('#pulseRailToggle').getAttribute('aria-expanded'),'false');
+ note('Pulse 3.0 expanded and compact navigation work without overlap');
 
  // Visibilidade em mais larguras, sem rolagem horizontal oculta, nos dois temas.
  for(const [width,height] of [[320,700],[390,844],[768,880],[800,600],[1024,768],[1280,720],[1366,768],[1440,900],[1536,864],[1920,1080],[2560,1440],[3440,1440],[1280,550]]){

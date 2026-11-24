@@ -73,11 +73,21 @@ function renderRadarAccount(user) {
 
 function setRadarMenu(open) {
   $('#radarMenuToggle').setAttribute('aria-expanded', String(open));
+  $('#radarMenuToggle').setAttribute('aria-label',open?'Fechar menu de navegação':'Abrir menu de navegação');
   $('.sidebar-inner').classList.toggle('radar-menu-open', open);
 }
 
 function bindRadarMenu() {
-  const toggle = $('#radarMenuToggle');
+  const toggle = $('#radarMenuToggle'),rail=$('#pulseRailToggle'),shell=$('#appShell');
+  function railMode(expanded){
+    shell.classList.toggle('pulse-rail-expanded',expanded);
+    rail.setAttribute('aria-expanded',String(expanded));
+    rail.title=expanded?'Recolher menu lateral':'Expandir menu lateral';
+    rail.setAttribute('aria-label',rail.title);
+  }
+  let expanded=false;try{expanded=localStorage.getItem('rlb-pulse-rail')==='expanded'}catch{}
+  railMode(expanded);
+  rail.addEventListener('click',()=>{const next=rail.getAttribute('aria-expanded')!=='true';railMode(next);try{localStorage.setItem('rlb-pulse-rail',next?'expanded':'compact')}catch{}});
   toggle.addEventListener('click', () => setRadarMenu(toggle.getAttribute('aria-expanded') !== 'true'));
   $('#mainNav').addEventListener('click', event => {
     if (event.target.closest('[data-view]') && toggle.offsetWidth && toggle.getAttribute('aria-expanded') === 'true') {
