@@ -573,6 +573,13 @@ try{
  assert.equal((csvText.match(/fixture-1/g)||[]).length,1,'CSV must deduplicate');
  await page.unroute('**/api/dashboard/contracts?*');
  note('Intelligence Pro: contract UI failure recovery, retry, deduplication and safe CSV export passed with isolated network fixture');
+ await page.locator('[data-pb-tab="archive"]').click();
+ await page.locator('#maResults .pb-metrics').waitFor({timeout});
+ await page.locator('[data-pb-tab="predict"]').click();
+ await page.locator('#maTitle').filter({hasText:'Radar Predict'}).waitFor({timeout});
+ await until(page,()=>document.querySelector('#maResults')?.textContent.includes('Vencem em 30 dias'));
+ await page.locator('#maWatch').click();await page.locator('#maFavorites:not([hidden])').waitFor({timeout});
+ note('Market Intelligence 2.0 archive, Predict and isolated favorites UI OK');
  await gotoSection(page,'home');
  await page.locator('#pbCustomize').click();
  await page.locator('.pb-dialog input[type="checkbox"]').first().uncheck();

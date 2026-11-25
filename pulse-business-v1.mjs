@@ -73,7 +73,7 @@ export function contractView(body,f,reference=localDay()){
   if(f.uf&&uf!==f.uf||f.supplier&&(!corporate||supplierId!==f.supplier)||f.keyword&&!norm([object,org,supplierName].join(' ')).includes(norm(f.keyword))||f.expiry&&(!end||end<reference||end>cutoff)||f.min!==null&&(value===null||value<f.min)||f.max!==null&&(value===null||value>f.max))continue;
   const cnpj=String(x.orgaoEntidade?.cnpj??''),year=Number(x.anoContrato),seq=Number(x.sequencialContrato);
   const url=/^\d{14}$/.test(cnpj)&&Number.isInteger(year)&&year>=2000&&Number.isInteger(seq)&&seq>0?'https://pncp.gov.br/app/contratos/'+cnpj+'/'+year+'/'+seq:null;
-  items.push({id,object,org,uf,municipality:clean(x.unidadeOrgao?.municipioNome,120),supplier:corporate?supplierId:null,supplier_name:supplierName,value,published,end,url,type:clean(x.tipoContrato?.nome,120)});
+  items.push({id,object,org,org_cnpj:/^\d{14}$/.test(cnpj)?cnpj:null,source_updated:Number.isFinite(Date.parse(x.dataAtualizacaoGlobal||x.dataAtualizacao||''))?new Date(x.dataAtualizacaoGlobal||x.dataAtualizacao).toISOString():null,uf,municipality:clean(x.unidadeOrgao?.municipioNome,120),supplier:corporate?supplierId:null,supplier_name:supplierName,value,published,end,url,type:clean(x.tipoContrato?.nome,120)});
  }
  const suppliers=new Map(),months=new Map();
  for(const x of items){if(x.supplier){const e=suppliers.get(x.supplier)||{name:x.supplier_name,cnpj:x.supplier,count:0,value:0,known:0};e.count++;if(x.value!==null){e.value+=x.value;e.known++}suppliers.set(x.supplier,e)}if(x.published){const k=x.published.slice(0,7),e=months.get(k)||{month:k,count:0,value:0,known:0};e.count++;if(x.value!==null){e.value+=x.value;e.known++}months.set(k,e)}}
@@ -81,14 +81,15 @@ export function contractView(body,f,reference=localDay()){
  const due=days=>items.filter(x=>x.end&&x.end>=reference&&x.end<=new Date(Date.parse(reference)+days*86400000).toISOString().slice(0,10)).length;
  return {items,summary:{count:items.length,known_values:known.length,value:known.length?known.reduce((a,x)=>a+x.value,0):null,due30:due(30),due60:due(60),due90:due(90)},suppliers:[...suppliers.values()].sort((a,b)=>b.count-a.count).slice(0,10),months:[...months.values()].sort((a,b)=>a.month.localeCompare(b.month)),coverage:{page:f.page,page_size:50,received:raw.length,total_pages:Number(body?.totalPaginas)||0,total_records:Number(body?.totalRegistros)||0,local_filters:true,complete:false},generated_at:new Date().toISOString(),source:'PNCP /v1/contratos — publicação por período; filtros aplicados somente à página consultada. Vencimento não garante nova contratação.'};
 }
-export async function contracts(params,fetchPage=fetchPncpContractPage){
- const f=contractParams(params),data=[],pages=[],failed=[];let totalPages=0,totalRecords=0;
+export async function contracts(params,fetchPage=fetchPncpContractPage,onPage=null){
+ const f=contractParams(params),data=[],pages=[],failed=[];let totalPages=0,totalRecords=0,archiveSaved=0,archiveOmitted=0,archiveErrors=0;
  for(let p=f.page;p<Math.min(10001,f.page+f.batch);p++){
   if(p>f.page&&p>totalPages)break;
-  try{const body=await fetchPage({...f,page:p});data.push(...(Array.isArray(body?.data)?body.data:Array.isArray(body)?body:[]));totalPages=Number(body?.totalPaginas)||0;totalRecords=Number(body?.totalRegistros)||0;pages.push(p)}
+  try{const body=await fetchPage({...f,page:p});data.push(...(Array.isArray(body?.data)?body.data:Array.isArray(body)?body:[]));totalPages=Number(body?.totalPaginas)||0;totalRecords=Number(body?.totalRegistros)||0;pages.push(p);if(onPage){try{const normalized=contractView(body,{...f,uf:'',keyword:'',supplier:'',expiry:0,min:null,max:null});const saved=await onPage(normalized.items,{start:f.start,end:f.end,page:p,received:normalized.coverage.received,total_pages:totalPages});archiveSaved+=saved.archived;archiveOmitted+=saved.omitted}catch(e){archiveErrors++;console.error('market archive page:',e.message)}}}
   catch(error){if(!pages.length)throw error;failed.push(p);break}
  }
  const result=contractView({data,totalPaginas:totalPages,totalRegistros:totalRecords},f);
+ result.archive={saved:archiveSaved,omitted:archiveOmitted,errors:archiveErrors};
  result.coverage={...result.coverage,pages,failed_pages:failed,last_page:pages.at(-1)||f.page,next_page:failed[0]??(pages.at(-1)||f.page)+1,complete:false};
  result.source='PNCP /v1/contratos — filtros aplicados às páginas consultadas; não representa todo o histórico. Vencimento não garante nova contratação.';
  return result;

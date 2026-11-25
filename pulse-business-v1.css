@@ -50,3 +50,17 @@ html[data-theme] #appShell .pb-group{margin-top:10px}
 html[data-theme] #appShell #pbPrev{display:none}
 html[data-theme] #appShell .pb-pagination label{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
 @media(prefers-reduced-motion:reduce){html[data-theme] #appShell .pb-metric-action{transition:none}}
+
+/* Market Intelligence 2.0: executive data workspace */
+#view-intelligence .pb-tabs{display:grid!important;grid-template-columns:repeat(auto-fit,minmax(min(152px,100%),1fr));gap:9px!important;margin:16px 0!important}
+#view-intelligence .pb-tabs button{min-height:52px;font-weight:650;text-align:left;border-radius:12px}
+#view-intelligence .pb-tabs button[aria-pressed=true]{box-shadow:inset 0 -3px var(--rp-accent)}
+#view-intelligence .ma-group{min-width:0}
+#view-intelligence .ma-rank{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:7px;border-bottom:1px solid var(--pulse-edge);padding:10px 0}
+#view-intelligence .ma-rank-link{border:0;background:transparent;color:var(--rp-info);text-align:left;overflow-wrap:anywhere;font-size:13px;cursor:pointer;padding:4px 0}
+#view-intelligence .ma-rank-link:disabled{color:var(--pulse-ink);cursor:default}
+#view-intelligence .ma-watch-row{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}
+#view-intelligence #maStatus{color:var(--pulse-secondary);font-size:12px}
+#view-intelligence #maFavorites[hidden]{display:none!important}
+#view-intelligence #maFavorites{padding:12px;border:1px solid var(--pulse-edge);border-radius:12px;margin:10px 0}
+@media print{body.ma-print *{visibility:hidden!important}body.ma-print #pbArchive,body.ma-print #pbArchive *{visibility:visible!important}body.ma-print #pbArchive{position:absolute!important;inset:0!important;width:100%!important;background:white!important;color:#111!important}body.ma-print #pbArchive :is(button,form,.pb-pagination){display:none!important}body.ma-print #pbArchive *{color:#111!important;box-shadow:none!important}body.ma-print #pbArchive .pb-contract{break-inside:avoid}}
