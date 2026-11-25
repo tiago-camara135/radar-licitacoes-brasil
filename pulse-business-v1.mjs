@@ -62,6 +62,7 @@ export function contractParams(params){
  if(kind==='ata'&&supplier)throw bad('A consulta de atas não disponibiliza fornecedor nesta fonte.');
  return {start,end,page,supplier,expiry,batch,kind,validity,org,...filters(params)};
 }
+function instrumentMatch(keyword,text){const haystack=norm(text);return norm(keyword).trim().split(/\s+/).filter(Boolean).every(t=>haystack.includes(/^(?:alimentos?|alimenticios?|alimentacao)$/.test(t)?'aliment':t))}
 export function instrumentValidity(begin,end,reference,cancelled=false){
  if(cancelled===true)return 'cancelled';
  if(!begin||!end||begin>end)return 'unknown';
@@ -83,13 +84,13 @@ export function contractView(body,f,reference=localDay()){
  const items=[];const seen=new Set();
  const cutoff=new Date(Date.parse(reference)+f.expiry*86400000).toISOString().slice(0,10);
  for(const x of raw){
-  if(f.kind==='ata'){const a=ataRecord(x);if(!a.id||seen.has(a.id))continue;seen.add(a.id);a.validity=instrumentValidity(a.begin,a.end,reference,a.cancelled);if(f.uf&&a.uf!==f.uf||f.org&&a.org_cnpj!==f.org||f.keyword&&!norm([a.object,a.org,a.number].join(' ')).includes(norm(f.keyword))||f.validity&&f.validity!=='all'&&a.validity!==f.validity||f.expiry&&(!a.end||a.validity!=='active'||a.end>cutoff)||f.min!=null||f.max!=null)continue;items.push(a);continue}
+  if(f.kind==='ata'){const a=ataRecord(x);if(!a.id||seen.has(a.id))continue;seen.add(a.id);a.validity=instrumentValidity(a.begin,a.end,reference,a.cancelled);if(f.uf&&a.uf!==f.uf||f.org&&a.org_cnpj!==f.org||f.keyword&&!instrumentMatch(f.keyword,[a.object,a.org,a.number].join(' '))||f.validity&&f.validity!=='all'&&a.validity!==f.validity||f.expiry&&(!a.end||a.validity!=='active'||a.end>cutoff)||f.min!=null||f.max!=null)continue;items.push(a);continue}
   const id=clean(x.numeroControlePNCP,100);if(!id||seen.has(id))continue;seen.add(id);
   const uf=clean(x.unidadeOrgao?.ufSigla,2).toUpperCase(),object=clean(x.objetoContrato,1500),org=clean(x.orgaoEntidade?.razaoSocial,250),supplierId=String(x.niFornecedor??'').replace(/\D/g,'');
   const corporate=x.tipoPessoa==='PJ'&&supplierId.length===14;
   const supplierName=corporate?clean(x.nomeRazaoSocialFornecedor,250):'Fornecedor não empresarial';
   const value=number(x.valorGlobal),end=date(x.dataVigenciaFim),begin=date(x.dataVigenciaInicio),published=date(x.dataPublicacaoPncp),validity=instrumentValidity(begin,end,reference,x.cancelado===true);
-  if(f.org&&String(x.orgaoEntidade?.cnpj||'')!==f.org||f.validity&&f.validity!=='all'&&validity!==f.validity||f.uf&&uf!==f.uf||f.supplier&&(!corporate||supplierId!==f.supplier)||f.keyword&&!norm([object,org,supplierName].join(' ')).includes(norm(f.keyword))||f.expiry&&(!end||end<reference||end>cutoff)||f.min!==null&&(value===null||value<f.min)||f.max!==null&&(value===null||value>f.max))continue;
+  if(f.org&&String(x.orgaoEntidade?.cnpj||'')!==f.org||f.validity&&f.validity!=='all'&&validity!==f.validity||f.uf&&uf!==f.uf||f.supplier&&(!corporate||supplierId!==f.supplier)||f.keyword&&!instrumentMatch(f.keyword,[object,org,supplierName].join(' '))||f.expiry&&(!end||end<reference||end>cutoff)||f.min!==null&&(value===null||value<f.min)||f.max!==null&&(value===null||value>f.max))continue;
   const cnpj=String(x.orgaoEntidade?.cnpj??''),year=Number(x.anoContrato),seq=Number(x.sequencialContrato);
   const url=/^\d{14}$/.test(cnpj)&&Number.isInteger(year)&&year>=2000&&Number.isInteger(seq)&&seq>0?'https://pncp.gov.br/app/contratos/'+cnpj+'/'+year+'/'+seq:null;
   items.push({id,object,org,org_cnpj:/^\d{14}$/.test(cnpj)?cnpj:null,source_updated:Number.isFinite(Date.parse(x.dataAtualizacaoGlobal||x.dataAtualizacao||''))?new Date(x.dataAtualizacaoGlobal||x.dataAtualizacao).toISOString():null,uf,municipality:clean(x.unidadeOrgao?.municipioNome,120),supplier:corporate?supplierId:null,supplier_name:supplierName,value,published,begin,end,validity,kind:'contract',number:clean(x.numeroContratoEmpenho,80),url,type:clean(x.tipoContrato?.nome,120)});
