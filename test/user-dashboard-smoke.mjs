@@ -26,6 +26,8 @@ try{
   r=await get('/api/dashboard/overview',c1);assert.equal(r.status,200);const d1=await r.json();
   assert.equal(d1.user.id,u1);assert.ok(d1.recommendations.some(x=>x.pncp_id===pncpId));assert.equal(d1.metrics.active_alerts,1);
 
+  r=await get('/api/dashboard/market/archive',c1);assert.equal(r.status,200);const market=await r.json();assert.equal(Number(market.coverage.records),0);assert.equal(Number(market.summary.count),0);
+  r=await get('/api/dashboard/market/watchlist',c2);assert.equal(r.status,200);assert.deepEqual((await r.json()).items,[]);
   r=await post('/api/dashboard/preferences',{geo:{scope:'ufs',ufs:['RN']}},c1);assert.equal(r.status,200);
   r=await post('/api/dashboard/preferences',{pulse_layout:{hidden:['recent','invalid'],order:['quick','quick','agenda']}},c1);assert.equal(r.status,200);const prefs=(await r.json()).preferences;assert.deepEqual(prefs.geo.ufs,['RN']);assert.deepEqual(prefs.pulse_layout.hidden,['recent']);assert.equal(prefs.pulse_layout.order[0],'quick');
   r=await get('/api/dashboard/overview',c1);assert.equal(r.status,200);const rn=await r.json();assert.ok(rn.recommendations.some(x=>x.pncp_id===pncpId));

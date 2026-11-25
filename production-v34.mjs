@@ -6,6 +6,7 @@ import { detectDatabaseProvider } from './database-provider-v1.mjs';
 const nativeCreateServer=http.createServer.bind(http);
 const databaseProvider=detectDatabaseProvider(process.env.DATABASE_URL||'');
 const publicAssets=new Map([
+ ['/assets/market-archive-v1.js',['market-archive-v1.js','application/javascript; charset=utf-8']],
  ['/assets/pulse-business-v1.js',['pulse-business-v1.js','application/javascript; charset=utf-8']],
  ['/assets/pulse-business-v1.css',['pulse-business-v1.css','text/css; charset=utf-8']],
  ['/manifest.webmanifest',['pulse-manifest.json','application/manifest+json; charset=utf-8']],
