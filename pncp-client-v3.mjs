@@ -11,9 +11,9 @@ const OPEN_HORIZON_DAYS=Math.min(Math.max(Number(process.env.PNCP_OPEN_HORIZON_D
 const pageProgress=new Map(),modalityHealth=new Map();
 const transport=createPncpTransport({spacing:REQUEST_SPACING_MS,maxRetries:MAX_RETRIES,maxConcurrent:2});
 const fetchJsonWithRetry=url=>transport.get(url);
-export async function fetchPncpContractPage({start,end,page}){
+export async function fetchPncpContractPage({start,end,page,org}){
  const url=new URL(PNCP_BASE_URL.replace(/\/$/,'')+'/v1/contratos');
- url.search=new URLSearchParams({dataInicial:start.replaceAll('-',''),dataFinal:end.replaceAll('-',''),pagina:String(page),tamanhoPagina:'50'}).toString();
+ url.search=new URLSearchParams({dataInicial:start.replaceAll('-',''),dataFinal:end.replaceAll('-',''),pagina:String(page),tamanhoPagina:'50',...(org?{cnpjOrgao:org}:{})}).toString();
  // Share the national queue and cache; no automatic historical backfill.
  const {body}=await fetchJsonWithRetry(url.href);return body;
 }
@@ -21,6 +21,11 @@ export async function fetchPncpAtaPage({start,end,page,org}){
  const url=new URL(PNCP_BASE_URL.replace(/\/$/,'')+'/v1/atas');
  url.search=new URLSearchParams({dataInicial:start.replaceAll('-',''),dataFinal:end.replaceAll('-',''),pagina:String(page),tamanhoPagina:'50',...(org?{cnpj:org}:{})}).toString();
  const {body}=await fetchJsonWithRetry(url.href);return body;
+}
+export async function fetchPncpAtaDetail({cnpj,year,purchase,sequence}){
+ if(!/^\d{14}$/.test(cnpj)||![year,purchase,sequence].every(x=>Number.isInteger(x)&&x>0))throw new Error('Identificação de ata inválida.');
+ const base='https://pncp.gov.br/api/pncp/v1/orgaos/';
+ const {body}=await fetchJsonWithRetry(base+cnpj+'/compras/'+year+'/'+purchase+'/atas/'+sequence);return body;
 }
 const digits = v => String(v ?? '').replace(/\D/g,'');
 const clean = (v,n=500) => String(v ?? '').trim().slice(0,n);
