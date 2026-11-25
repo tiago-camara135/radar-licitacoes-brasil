@@ -64,3 +64,39 @@ html[data-theme] #appShell .pb-pagination label{display:flex;gap:6px;align-items
 #view-intelligence #maFavorites[hidden]{display:none!important}
 #view-intelligence #maFavorites{padding:12px;border:1px solid var(--pulse-edge);border-radius:12px;margin:10px 0}
 @media print{body.ma-print *{visibility:hidden!important}body.ma-print #pbArchive,body.ma-print #pbArchive *{visibility:visible!important}body.ma-print #pbArchive{position:absolute!important;inset:0!important;width:100%!important;background:white!important;color:#111!important}body.ma-print #pbArchive :is(button,form,.pb-pagination){display:none!important}body.ma-print #pbArchive *{color:#111!important;box-shadow:none!important}body.ma-print #pbArchive .pb-contract{break-inside:avoid}}
+
+/* Market workspace — quiet visual hierarchy, scoped to the intelligence view */
+html[data-theme] #appShell #view-intelligence .mi-navigation{display:grid;gap:12px;margin:18px 0 20px}
+html[data-theme] #appShell #view-intelligence .mi-nav-group{min-width:0}
+html[data-theme] #appShell #view-intelligence .mi-nav-label{display:block;font-size:11px;font-weight:650;letter-spacing:.06em;text-transform:uppercase;color:var(--pulse-secondary);margin-bottom:6px}
+html[data-theme] #appShell #view-intelligence .mi-navigation .pb-tabs{display:grid!important;grid-template-columns:repeat(auto-fit,minmax(min(145px,100%),1fr));gap:6px!important;margin:0!important}
+html[data-theme] #appShell #view-intelligence .mi-navigation .pb-tabs button{display:grid;gap:3px;min-height:58px;text-align:left;padding:9px 12px;border-radius:9px;background:var(--pulse-paper);color:var(--pulse-ink);box-shadow:none;transition:background .15s,border-color .15s}
+html[data-theme] #appShell #view-intelligence .mi-navigation .pb-tabs button strong{font-size:13px;line-height:1.25;font-weight:650;overflow-wrap:anywhere}
+html[data-theme] #appShell #view-intelligence .mi-navigation .pb-tabs button small{font-size:11px;line-height:1.25;color:var(--pulse-secondary);font-weight:400}
+html[data-theme] #appShell #view-intelligence .mi-navigation .pb-tabs button[aria-pressed=true]{border-color:var(--rp-accent);background:var(--pulse-inset);box-shadow:inset 0 -2px var(--rp-accent)}
+html[data-theme] #appShell #view-intelligence .mi-navigation .pb-tabs button[aria-pressed=true] strong{color:var(--rp-accent)}
+html[data-theme] #appShell #view-intelligence :is(button,input,select):focus-visible{outline:2px solid var(--rp-info);outline-offset:2px}
+html[data-theme] #appShell #view-intelligence .pb-panel{padding:clamp(14px,2vw,24px);margin:0 0 16px;border:1px solid var(--pulse-edge);border-radius:14px;box-shadow:none}
+html[data-theme] #appShell #view-intelligence .pb-panel h2{font-size:clamp(19px,2vw,24px);margin:0 0 4px}
+html[data-theme] #appShell #view-intelligence .pb-fields{gap:10px;grid-template-columns:repeat(auto-fit,minmax(min(175px,100%),1fr));padding:12px;background:var(--pulse-inset);border:1px solid var(--pulse-edge);border-radius:10px;margin:16px 0}
+html[data-theme] #appShell #view-intelligence .pb-fields label{font-size:12px;font-weight:550}
+html[data-theme] #appShell #view-intelligence .pb-fields :is(input,select){background:var(--pulse-paper);color:var(--pulse-ink);border:1px solid var(--pulse-edge);min-height:40px}
+html[data-theme] #appShell #view-intelligence .pb-fields .btn{min-height:40px;white-space:normal}
+html[data-theme] #appShell #view-intelligence .pb-metrics{grid-template-columns:repeat(auto-fit,minmax(min(180px,100%),1fr));gap:10px;margin:14px 0}
+html[data-theme] #appShell #view-intelligence .pb-metric{padding:14px;border-radius:10px}
+html[data-theme] #appShell #view-intelligence .pb-metric b{font-size:clamp(19px,2vw,27px);font-variant-numeric:tabular-nums;line-height:1.15}
+html[data-theme] #appShell #view-intelligence .pb-group{border-radius:10px;padding:14px;margin-top:8px}
+html[data-theme] #appShell #view-intelligence .pb-group h3{font-size:14px;margin:0 0 8px}
+html[data-theme] #appShell #view-intelligence .pb-contract{padding:12px 0;line-height:1.45}
+html[data-theme] #appShell #view-intelligence .pb-contract:last-child{border-bottom:0}
+html[data-theme] #appShell #view-intelligence .pb-contract strong{font-size:14px}
+html[data-theme] #appShell #view-intelligence .pb-contract :is(small,span,a){font-size:12px}
+html[data-theme] #appShell #view-intelligence .mi-tool-head{margin:0 0 12px}
+html[data-theme] #appShell #view-intelligence #maPro{border:0;padding:0;margin:0}
+html[data-theme] #appShell #view-intelligence .mi-empty{padding:22px 12px;text-align:center;color:var(--pulse-ink);border:1px dashed var(--pulse-edge);border-radius:10px;margin:12px 0}
+html[data-theme] #appShell #view-intelligence .mi-empty p{margin:8px 0 12px}
+html[data-theme] #appShell #view-intelligence [hidden]{display:none!important}
+html[data-theme] #appShell #view-intelligence #maCoverage{display:inline-block;padding:5px 9px;border-radius:6px;background:var(--pulse-inset);color:var(--pulse-secondary);font-size:11px;line-height:1.5}
+html[data-theme] #appShell #view-intelligence .mi-manage{margin:8px 0}
+@media(max-width:600px){html[data-theme] #appShell #view-intelligence .mi-navigation .pb-tabs{grid-template-columns:repeat(2,minmax(0,1fr))}html[data-theme] #appShell #view-intelligence .pb-fields{grid-template-columns:1fr}html[data-theme] #appShell #view-intelligence .pb-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}html[data-theme] #appShell #view-intelligence .pb-metric{padding:10px}html[data-theme] #appShell #view-intelligence .pb-metric b{font-size:17px}}
+@media(prefers-reduced-motion:reduce){html[data-theme] #appShell #view-intelligence .mi-navigation .pb-tabs button{transition:none}}
