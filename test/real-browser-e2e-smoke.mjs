@@ -580,6 +580,41 @@ try{
  await until(page,()=>document.querySelector('#maResults')?.textContent.includes('Vencem em 30 dias'));
  await page.locator('#maWatch').click();await page.locator('#maFavorites:not([hidden])').waitFor({timeout});
  note('Market Intelligence 2.0 archive, Predict and isolated favorites UI OK');
+ // Each market tool has one focused panel; mocked official responses are CI-only.
+ await page.route('**/api/dashboard/market/signals?*',route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({total:2,due30:1,companies:new URL(route.request().url()).searchParams.get('companies')?['12345678000195']:[],competitors:[{cnpj:'12345678000195',label:'Fornecedor QA',count:2,buyers:1,value:200}],states:[{uf:'RN',count:2,value:200}],alerts:[{object:'Contrato QA',org:'Órgão QA',supplier_name:'Fornecedor QA',published:'2026-01-01',expires:'2027-01-01'}],source:'Amostra isolada de teste'})}));
+ await page.locator('[data-pb-tab="compare"]').click();
+ await page.locator('#pbMarketPro input[name="companies"]').fill('12345678000195');
+ await page.locator('#pbMarketPro button[type="submit"]').first().click();
+ await until(page,()=>document.querySelector('#pbMarketPro')?.textContent.includes('Fornecedor QA'));
+ assert.ok(!(await page.locator('#pbArchive').isVisible()));
+ assert.ok(!(await page.locator('#pbMarketPro .mi-lookup').isVisible()));
+ await page.locator('[data-pb-tab="geo"]').click();
+ await page.locator('#pbMarketPro button').filter({hasText:/^RN · 2$/}).waitFor({timeout});
+ assert.ok(!(await page.locator('#pbMarketPro input[name="companies"]').isVisible()));
+ await page.locator('#pbMarketPro button').filter({hasText:/^RN · 2$/}).click();
+ assert.equal(await page.locator('#maForm select[name="uf"]').inputValue(),'RN');
+ await page.locator('[data-pb-tab="watch"]').click();
+ await page.locator('#pbMarketPro .pb-contract').first().waitFor({timeout});
+ assert.ok(await page.locator('#pbMarketPro .mi-manage').isVisible());
+ assert.ok(!(await page.locator('#pbMarketPro input[name="keyword"]').isVisible()));
+ await page.route('**/api/dashboard/market/lookup?*',route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({kind:'pricing',summary:{count:1,min:10,median:10,max:10},rows:[{price:10,quantity:2}],excluded:0,source:'https://pncp.gov.br/app/editais/12345678000195/2026/1',warning:'Amostra de teste'})}));
+ await page.locator('[data-pb-tab="lookup"]').click();
+ assert.ok(await page.locator('#pbMarketPro .mi-lookup').isVisible());
+ assert.ok(!(await page.locator('#pbMarketPro input[name="keyword"]').isVisible()));
+ await page.locator('#pbMarketPro select[name="kind"]').selectOption('pricing');
+ await page.locator('#pbMarketPro input[name="cnpj"]').fill('12345678000195');
+ await page.locator('#pbMarketPro input[name="sequence"]').fill('1');
+ await page.locator('#pbMarketPro input[name="item"]').fill('1');
+ assert.match(await page.locator('#pbMarketPro input[name="year"]').inputValue(),/^20\d{2}$/,'Current year must survive login form reset');
+ assert.ok(await page.locator('#pbMarketPro .mi-lookup form').evaluate(f=>f.checkValidity()),'Official lookup must be valid before submit');
+ const [lookupResponse]=await Promise.all([page.waitForResponse(r=>r.url().includes('/api/dashboard/market/lookup?')&&r.url().includes('kind=pricing'),{timeout}),page.locator('#pbMarketPro .mi-lookup button[type="submit"]').click()]);
+ assert.equal(lookupResponse.status(),200);
+ await page.locator('#pbMarketPro .mi-lookup .pb-metric').filter({hasText:'Mediana'}).waitFor({timeout});
+ for(const width of [390,1280]){await page.setViewportSize({width,height:844});for(const theme of ['light','dark']){await page.evaluate(t=>document.documentElement.dataset.theme=t,theme);assert.ok(await page.locator('#pbMarketPro .mi-lookup').isVisible());const size=await page.evaluate(()=>({width:innerWidth,scroll:document.documentElement.scrollWidth}));assert.ok(size.scroll<=size.width+6,'Market layout overflow '+theme+' '+width)}}
+ await page.setViewportSize({width:1280,height:800});
+ await page.unroute('**/api/dashboard/market/signals?*');await page.unroute('**/api/dashboard/market/lookup?*');
+ note('Market clean workspace: focused tools, regional drilldown, lookup and responsive themes passed');
+
  await gotoSection(page,'home');
  await page.locator('#pbCustomize').click();
  await page.locator('.pb-dialog input[type="checkbox"]').first().uncheck();
