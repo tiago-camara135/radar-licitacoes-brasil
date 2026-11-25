@@ -1,6 +1,6 @@
 import {initMarketArchive} from './market-archive-v1.mjs';
 import {createPncpTransport} from './pncp-transport-v1.mjs';
-const transport=createPncpTransport({spacing:650,maxRetries:1,maxConcurrent:1});
+const transport=createPncpTransport({spacing:650,maxRetries:1,maxConcurrent:1,acceptBody:b=>b&&typeof b==='object'});
 const bad=message=>Object.assign(new Error(message),{status:400});
 const str=(v,n=250)=>String(v??'').trim().slice(0,n);
 const num=v=>v===null||v===undefined||v===''||!Number.isFinite(Number(v))||Number(v)<0?null:Number(v);
