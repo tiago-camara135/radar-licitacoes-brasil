@@ -1,4 +1,5 @@
 import {createHmac,randomBytes,timingSafeEqual} from 'node:crypto';
+import {criticalStats,smartTerms,healthSearch} from './radar-suite-v2.mjs';
 import {createPncpTransport} from './pncp-transport-v1.mjs';
 const transport=createPncpTransport({spacing:500,maxConcurrent:2,maxRetries:0,timeoutMs:11000,acceptBody:b=>b&&typeof b==='object'});
 const SECRET=randomBytes(32);
@@ -64,6 +65,20 @@ async function objectSearch(p,get,page,uf){
 }
 export async function priceQuery(uid,p,get=official){
  const mode=p.get('mode')||'search',page=int(p.get('page')||1,1,100),uf=clean(p.get('uf'),2).toUpperCase();if(uf&&!/^[A-Z]{2}$/.test(uf))throw bad('UF inválida.');
+ if(mode==='smart'){
+  const terms=smartTerms(p.get('q'));if(!terms.length)throw bad('Digite pelo menos três caracteres.');
+  const variants=terms.slice(0,2),results=await Promise.allSettled(variants.map(q=>{const next=new URLSearchParams(p);next.set('q',q);return objectSearch(next,get,page,uf)}));
+  const ok=results.filter(r=>r.status==='fulfilled').map(r=>r.value);if(!ok.length)throw Object.assign(new Error('Pesquisa oficial indisponível.'),{status:503});
+  const rows=[...new Map(ok.flatMap(r=>r.rows).map(r=>[r.kind+':'+r.id,r])).values()];
+  return {mode:'object',rows,page,has_more:ok.some(r=>r.has_more),warning:'Busca ampliada por vocabulário setorial: '+variants.join(' / ')+'. Não garante equivalência técnica. '+(results.some(r=>r.status==='rejected')||ok.some(r=>r.failed.length)?'Cobertura parcial por falha de fonte. ':'')+'Filtros aplicados às páginas consultadas.'};
+ }
+ if(mode==='bps'){
+  const d=await healthSearch(p,get);
+  const rows=d.rows.map(r=>{const eligible=r.process&&['municipal','estadual','federal','distrital'].includes(fold(r.scope));
+   const key='bps:'+createHmac('sha256','radar-bps-key').update(JSON.stringify([r.process,r.catalog,r.date,r.price,r.quantity,r.reference])).digest('hex');
+   return eligible?priceRow(uid,sourceRow({...r,key,ata_url:null,validity:null})):r});
+  return {mode:'bps',...d,rows};
+ }
  if(mode==='object')return objectSearch(p,get,page,uf);
  if(mode==='search'){
   const q=clean(p.get('q'),180);if(q.length<3)throw bad('Digite pelo menos três caracteres.');
@@ -130,7 +145,7 @@ export function buildPriceReport(uid,body){
   const values=refs.map(r=>r.price).sort((a,b)=>a-b),n=values.length,ready=n>=3;
   const mean=n?values.reduce((a,b)=>a+b,0)/n:null,median=n?(values[(n-1)>>1]+values[n>>1])/2:null;
   const estimate=ready?({median,mean,min:values[0]})[method]:null;
-  return {number:i+1,description,unit:u,quantity,notes:clean(it.notes,500),refs,count:n,min:n?values[0]:null,max:n?values[n-1]:null,mean,median,estimate,total:estimate===null?null:Math.round((estimate*quantity+Number.EPSILON)*100)/100,ready}
+  return {number:i+1,description,unit:u,quantity,notes:clean(it.notes,500),analysis:criticalStats(values),refs,count:n,min:n?values[0]:null,max:n?values[n-1]:null,mean,median,estimate,total:estimate===null?null:Math.round((estimate*quantity+Number.EPSILON)*100)/100,ready}
  });
  return {object,agency,responsible,notes,method,date:asOf,generated_at:new Date().toISOString(),items,ready:items.every(i=>i.ready),total:items.every(i=>i.ready)?items.reduce((s,i)=>s+i.total,0):null,warning:'Pesquisa preliminar. Valores nominais de fontes oficiais; não houve correção monetária automática. Responsável deve conferir especificação, unidade, escala, local, condições, alterações da ata, duplicidades entre fontes, excluir discrepâncias justificadamente e observar regulamento aplicável. Não substitui análise administrativa.'};
 }

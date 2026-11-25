@@ -121,3 +121,10 @@ html[data-theme] #appShell #view-intelligence .mi-manage{margin:8px 0}
 #view-intelligence #pbPrices .rp-import textarea{display:block;width:100%;max-width:100%;margin:8px 0;padding:10px;background:var(--pulse-paper);color:var(--pulse-ink);border:1px solid var(--pulse-edge);border-radius:8px;resize:vertical}
 #view-intelligence #pbPrices .rp-refine{margin:8px 0}
 #view-intelligence #pbPrices .rp-refine button{align-self:end}
+
+#view-intelligence #pbPrices .rp-suite{display:grid;gap:10px;min-width:0}
+#view-intelligence #pbPrices .rp-suite>label{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:12px}
+#view-intelligence #pbPrices .rp-suite input[type=file]{width:min(100%,300px);max-width:100%;color:var(--pulse-ink)}
+#view-intelligence #pbPrices .rp-suite :is(select,input[type=number]){max-width:180px;background:var(--pulse-paper);color:var(--pulse-ink);border:1px solid var(--pulse-edge);padding:8px;border-radius:8px}
+#view-intelligence #pbPrices .rp-suite .rp-quick{margin:2px 0}
+#view-intelligence #pbPrices .rp-suite .rp-quick>*{max-width:100%;white-space:normal;overflow-wrap:anywhere}
