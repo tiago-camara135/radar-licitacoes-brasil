@@ -113,3 +113,11 @@ html[data-theme] #appShell #view-intelligence .mi-manage{margin:8px 0}
 #view-intelligence #pbPrices .rp-confirm input{flex:0 0 auto;margin-top:3px}
 #view-intelligence #pbPrices a{color:var(--rp-info);overflow-wrap:anywhere}
 #view-intelligence #pbPrices .pb-contract .btn{justify-self:start;white-space:normal}
+
+#view-intelligence #pbPrices .rp-quick{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
+#view-intelligence #pbPrices .rp-type{font-weight:650;color:var(--rp-info);text-transform:uppercase;letter-spacing:.025em}
+#view-intelligence #pbPrices .rp-import{margin:12px 0;padding:12px;border:1px solid var(--pulse-edge);border-radius:10px}
+#view-intelligence #pbPrices .rp-import summary{cursor:pointer;font-weight:600;color:var(--pulse-ink)}
+#view-intelligence #pbPrices .rp-import textarea{display:block;width:100%;max-width:100%;margin:8px 0;padding:10px;background:var(--pulse-paper);color:var(--pulse-ink);border:1px solid var(--pulse-edge);border-radius:8px;resize:vertical}
+#view-intelligence #pbPrices .rp-refine{margin:8px 0}
+#view-intelligence #pbPrices .rp-refine button{align-self:end}
