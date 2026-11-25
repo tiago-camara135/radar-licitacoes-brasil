@@ -2,7 +2,8 @@ import { Pool } from 'pg';
 import { createHash } from 'node:crypto';
 import { effectivePncpDeadline } from './pncp-operational-date-v1.mjs';
 import {nationalIntelligence,contracts} from './pulse-business-v1.mjs';
-import {archiveReport,saveContractPage,watchlist,startMarketCollector} from './market-archive-v1.mjs';
+import {archiveReport,saveContractPage,watchlist,startMarketCollector,initMarketArchive} from './market-archive-v1.mjs';
+import {marketSignals,lookupMarket} from './market-pro-v1.mjs';
 
 const DATABASE_URL=String(process.env.DATABASE_URL||'');
 const APP_ORIGIN=String(process.env.APP_ORIGIN||'');
@@ -76,6 +77,7 @@ function normalizeGeo(value){
 function geoLabel(geo){if(geo.scope==='regiao')return geo.region;if(geo.scope==='ufs')return geo.ufs.join(', ');return'Brasil inteiro'}
 
 export async function initUserDashboard(){
+  if(pool)await initMarketArchive(pool).catch(e=>console.error('market archive initialization:',e.message));
   startMarketCollector(pool);
   if(!pool||initialized)return;
   await pool.query(`CREATE TABLE IF NOT EXISTS user_tender_tracking(
@@ -243,6 +245,8 @@ export async function handleUserDashboardRoute(req,res,url){
     const user=await authUser(req);if(!user){json(res,401,{error:'Faça login para acessar seu dashboard.'});return true}
     if(!allowDashboard(user.id)){res.setHeader('Retry-After','60');json(res,429,{error:'Muitas consultas ao dashboard. Tente novamente em instantes.'});return true}
     if(req.method==='GET'&&url.pathname==='/api/dashboard/intelligence'){json(res,200,await nationalIntelligence(pool,url.searchParams));return true}
+    if(req.method==='GET'&&url.pathname==='/api/dashboard/market/signals'){json(res,200,await marketSignals(pool,user.id,url.searchParams));return true}
+    if(req.method==='GET'&&url.pathname==='/api/dashboard/market/lookup'){try{json(res,200,await lookupMarket(url.searchParams))}catch(e){json(res,e.status===400?400:503,{error:e.status===400?e.message:'Consulta oficial indisponível. Tente novamente.'})}return true}
     if(req.method==='GET'&&url.pathname==='/api/dashboard/market/archive'){json(res,200,await archiveReport(pool,url.searchParams));return true}
     if(url.pathname==='/api/dashboard/market/watchlist'&&['GET','POST'].includes(req.method)){json(res,200,{items:await watchlist(pool,user.id,req.method==='POST'?await readJson(req):undefined)});return true}
     if(req.method==='GET'&&url.pathname==='/api/dashboard/contracts'){try{json(res,200,await contracts(url.searchParams,undefined,(items,coverage)=>saveContractPage(pool,items,coverage)))}catch(e){json(res,e.status===400?400:503,{error:e.status===400?e.message:'PNCP temporariamente indisponível ou consulta adiada. Tente novamente.'})}return true}
