@@ -1,5 +1,4 @@
 import ExcelJS from 'exceljs';
-import {createHash} from 'node:crypto';
 import {createPncpTransport} from './pncp-transport-v1.mjs';
 const bad=message=>Object.assign(new Error(message),{status:400});
 const clean=(v,n=600)=>String(v??'').trim().slice(0,n);
@@ -33,7 +32,7 @@ export async function importDemand(body){
  if(!description||!unit||!quantity||quantity>1e9||catalog&&!/^\d+$/.test(catalog))throw bad('Confira descrição, unidade, quantidade e código na linha '+i+'.');rows.push({description,unit,quantity,catalog,catalogType:cols.catalogType||null});
  }if(!rows.length||rows.length>30)throw bad('Importe de 1 a 30 itens por pesquisa.');return {rows,warning:'Somente dados da demanda importados; nenhum preço foi considerado oficial.'};
 }
-export async function initPriceHistory(pool){await pool.query('CREATE TABLE IF NOT EXISTS radar_price_history(id bigserial PRIMARY KEY,user_id bigint NOT NULL,report jsonb NOT NULL,created_at timestamptz NOT NULL DEFAULT now())');await pool.query('CREATE INDEX IF NOT EXISTS radar_price_history_owner ON radar_price_history(user_id,created_at DESC)')}
+export async function initPriceHistory(pool){await pool.query('CREATE TABLE IF NOT EXISTS radar_price_history(id bigserial PRIMARY KEY,user_id bigint NOT NULL REFERENCES users(id) ON DELETE CASCADE,report jsonb NOT NULL,created_at timestamptz NOT NULL DEFAULT now())');await pool.query('CREATE INDEX IF NOT EXISTS radar_price_history_owner ON radar_price_history(user_id,created_at DESC)')}
 export async function priceHistory(pool,uid,id,report){
  await initPriceHistory(pool);
  if(report){const r=await pool.query('INSERT INTO radar_price_history(user_id,report) VALUES($1,$2::jsonb) RETURNING id,created_at',[uid,JSON.stringify(report)]);return r.rows[0]}
@@ -62,4 +61,15 @@ export async function engineeringSearch(p,fetchOfficial=get){
  const b=await fetchOfficial(u);if(!Array.isArray(b)||b.length<2)throw Object.assign(new Error('SINAPI sem resultado.'),{status:503});
  const rows=b.slice(1).filter(z=>String(z.D1C)===String(ufs[uf])&&String(z.D2C)==='48'&&positive(z.V)).map(z=>({uf,location:clean(z.D1N,100),period:clean(z.D3N,100),value:positive(z.V),unit:'R$/m²',source:u}));
  return {rows,warning:'Custo médio agregado do SINAPI/IBGE. Não é preço unitário de insumo nem composição. Consulte tabelas CAIXA e SICRO/DNIT para orçamento detalhado.'};
+}
+
+const sicroRoot='https://www.gov.br/dnit/pt-br/assuntos/planejamento-e-pesquisa/custos-referenciais/sistemas-de-custos/sicro/relatorios/relatorios-sicro/';
+const sicroRegions={AC:'norte/acre',AM:'norte/amazonas',AP:'norte/amapa',PA:'norte/para',RO:'norte/rondonia',RR:'norte/roraima',TO:'norte/tocantins',AL:'nordeste/alagoas',BA:'nordeste/bahia',CE:'nordeste/ceara',MA:'nordeste/maranhao',PB:'nordeste/paraiba',PE:'nordeste/pernambuco',PI:'nordeste/piaui',RN:'nordeste/rio-grande-do-norte',SE:'nordeste/sergipe',GO:'centro-oeste/goias',DF:'centro-oeste/distrito-federal',MT:'centro-oeste/mato-grosso',MS:'centro-oeste/mato-grosso-do-sul',ES:'sudeste/espirito-santo',MG:'sudeste/minas-gerais',RJ:'sudeste/rio-de-janeiro',SP:'sudeste/sao-paulo',PR:'sul/parana',RS:'sul/rio-grande-do-sul',SC:'sul/santa-catarina'};
+export async function sicroFiles(p,fetchPage=async url=>{const res=await fetch(url,{redirect:'error',signal:AbortSignal.timeout(10000),headers:{accept:'text/html'}});if(!res.ok)throw Error('DNIT HTTP '+res.status);return res.text()}){
+ const uf=clean(p.get('uf'),2).toUpperCase(),year=Number(p.get('year')),month=Number(p.get('month'));
+ if(!sicroRegions[uf]||!Number.isInteger(year)||year<2017||year>Number(day().slice(0,4))||![1,4,7,10].includes(month))throw bad('Selecione UF, ano e referência trimestral do SICRO.');
+ const page=sicroRoot+sicroRegions[uf]+'/'+year+'/'+({1:'janeiro',4:'abril',7:'julho',10:'outubro'})[month];
+ const html=await fetchPage(page);const rows=[],seen=new Set();
+ for(const m of html.matchAll(/href\s*=\s*["']([^"']+)["']/gi)){try{const u=new URL(m[1].replace(/&amp;/g,'&'),page+'/');if(u.protocol!=='https:'||u.hostname!=='www.gov.br'||!u.pathname.startsWith(new URL(page).pathname+'/')||!/\.(?:7z|zip|xlsx)(?:\/view|\/@@download\/file)?$/i.test(u.pathname)||seen.has(u.href))continue;seen.add(u.href);rows.push({title:decodeURIComponent(u.pathname.split('/').find(x=>/\.(?:7z|zip|xlsx)$/i.test(x))||'Arquivo oficial'),url:u.href})}catch{}}
+ return {rows:rows.slice(0,30),page,warning:'Arquivos publicados pelo DNIT para a referência consultada. O Radar não extrai custos das composições nem interpreta automaticamente os arquivos 7z.'};
 }
