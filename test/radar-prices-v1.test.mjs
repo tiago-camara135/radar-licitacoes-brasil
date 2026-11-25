@@ -50,3 +50,25 @@ test('transport preserves strict default shape and supports explicitly opted-in 
  await assert.rejects(createPncpTransport({fetcher,maxRetries:0}).get('https://pncp.gov.br/x'),/sem lista/);
  const r=await createPncpTransport({fetcher,maxRetries:0,acceptBody:b=>b&&typeof b==='object'}).get('https://pncp.gov.br/x');assert.equal(r.body.numeroControlePNCP,'abc');
 });
+
+test('object-first discovery searches each official document type separately and links contracts to purchase',async()=>{
+ const purchase='10877412000168-1-000126/2026',calls=[];
+ const d=await priceQuery(42,new URLSearchParams('mode=object&q=alimentos&uf=RN'),async u=>{const p=new URL(u).searchParams,k=p.get('tipos_documento');calls.push(k);assert.equal(p.get('ufs'),'RN');return {total:25,items:[{document_type:k,numero_controle_pncp:k==='ata'?purchase+'-000003':k==='contrato'?'10877412000168-2-000760/2026':purchase,numero_contratacao:purchase,uf:'RN',description:'Aquisição de alimentos',data_inicio_vigencia:'2026-01-01',data_fim_vigencia:'2099-01-01',permite_adesao:true},{document_type:k,numero_controle_pncp:purchase,uf:'SP'}]};});
+ assert.deepEqual(calls.sort(),['ata','contrato','edital']);assert.equal(d.rows.length,3);assert.equal(d.has_more,true);
+ const contract=d.rows.find(r=>r.kind==='contrato');assert.equal(contract.control,purchase);assert.match(contract.url,/contratos\/10877412000168\/2026\/760$/);assert.match(contract.purchase_url,/editais\/10877412000168\/2026\/126$/);
+ const filtered=await priceQuery(42,new URLSearchParams('mode=object&q=alimentos&kind=ata&validity=active&adhesion=1'),async()=>({total:21,items:[{document_type:'ata',numero_controle_pncp:purchase+'-000003',permite_adesao:false,data_inicio_vigencia:'2026-01-01',data_fim_vigencia:'2099-01-01'}]}));assert.equal(filtered.rows.length,0);assert.equal(filtered.has_more,true);
+});
+test('object search surfaces partial failures and preserves missing linked purchase',async()=>{
+ const d=await priceQuery(42,new URLSearchParams('mode=object&q=alimentos'),async u=>{if(!u.includes('tipos_documento=contrato'))throw Error('offline');return {total:1,items:[{document_type:'contrato',numero_controle_pncp:'10877412000168-2-000760/2026',description:'Alimentos'}]}});
+ assert.deepEqual(d.failed,['edital','ata']);assert.equal(d.rows[0].control,null);assert.match(d.warning,/indisponíveis/);
+ await assert.rejects(priceQuery(42,new URLSearchParams('mode=object&q=alimentos'),async()=>{throw Error('offline')}),/indisponível/);
+});
+test('item description filter preserves paging and actual catalog codes',async()=>{
+ const d=await priceQuery(42,new URLSearchParams('mode=items&control=10877412000168-1-000126%2F2026&term=arroz+tipo+1'),async()=>Array.from({length:50},(_,i)=>({numeroItem:i+1,descricao:i===0?'ARROZ BRANCO TIPO 1':'Café',unidadeMedida:'KG',catalogoCodigoItem:i===0?123:null,materialOuServico:'M'})));
+ assert.equal(d.rows.length,1);assert.equal(d.rows[0].catalog,'123');assert.equal(d.rows[0].type,'material');assert.equal(d.has_more,true);
+});
+test('direct ata item discovery only lists registered linked items and marks units unverified',async()=>{
+ const id='08241754000145-1-000146/2025-000002',row={numeroControlePncpAta:id,numeroItem:'00008',itemExcluido:false,classificacaoFornecedor:'001',descricaoItem:'ADOÇANTE LÍQUIDO',codigoItem:436134,tipoItem:'Material',valorUnitario:9.9,quantidadeHomologadaVencedor:14325};
+ const d=await priceQuery(42,new URLSearchParams({mode:'ata-items',control:id,term:'adocante'}),async u=>u.includes('consultarARPItem')?{resultado:[row,{...row,numeroItem:'00009',itemExcluido:true},{...row,numeroItem:'00010',numeroControlePncpAta:'other'}],totalPaginas:2}:{numeroControlePNCP:id});
+ assert.equal(d.rows.length,1);assert.equal(d.rows[0].price,9.9);assert.equal(d.rows[0].unit,null);assert.equal(d.rows[0].token,undefined);assert.equal(d.has_more,true);
+});

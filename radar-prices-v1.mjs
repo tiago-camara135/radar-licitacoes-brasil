@@ -30,8 +30,41 @@ function federalRow(z,code,source){
  const u=capacity&&measure?baseUnit+' '+capacity+' '+measure:baseUnit;
  if(String(z.codigoItemCatalogo)!==String(code)||!positive(z.precoUnitario)||!positive(z.quantidade)||!item||!purchase||!date(z.dataResultado)||Number(z.percentualMaiorDesconto||0)>0||!u)return null;
  return sourceRow({key:'compras:'+purchase+':'+item,process:'compras:'+purchase,source:'Compras.gov.br — preço praticado',description:clean(z.descricaoDetalhadaItem||z.descricaoItem,1200),unit:u,price:positive(z.precoUnitario),quantity:positive(z.quantidade),date:date(z.dataResultado),org:clean(z.nomeUasg||z.nomeOrgao,250),uf:clean(z.estado,2),supplier:clean(z.niFornecedor,20).replace(/\D/g,'').length===14?clean(z.nomeFornecedor,200):'',catalog:String(code),item:clean(z.numeroItemCompra,20),reference:item+' / compra '+purchase,url:source,ata_url:null,regime:clean(z.forma,30),validity:null})}
+// Object-first discovery: preserve instrument identity and link only to validated purchase IDs.
+const words=v=>fold(v).split(/[^a-z0-9]+/).filter(x=>(x.length>1||/^\d$/.test(x))&&!['de','da','do','das','dos','para','com','em'].includes(x));
+function matchTerms(term,description){const hay=fold(description);return words(term).every(w=>hay.includes(w))}
+function documentRow(z,kind){
+ const id=clean(z.numero_controle_pncp,80);
+ let c=null,url=null;
+ if(kind==='contrato'){
+  const m=id.match(/^(\d{14})-2-(\d{1,9})\/(\d{4})$/);if(!m)return null;
+  url='https://pncp.gov.br/app/contratos/'+m[1]+'/'+Number(m[3])+'/'+Number(m[2]);
+  try{const linked=control(z.numero_contratacao);if(!linked.ata)c=linked}catch{}
+ }else{try{c=control(id)}catch{return null}if((kind==='ata')!==Boolean(c.ata))return null;url=links(c).ata_url||links(c).url}
+ const begin=date(z.data_inicio_vigencia),end=date(z.data_fim_vigencia),now=today();
+ const validity=z.cancelado===true?'cancelled':!begin||!end||begin>end?'unknown':end<now?'expired':begin>now?'future':'active';
+ return {id,control:c?.id||null,kind,description:clean(z.description,1200),title:clean(z.title,250),org:clean(z.orgao_nome,250),uf:clean(z.uf,2),municipality:clean(z.municipio_nome,120),published:date(z.data_publicacao_pncp),begin,end,validity,cancelled:z.cancelado===true,adhesion:kind==='ata'&&typeof z.permite_adesao==='boolean'?z.permite_adesao:null,url,ata_url:kind==='ata'?url:null,purchase_url:c?links(c).url:null};
+}
+async function objectSearch(p,get,page,uf){
+ const q=clean(p.get('q'),180);if(q.length<3)throw bad('Digite pelo menos três caracteres do objeto.');
+ const kind=p.get('kind')||'all',status=p.get('validity')||'all',adhesion=p.get('adhesion')==='1';
+ if(!['all','edital','ata','contrato'].includes(kind)||!['all','active','expired','future','unknown','cancelled'].includes(status))throw bad('Filtro de documento ou vigência inválido.');
+ const start=clean(p.get('from'),10),end=clean(p.get('to'),10);
+ if(start&&date(start)!==start||end&&date(end)!==end||start&&end&&start>end)throw bad('Intervalo de publicação inválido.');
+ const kinds=kind==='all'?['edital','ata','contrato']:[kind],pages=await Promise.allSettled(kinds.map(async k=>{
+  const u='https://pncp.gov.br/api/search/?'+new URLSearchParams({q,tipos_documento:k,pagina:String(page),tam_pagina:'20',...(uf?{ufs:uf}:{})});
+  const b=await get(u);if(!Array.isArray(b?.items))throw Error('Resposta oficial não reconhecida');
+  return {kind:k,total:Number(b.total)||0,rows:b.items.filter(z=>z.document_type===k&&(!uf||z.uf===uf)).map(z=>documentRow(z,k)).filter(Boolean)};
+ }));
+ const successes=pages.filter(x=>x.status==='fulfilled').map(x=>x.value),failed=kinds.filter((_,i)=>pages[i].status==='rejected');
+ if(!successes.length)throw Object.assign(new Error('Pesquisa oficial indisponível.'),{status:503});
+ const rows=successes.flatMap(x=>x.rows).filter(r=>(status==='all'||r.kind!=='edital'&&r.validity===status)&&(!adhesion||r.kind==='ata'&&r.adhesion===true)&&(!start||r.published&&r.published>=start)&&(!end||r.published&&r.published<=end));
+ const totals=Object.fromEntries(successes.map(s=>[s.kind,s.total]));
+ return {mode:'object',rows,page,totals,failed,has_more:page<100&&successes.some(s=>s.total>page*20),warning:'Busca por objeto no índice oficial PNCP. Filtros de vigência e publicação aplicados à página recebida; avance mesmo se a página estiver vazia. Contratos podem não ter compra vinculada.'+(failed.length?' Fontes temporariamente indisponíveis: '+failed.join(', ')+'.':'')};
+}
 export async function priceQuery(uid,p,get=official){
  const mode=p.get('mode')||'search',page=int(p.get('page')||1,1,100),uf=clean(p.get('uf'),2).toUpperCase();if(uf&&!/^[A-Z]{2}$/.test(uf))throw bad('UF inválida.');
+ if(mode==='object')return objectSearch(p,get,page,uf);
  if(mode==='search'){
   const q=clean(p.get('q'),180);if(q.length<3)throw bad('Digite pelo menos três caracteres.');
   const kind=p.get('kind')==='ata'?'ata':'edital';
@@ -49,8 +82,21 @@ export async function priceQuery(uid,p,get=official){
  }
  const c=control(p.get('control')),b=base(c);
  if(mode==='items'){
-  const rows=checkedList(await get(b+'/itens?'+new URLSearchParams({pagina:String(page),tamanhoPagina:'50'}))).filter(z=>positive(z.numeroItem)).map(z=>({item:Number(z.numeroItem),description:clean(z.descricao,1200),unit:clean(z.unidadeMedida,100),catalog:clean(z.catalogoCodigoItem,30),has_result:z.temResultado===true,criterion:clean(z.criterioJulgamentoNome,80)}));
-  return {mode,rows,page,control:c.id,...links(c),warning:c.ata?'Itens da compra de origem, não necessariamente integrantes desta ata. Use preços registrados para confirmar a vinculação.':''};
+  const source=checkedList(await get(b+'/itens?'+new URLSearchParams({pagina:String(page),tamanhoPagina:'50'})));const term=clean(p.get('term'),180);const rows=source.filter(z=>positive(z.numeroItem)&&(!term||matchTerms(term,z.descricao))).map(z=>({item:Number(z.numeroItem),description:clean(z.descricao,1200),unit:clean(z.unidadeMedida,100),catalog:clean(z.catalogoCodigoItem,30),type:z.materialOuServico==='S'?'service':z.materialOuServico==='M'?'material':null,has_result:z.temResultado===true,criterion:clean(z.criterioJulgamentoNome,80)}));
+  return {mode,rows,page,has_more:source.length===50&&page<100,control:c.id,...links(c),warning:c.ata?'Itens da compra de origem, não necessariamente integrantes desta ata. Use preços registrados para confirmar a vinculação.':''};
+ }
+ if(mode==='ata-items'){
+  if(!c.ata)throw bad('Selecione uma ata de registro de preços.');
+  const u=compras+'/modulo-arp/2.1_consultarARPItem_Id?'+new URLSearchParams({numeroControlePncpAta:c.id,pagina:String(page),tamanhoPagina:'50'});
+  const [body,doc]=await Promise.all([get(u),get(b+'/atas/'+c.ata)]);
+  if(doc?.numeroControlePNCP!==c.id)throw Object.assign(new Error('Ata não confirmada pelo PNCP.'),{status:503});
+  const term=clean(p.get('term'),180),seen=new Set(),rows=[];
+  for(const z of checkedList(body)){
+   const item=Number(z.numeroItem);
+   if(z.numeroControlePncpAta!==c.id||!Number.isInteger(item)||item<1||seen.has(item)||z.itemExcluido!==false||z.dataHoraExclusao||Number(z.classificacaoFornecedor)!==1||term&&!matchTerms(term,z.descricaoItem))continue;
+   seen.add(item);rows.push({item,description:clean(z.descricaoItem,1200),catalog:clean(z.codigoItem,30),type:fold(z.tipoItem)==='servico'?'service':fold(z.tipoItem)==='material'?'material':null,unit:null,price:Number(z.percentualMaiorDesconto||0)===0?positive(z.valorUnitario):null,quantity:positive(z.quantidadeHomologadaVencedor)});
+  }
+  return {mode,rows,page,control:c.id,...links(c),has_more:page<100&&Number(body.totalPaginas)>page,warning:'Itens vinculados à ata no Compras.gov.br. Unidade e preço devem ser confirmados antes de adicionar a referência. Ausência de registros não prova inexistência de itens na ata.'};
  }
  if(mode==='ata-prices'){
   if(!c.ata)throw bad('Selecione uma ata de registro de preços.');
