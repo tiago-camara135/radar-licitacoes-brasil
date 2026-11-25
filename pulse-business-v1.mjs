@@ -72,12 +72,12 @@ export function instrumentValidity(begin,end,reference,cancelled=false){
 }
 function ataRecord(x){
  const id=clean(x.numeroControlePNCP||x.numeroControlePncpAta||x.numeroControle,100);
- const m=id.match(/^(\d{14})-3-(\d+)\/(\d{4})$/);
- const purchase=String(x.numeroControlePNCPCompra||x.numeroControlePncpCompra||'').match(/^(\d{14})-1-(\d+)\/(\d{4})$/);
+ const m=id.match(/^(\d{14})-1-(\d+)\/(\d{4})-(\d+)$/);
+ const purchase=String(x.numeroControlePNCPCompra||x.numeroControlePncpCompra||'').match(/^(\d{14})-1-(\d+)\/(\d{4})$/)||m;
  const org=clean(x.orgaoEntidade?.razaoSocial||x.orgaoEntidadeRazaoSocial||x.nomeOrgao,250);
  const cnpj=String(x.orgaoEntidade?.cnpj||x.orgaoEntidadeCnpj||x.cnpjOrgao||m?.[1]||'');
- const seq=Number(x.sequencialAta||m?.[2]),year=Number(x.anoCompra||purchase?.[3]),buy=Number(x.sequencialCompra||purchase?.[2]);
- return {id,object:clean(x.objetoContratacao||x.objetoCompra||x.objetoAta,1500),org,org_cnpj:/^\d{14}$/.test(cnpj)?cnpj:null,uf:clean(x.unidadeOrgao?.ufSigla||x.unidadeOrgaoUfSigla||x.ufSigla||x.uf,2).toUpperCase(),municipality:clean(x.unidadeOrgao?.municipioNome||x.unidadeOrgaoMunicipioNome||x.municipioNome,120),supplier:null,supplier_name:'Fornecedor não informado nesta consulta',value:null,published:date(x.dataPublicacaoPncp),begin:date(x.dataVigenciaInicio||x.dataInicioVigencia),end:date(x.dataVigenciaFim||x.dataFimVigencia),cancelled:x.cancelado===true,kind:'ata',type:'Ata de registro de preços',number:clean(x.numeroAtaRegistroPreco,80),url:/^\d{14}$/.test(cnpj)&&Number.isInteger(year)&&year>=2000&&Number.isInteger(buy)&&buy>0&&Number.isInteger(seq)&&seq>0?'https://pncp.gov.br/app/atas/'+cnpj+'/'+year+'/'+buy+'/'+seq:null};
+ const seq=Number(x.sequencialAta||m?.[4]),year=Number(x.anoCompra||purchase?.[3]),buy=Number(x.sequencialCompra||purchase?.[2]);
+ return {id,object:clean(x.objetoContratacao||x.objetoCompra||x.objetoAta,1500),org,org_cnpj:/^\d{14}$/.test(cnpj)?cnpj:null,uf:clean(x.unidadeOrgao?.ufSigla||x.unidadeOrgaoUfSigla||x.ufSigla||x.uf,2).toUpperCase(),municipality:clean(x.unidadeOrgao?.municipioNome||x.unidadeOrgaoMunicipioNome||x.municipioNome,120),supplier:null,supplier_name:'Fornecedor não informado nesta consulta',value:null,published:date(x.dataPublicacaoPncp),begin:date(x.dataVigenciaInicio||x.dataInicioVigencia),end:date(x.dataVigenciaFim||x.dataFimVigencia),cancelled:x.cancelado===true,adhesion:x.possibilidadeAdesao===true?true:x.possibilidadeAdesao===false?false:null,kind:'ata',type:'Ata de registro de preços',number:clean(x.numeroAtaRegistroPreco,80),url:/^\d{14}$/.test(cnpj)&&Number.isInteger(year)&&year>=2000&&Number.isInteger(buy)&&buy>0&&Number.isInteger(seq)&&seq>0?'https://pncp.gov.br/app/atas/'+cnpj+'/'+year+'/'+buy+'/'+seq:null};
 }
 export function contractView(body,f,reference=localDay()){
  const raw=Array.isArray(body?.data)?body.data:Array.isArray(body)?body:[];
