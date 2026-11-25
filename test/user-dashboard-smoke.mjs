@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
 import {Pool} from 'pg';
+import {saveContractPage} from '../market-archive-v1.mjs';
 
 const base='http://127.0.0.1:10000',origin=base;
 const db=new Pool({connectionString:process.env.DATABASE_URL,ssl:false});
@@ -28,6 +29,16 @@ try{
 
   r=await get('/api/dashboard/market/archive',c1);assert.equal(r.status,200);const market=await r.json();assert.equal(Number(market.coverage.records),0);assert.equal(Number(market.summary.count),0);
   r=await get('/api/dashboard/market/watchlist',c2);assert.equal(r.status,200);assert.deepEqual((await r.json()).items,[]);
+  const fixture={id:'market-qa-'+suffix,object:'Serviço de saúde QA',org:'Órgão QA',org_cnpj:cnpj,uf:'RN',municipality:'Natal',supplier:cnpj,supplier_name:'Empresa QA',value:100,published:'2026-01-01',end:'2027-01-01',url:null,type:'Contrato',source_updated:'2026-01-02T00:00:00Z'};
+  const coverage={start:'2026-01-01',end:'2026-01-01',page:1,received:1,total_pages:1};
+  await saveContractPage(db,[fixture],coverage);await saveContractPage(db,[{...fixture,value:200,source_updated:'2026-01-03T00:00:00Z'}],coverage);await saveContractPage(db,[fixture],coverage);
+  r=await get('/api/dashboard/market/archive?supplier='+cnpj+'&keyword=saude',c1);assert.equal(r.status,200);const profile=await r.json();assert.equal(Number(profile.summary.count),1);assert.equal(Number(profile.summary.value),200);assert.equal(profile.suppliers[0].cnpj,cnpj);
+  r=await post('/api/dashboard/market/watchlist',{kind:'supplier',cnpj,remove:false},c1);assert.equal(r.status,200);assert.equal((await r.json()).items.length,1);
+  r=await get('/api/dashboard/market/watchlist',c2);assert.equal(r.status,200);assert.deepEqual((await r.json()).items,[]);
+  r=await post('/api/dashboard/market/watchlist',{kind:'supplier',cnpj,remove:true},c2);assert.equal(r.status,200);
+  r=await get('/api/dashboard/market/watchlist',c1);assert.equal(r.status,200);assert.equal((await r.json()).items.length,1);
+  r=await post('/api/dashboard/market/watchlist',{kind:'supplier',cnpj,remove:true},c1,'https://cross-origin.invalid');assert.equal(r.status,403);
+  r=await get('/api/dashboard/market/archive');assert.equal(r.status,401);
   r=await post('/api/dashboard/preferences',{geo:{scope:'ufs',ufs:['RN']}},c1);assert.equal(r.status,200);
   r=await post('/api/dashboard/preferences',{pulse_layout:{hidden:['recent','invalid'],order:['quick','quick','agenda']}},c1);assert.equal(r.status,200);const prefs=(await r.json()).preferences;assert.deepEqual(prefs.geo.ufs,['RN']);assert.deepEqual(prefs.pulse_layout.hidden,['recent']);assert.equal(prefs.pulse_layout.order[0],'quick');
   r=await get('/api/dashboard/overview',c1);assert.equal(r.status,200);const rn=await r.json();assert.ok(rn.recommendations.some(x=>x.pncp_id===pncpId));
@@ -61,6 +72,8 @@ try{
   r=await get('/api/dashboard/overview',c1);assert.equal(r.status,401,'Disabled accounts remain invalid');
   console.log('backend dashboard smoke passed: APIs preserved, isolation/origin guard valid, visual Dashboard and Minha Operação absent');
 }finally{
+  await db.query('DELETE FROM market_contract_archive WHERE id=$1',['market-qa-'+suffix]).catch(()=>{});
+  await db.query("DELETE FROM market_contract_pages WHERE start_date='2026-01-01' AND end_date='2026-01-01' AND page=1").catch(()=>{});
   await db.query('DELETE FROM monitored_procurements WHERE pncp_id=$1',[pncpId]).catch(()=>{});
   if(u1||u2)await db.query('DELETE FROM users WHERE id = ANY($1::bigint[])',[[u1,u2].filter(Boolean)]).catch(()=>{});
   await db.end();

@@ -1,4 +1,6 @@
 // Public contract archive: only normalized corporate identifiers; no user search history.
+import {pncpClientHealth,fetchPncpContractPage} from './pncp-client-v3.mjs';
+import {contractView} from './pulse-business-v1.mjs';
 const clean=(v,n=180)=>String(v??'').trim().slice(0,n);
 const bad=message=>Object.assign(new Error(message),{status:400});
 const validCnpj=v=>/^\d{14}$/.test(String(v||''));
@@ -28,7 +30,7 @@ export async function saveContractPage(pool,items,coverage){
   const count=Number((await c.query('SELECT COUNT(*)::int AS n FROM market_contract_archive')).rows[0].n);
   const ids=rows.map(x=>x.id),existing=new Set((await c.query('SELECT id FROM market_contract_archive WHERE id=ANY($1::text[])',[ids])).rows.map(x=>x.id));
   let room=Math.max(0,ARCHIVE_CAP-count),omitted=0;
-  const accepted=rows.filter(x=>existing.has(x.id)||room-->0?true:(omitted++,false));
+  const accepted=rows.filter(x=>{if(existing.has(x.id))return true;if(room>0){room--;return true}omitted++;return false});
   if(accepted.length)await c.query("INSERT INTO market_contract_archive(id,object,org,org_cnpj,uf,municipality,supplier,supplier_name,value,published,expires,url,type,source_updated) SELECT id,object,org,org_cnpj,uf,municipality,supplier,supplier_name,value,published,expires,url,type,source_updated FROM jsonb_to_recordset($1::jsonb) AS r(id text,object text,org text,org_cnpj text,uf text,municipality text,supplier text,supplier_name text,value numeric,published date,expires date,url text,type text,source_updated timestamptz) ON CONFLICT(id) DO UPDATE SET object=EXCLUDED.object,org=EXCLUDED.org,org_cnpj=EXCLUDED.org_cnpj,uf=EXCLUDED.uf,municipality=EXCLUDED.municipality,supplier=EXCLUDED.supplier,supplier_name=EXCLUDED.supplier_name,value=EXCLUDED.value,published=EXCLUDED.published,expires=EXCLUDED.expires,url=EXCLUDED.url,type=EXCLUDED.type,source_updated=EXCLUDED.source_updated,observed_at=NOW() WHERE market_contract_archive.source_updated IS NULL OR EXCLUDED.source_updated>=market_contract_archive.source_updated",[JSON.stringify(accepted)]);
   // Never mark a page as archived if some records were omitted by the storage limit.
   if(!omitted&&accepted.length===coverage.received)await c.query('INSERT INTO market_contract_pages(start_date,end_date,page,received,total_pages) VALUES($1,$2,$3,$4,$5) ON CONFLICT(start_date,end_date,page) DO UPDATE SET received=EXCLUDED.received,total_pages=EXCLUDED.total_pages,observed_at=NOW()',[coverage.start,coverage.end,coverage.page,coverage.received,coverage.total_pages]);
@@ -54,4 +56,27 @@ export async function watchlist(pool,uid,body){
  if(body.remove)await pool.query('DELETE FROM market_watchlist WHERE user_id=$1 AND kind=$2 AND cnpj=$3',[uid,kind,cnpj]);
  else{const col=kind==='supplier'?'supplier':'org_cnpj',name=kind==='supplier'?'supplier_name':'org';await pool.query('INSERT INTO market_watchlist(user_id,kind,cnpj,label) SELECT $1,$2,$3,MAX('+name+') FROM market_contract_archive WHERE '+col+'=$3 HAVING COUNT(*)>0 AND (SELECT COUNT(*) FROM market_watchlist WHERE user_id=$1)<100 ON CONFLICT DO NOTHING',[uid,kind,cnpj])}}
  return (await pool.query('SELECT kind,cnpj,label FROM market_watchlist WHERE user_id=$1 ORDER BY created_at DESC LIMIT 100',[uid])).rows;
+}
+
+let collecting=false,collectorTimer=null;
+export async function collectRecentContractPage(pool){
+ if(collecting)return {skipped:'busy'};
+ const transport=pncpClientHealth().transport||{};
+ if(transport.queued||transport.active||transport.cooldown_until)return {skipped:'pncp_busy'};
+ collecting=true;
+ try{
+  await initMarketArchive(pool);
+  const {rows}=await pool.query("SELECT COUNT(*)::int AS n FROM market_contract_archive");if(rows[0].n>=ARCHIVE_CAP)return {skipped:'storage_cap'};
+  const {rows:days}=await pool.query("WITH days AS (SELECT ((NOW() AT TIME ZONE 'America/Fortaleza')::date-i)::date AS day FROM generate_series(1,7) i), progress AS (SELECT d.day,COALESCE(MAX(p.page),0)::int AS last_page,COALESCE(MAX(p.total_pages),0)::int total_pages,MAX(p.observed_at) last_scan FROM days d LEFT JOIN market_contract_pages p ON p.start_date=d.day AND p.end_date=d.day GROUP BY d.day) SELECT to_char(day,'YYYY-MM-DD') AS day,last_page FROM progress WHERE last_page=0 OR last_page<total_pages ORDER BY last_scan ASC NULLS FIRST,day DESC LIMIT 1");
+  const next=days[0];if(!next)return {skipped:'recent_pages_complete'};
+  const p={start:next.day,end:next.day,page:next.last_page+1};
+  const body=await fetchPncpContractPage(p);
+  const d=contractView(body,{...p,uf:'',keyword:'',supplier:'',expiry:0,min:null,max:null});
+  return saveContractPage(pool,d.items,{...p,received:d.coverage.received,total_pages:d.coverage.total_pages});
+ }finally{collecting=false}
+}
+export function startMarketCollector(pool){
+ if(!pool||collectorTimer||process.env.NODE_ENV==='test'||process.env.MARKET_COLLECTOR==='0')return;
+ const run=async()=>{try{const result=await collectRecentContractPage(pool);if(!result.skipped)console.log('market archive collector:',JSON.stringify(result))}catch(e){console.error('market archive collector:',e.message)}finally{collectorTimer=setTimeout(run,30*60*1000);collectorTimer.unref?.()}};
+ collectorTimer=setTimeout(run,60000);collectorTimer.unref?.();
 }

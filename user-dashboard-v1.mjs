@@ -2,7 +2,7 @@ import { Pool } from 'pg';
 import { createHash } from 'node:crypto';
 import { effectivePncpDeadline } from './pncp-operational-date-v1.mjs';
 import {nationalIntelligence,contracts} from './pulse-business-v1.mjs';
-import {archiveReport,saveContractPage,watchlist} from './market-archive-v1.mjs';
+import {archiveReport,saveContractPage,watchlist,startMarketCollector} from './market-archive-v1.mjs';
 
 const DATABASE_URL=String(process.env.DATABASE_URL||'');
 const APP_ORIGIN=String(process.env.APP_ORIGIN||'');
@@ -76,6 +76,7 @@ function normalizeGeo(value){
 function geoLabel(geo){if(geo.scope==='regiao')return geo.region;if(geo.scope==='ufs')return geo.ufs.join(', ');return'Brasil inteiro'}
 
 export async function initUserDashboard(){
+  startMarketCollector(pool);
   if(!pool||initialized)return;
   await pool.query(`CREATE TABLE IF NOT EXISTS user_tender_tracking(
     id BIGSERIAL PRIMARY KEY,user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
