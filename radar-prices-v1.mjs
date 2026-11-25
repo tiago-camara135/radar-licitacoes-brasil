@@ -31,7 +31,7 @@ function federalRow(z,code,source){
  if(String(z.codigoItemCatalogo)!==String(code)||!positive(z.precoUnitario)||!positive(z.quantidade)||!item||!purchase||!date(z.dataResultado)||Number(z.percentualMaiorDesconto||0)>0||!u)return null;
  return sourceRow({key:'compras:'+purchase+':'+item,process:'compras:'+purchase,source:'Compras.gov.br — preço praticado',description:clean(z.descricaoDetalhadaItem||z.descricaoItem,1200),unit:u,price:positive(z.precoUnitario),quantity:positive(z.quantidade),date:date(z.dataResultado),org:clean(z.nomeUasg||z.nomeOrgao,250),uf:clean(z.estado,2),supplier:clean(z.niFornecedor,20).replace(/\D/g,'').length===14?clean(z.nomeFornecedor,200):'',catalog:String(code),item:clean(z.numeroItemCompra,20),reference:item+' / compra '+purchase,url:source,ata_url:null,regime:clean(z.forma,30),validity:null})}
 // Object-first discovery: preserve instrument identity and link only to validated purchase IDs.
-const words=v=>fold(v).split(/[^a-z0-9]+/).filter(x=>x.length>1&&!['de','da','do','das','dos','para','com','em','tipo'].includes(x));
+const words=v=>fold(v).split(/[^a-z0-9]+/).filter(x=>(x.length>1||/^\d$/.test(x))&&!['de','da','do','das','dos','para','com','em'].includes(x));
 function matchTerms(term,description){const hay=fold(description);return words(term).every(w=>hay.includes(w))}
 function documentRow(z,kind){
  const id=clean(z.numero_controle_pncp,80);
