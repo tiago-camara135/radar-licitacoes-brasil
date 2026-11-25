@@ -100,3 +100,6 @@ html[data-theme] #appShell #view-intelligence #maCoverage{display:inline-block;p
 html[data-theme] #appShell #view-intelligence .mi-manage{margin:8px 0}
 @media(max-width:600px){html[data-theme] #appShell #view-intelligence .mi-navigation .pb-tabs{grid-template-columns:repeat(2,minmax(0,1fr))}html[data-theme] #appShell #view-intelligence .pb-fields{grid-template-columns:1fr}html[data-theme] #appShell #view-intelligence .pb-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}html[data-theme] #appShell #view-intelligence .pb-metric{padding:10px}html[data-theme] #appShell #view-intelligence .pb-metric b{font-size:17px}}
 @media(prefers-reduced-motion:reduce){html[data-theme] #appShell #view-intelligence .mi-navigation .pb-tabs button{transition:none}}
+
+#view-intelligence .mi-rank-more{margin-top:8px;width:100%}
+@media print{html[data-theme] #appShell #view-intelligence .mi-rank-extra[hidden]{display:grid!important;visibility:visible!important}}
