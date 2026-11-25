@@ -681,6 +681,30 @@ try{
  assert.equal(await page.locator('#pbPrices button').filter({hasText:/^Adicionar referência$/}).count(),0);
  await page.unroute('**/api/dashboard/prices/query?*');
  note('Guided price discovery: object shortcut, contract origin, registered ata items and imported list passed');
+ // Actual authenticated workbook import, persistence and native document download.
+ const ExcelJS=(await import('exceljs')).default,w=new ExcelJS.Workbook(),ws=w.addWorksheet('Itens');ws.addRow(['Descrição','Unidade','Quantidade','CATMAT']);ws.addRow(['Material QA','KG',5,123]);
+ await page.locator('#pbPrices input[type="file"]').setInputFiles({name:'itens-qa.xlsx',mimeType:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',buffer:Buffer.from(await w.xlsx.writeBuffer())});
+ await page.locator('#pbPrices button').filter({hasText:/^Importar arquivo XLSX$/}).click();
+ await page.locator('#pbPrices button').filter({hasText:/^Pesquisar código 123$/}).waitFor({timeout});
+ assert.equal(await page.locator('#pbPrices .rp-item').count(),4);
+ await page.route('**/api/dashboard/prices/batch',route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({rows:[{index:3,code:123,rows:[]}]})}));
+ await page.locator('#pbPrices button').filter({hasText:/^Consultar códigos em lote/}).click();
+ await page.locator('#pbPrices .rp-suite').getByText('Item 4 — Material QA',{exact:true}).waitFor({timeout});await page.unroute('**/api/dashboard/prices/batch');
+ await page.locator('#pbPrices .rp-confirm input').check();
+ await page.locator('#pbPrices button').filter({hasText:/^Salvar pesquisa no histórico$/}).click();
+ await page.locator('#pbPrices .rp-suite').getByText(/Pesquisa salva sob nº/).waitFor({timeout});
+ await page.locator('#pbPrices button').filter({hasText:/^Histórico de pesquisas$/}).click();
+ await page.locator('#pbPrices button').filter({hasText:/^PDF histórico$/}).first().waitFor({timeout});
+ const [draft]=await Promise.all([page.waitForEvent('download',{timeout}),page.locator('#pbPrices button').filter({hasText:/^Minuta de ETP$/}).click()]);assert.equal(draft.suggestedFilename(),'radar-minuta-etp.pdf');
+ await page.route('**/api/dashboard/prices/engineering?*',route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({rows:[{location:'RN QA',period:'2026-10',value:1893.33,source:'https://apisidra.ibge.gov.br/values/t/2296/n3/24/v/48/p/last%201'}],warning:'Indicador agregado'})}));
+ await page.locator('#pbPrices button').filter({hasText:/^Consultar custo médio SINAPI$/}).click();await page.locator('#pbPrices .rp-suite').getByText(/RN QA/).waitFor({timeout});await page.unroute('**/api/dashboard/prices/engineering?*');
+ await page.route('**/api/dashboard/prices/sicro?*',route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({rows:[],page:'https://www.gov.br/dnit/pt-br/assuntos/planejamento-e-pesquisa/custos-referenciais/sistemas-de-custos/sicro',warning:'Arquivos oficiais'})}));
+ await page.locator('#pbPrices button').filter({hasText:/^Localizar arquivos SICRO$/}).click();await page.locator('#pbPrices .rp-suite').getByText('Página da referência no DNIT',{exact:true}).waitFor({timeout});await page.unroute('**/api/dashboard/prices/sicro?*');
+ await page.locator('#pbPrices select[name="mode"]').selectOption('bps');assert.ok(await page.locator('#pbPrices input[name="code"]').isVisible());
+ for(const theme of ['light','dark']){await page.setViewportSize({width:390,height:844});await page.evaluate(t=>document.documentElement.dataset.theme=t,theme);const size=await page.evaluate(()=>({w:innerWidth,s:document.documentElement.scrollWidth}));assert.ok(size.s<=size.w+6,'Suite mobile overflow '+theme)}
+ await page.setViewportSize({width:1280,height:800});
+ note('Market suite: actual XLSX upload, batch controls, authenticated persistence, ETP PDF and sector navigation passed');
+
 
 
 
