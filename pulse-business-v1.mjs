@@ -1,5 +1,5 @@
 import {effectivePncpDeadline} from './pncp-operational-date-v1.mjs';
-import {fetchPncpContractPage} from './pncp-client-v3.mjs';
+import {fetchPncpContractPage,fetchPncpAtaPage} from './pncp-client-v3.mjs';
 const UFS=new Set('AC AL AP AM BA CE DF ES GO MA MT MS MG PA PB PR PE PI RJ RN RS RO RR SC SP SE TO'.split(' '));
 const clean=(v,n=180)=>String(v??'').trim().slice(0,n);
 const norm=v=>String(v??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
@@ -52,28 +52,47 @@ export async function nationalIntelligence(pool,params){
  pending.set(key,task);return task;
 }
 export function contractParams(params){
- const start=date(params.get('start')),end=date(params.get('end')),page=Number(params.get('page')||1);
- if(!start||!end||start>end||Date.parse(end)-Date.parse(start)>30*86400000||end>localDay())throw bad('Informe até 31 dias de publicação, sem datas futuras.');
+ const start=date(params.get('start')),end=date(params.get('end')),page=Number(params.get('page')||1),kind=params.get('kind')||'contract',validity=params.get('validity')||'all',org=clean(params.get('org'),18).replace(/\D/g,'');
+ if(!['contract','ata'].includes(kind)||!['all','active','expired','future','unknown','cancelled'].includes(validity)||org&&org.length!==14)throw bad('Tipo, vigência ou CNPJ do órgão inválido.');
+ if(!start||!end||start>end||Date.parse(end)-Date.parse(start)>30*86400000||(kind==='contract'&&end>localDay()))throw bad('Cada lote deve abranger até 31 dias; publicação de contratos não admite datas futuras.');
  if(!Number.isInteger(page)||page<1||page>10000)throw bad('Página inválida.');
  const supplier=clean(params.get('supplier'),18).replace(/\D/g,'');if(supplier&&supplier.length!==14)throw bad('Informe um CNPJ empresarial com 14 dígitos.');
  const expiry=Number(params.get('expiry')||0);if(![0,30,60,90].includes(expiry))throw bad('Prazo inválido.');
  const batch=Number(params.get('batch')||1);if(![1,2,3].includes(batch))throw bad('Quantidade de páginas inválida.');
- return {start,end,page,supplier,expiry,batch,...filters(params)};
+ if(kind==='ata'&&supplier)throw bad('A consulta de atas não disponibiliza fornecedor nesta fonte.');
+ return {start,end,page,supplier,expiry,batch,kind,validity,org,...filters(params)};
+}
+export function instrumentValidity(begin,end,reference,cancelled=false){
+ if(cancelled===true)return 'cancelled';
+ if(!begin||!end||begin>end)return 'unknown';
+ if(end<reference)return 'expired';
+ if(begin>reference)return 'future';
+ return 'active';
+}
+function ataRecord(x){
+ const id=clean(x.numeroControlePNCP||x.numeroControlePncpAta||x.numeroControle,100);
+ const m=id.match(/^(\d{14})-3-(\d+)\/(\d{4})$/);
+ const purchase=String(x.numeroControlePNCPCompra||x.numeroControlePncpCompra||'').match(/^(\d{14})-1-(\d+)\/(\d{4})$/);
+ const org=clean(x.orgaoEntidade?.razaoSocial||x.orgaoEntidadeRazaoSocial||x.nomeOrgao,250);
+ const cnpj=String(x.orgaoEntidade?.cnpj||x.orgaoEntidadeCnpj||x.cnpjOrgao||m?.[1]||'');
+ const seq=Number(x.sequencialAta||m?.[2]),year=Number(x.anoCompra||purchase?.[3]),buy=Number(x.sequencialCompra||purchase?.[2]);
+ return {id,object:clean(x.objetoContratacao||x.objetoCompra||x.objetoAta,1500),org,org_cnpj:/^\d{14}$/.test(cnpj)?cnpj:null,uf:clean(x.unidadeOrgao?.ufSigla||x.unidadeOrgaoUfSigla||x.ufSigla||x.uf,2).toUpperCase(),municipality:clean(x.unidadeOrgao?.municipioNome||x.unidadeOrgaoMunicipioNome||x.municipioNome,120),supplier:null,supplier_name:'Fornecedor não informado nesta consulta',value:null,published:date(x.dataPublicacaoPncp),begin:date(x.dataVigenciaInicio||x.dataInicioVigencia),end:date(x.dataVigenciaFim||x.dataFimVigencia),cancelled:x.cancelado===true,kind:'ata',type:'Ata de registro de preços',number:clean(x.numeroAtaRegistroPreco,80),url:/^\d{14}$/.test(cnpj)&&Number.isInteger(year)&&year>=2000&&Number.isInteger(buy)&&buy>0&&Number.isInteger(seq)&&seq>0?'https://pncp.gov.br/app/atas/'+cnpj+'/'+year+'/'+buy+'/'+seq:null};
 }
 export function contractView(body,f,reference=localDay()){
  const raw=Array.isArray(body?.data)?body.data:Array.isArray(body)?body:[];
  const items=[];const seen=new Set();
  const cutoff=new Date(Date.parse(reference)+f.expiry*86400000).toISOString().slice(0,10);
  for(const x of raw){
+  if(f.kind==='ata'){const a=ataRecord(x);if(!a.id||seen.has(a.id))continue;seen.add(a.id);a.validity=instrumentValidity(a.begin,a.end,reference,a.cancelled);if(f.uf&&a.uf!==f.uf||f.org&&a.org_cnpj!==f.org||f.keyword&&!norm([a.object,a.org,a.number].join(' ')).includes(norm(f.keyword))||f.validity&&f.validity!=='all'&&a.validity!==f.validity||f.expiry&&(!a.end||a.validity!=='active'||a.end>cutoff)||f.min!=null||f.max!=null)continue;items.push(a);continue}
   const id=clean(x.numeroControlePNCP,100);if(!id||seen.has(id))continue;seen.add(id);
   const uf=clean(x.unidadeOrgao?.ufSigla,2).toUpperCase(),object=clean(x.objetoContrato,1500),org=clean(x.orgaoEntidade?.razaoSocial,250),supplierId=String(x.niFornecedor??'').replace(/\D/g,'');
   const corporate=x.tipoPessoa==='PJ'&&supplierId.length===14;
   const supplierName=corporate?clean(x.nomeRazaoSocialFornecedor,250):'Fornecedor não empresarial';
-  const value=number(x.valorGlobal),end=date(x.dataVigenciaFim),published=date(x.dataPublicacaoPncp);
-  if(f.uf&&uf!==f.uf||f.supplier&&(!corporate||supplierId!==f.supplier)||f.keyword&&!norm([object,org,supplierName].join(' ')).includes(norm(f.keyword))||f.expiry&&(!end||end<reference||end>cutoff)||f.min!==null&&(value===null||value<f.min)||f.max!==null&&(value===null||value>f.max))continue;
+  const value=number(x.valorGlobal),end=date(x.dataVigenciaFim),begin=date(x.dataVigenciaInicio),published=date(x.dataPublicacaoPncp),validity=instrumentValidity(begin,end,reference,x.cancelado===true);
+  if(f.org&&String(x.orgaoEntidade?.cnpj||'')!==f.org||f.validity&&f.validity!=='all'&&validity!==f.validity||f.uf&&uf!==f.uf||f.supplier&&(!corporate||supplierId!==f.supplier)||f.keyword&&!norm([object,org,supplierName].join(' ')).includes(norm(f.keyword))||f.expiry&&(!end||end<reference||end>cutoff)||f.min!==null&&(value===null||value<f.min)||f.max!==null&&(value===null||value>f.max))continue;
   const cnpj=String(x.orgaoEntidade?.cnpj??''),year=Number(x.anoContrato),seq=Number(x.sequencialContrato);
   const url=/^\d{14}$/.test(cnpj)&&Number.isInteger(year)&&year>=2000&&Number.isInteger(seq)&&seq>0?'https://pncp.gov.br/app/contratos/'+cnpj+'/'+year+'/'+seq:null;
-  items.push({id,object,org,org_cnpj:/^\d{14}$/.test(cnpj)?cnpj:null,source_updated:Number.isFinite(Date.parse(x.dataAtualizacaoGlobal||x.dataAtualizacao||''))?new Date(x.dataAtualizacaoGlobal||x.dataAtualizacao).toISOString():null,uf,municipality:clean(x.unidadeOrgao?.municipioNome,120),supplier:corporate?supplierId:null,supplier_name:supplierName,value,published,end,url,type:clean(x.tipoContrato?.nome,120)});
+  items.push({id,object,org,org_cnpj:/^\d{14}$/.test(cnpj)?cnpj:null,source_updated:Number.isFinite(Date.parse(x.dataAtualizacaoGlobal||x.dataAtualizacao||''))?new Date(x.dataAtualizacaoGlobal||x.dataAtualizacao).toISOString():null,uf,municipality:clean(x.unidadeOrgao?.municipioNome,120),supplier:corporate?supplierId:null,supplier_name:supplierName,value,published,begin,end,validity,kind:'contract',number:clean(x.numeroContratoEmpenho,80),url,type:clean(x.tipoContrato?.nome,120)});
  }
  const suppliers=new Map(),months=new Map();
  for(const x of items){if(x.supplier){const e=suppliers.get(x.supplier)||{name:x.supplier_name,cnpj:x.supplier,count:0,value:0,known:0};e.count++;if(x.value!==null){e.value+=x.value;e.known++}suppliers.set(x.supplier,e)}if(x.published){const k=x.published.slice(0,7),e=months.get(k)||{month:k,count:0,value:0,known:0};e.count++;if(x.value!==null){e.value+=x.value;e.known++}months.set(k,e)}}
@@ -81,16 +100,16 @@ export function contractView(body,f,reference=localDay()){
  const due=days=>items.filter(x=>x.end&&x.end>=reference&&x.end<=new Date(Date.parse(reference)+days*86400000).toISOString().slice(0,10)).length;
  return {items,summary:{count:items.length,known_values:known.length,value:known.length?known.reduce((a,x)=>a+x.value,0):null,due30:due(30),due60:due(60),due90:due(90)},suppliers:[...suppliers.values()].sort((a,b)=>b.count-a.count).slice(0,10),months:[...months.values()].sort((a,b)=>a.month.localeCompare(b.month)),coverage:{page:f.page,page_size:50,received:raw.length,total_pages:Number(body?.totalPaginas)||0,total_records:Number(body?.totalRegistros)||0,local_filters:true,complete:false},generated_at:new Date().toISOString(),source:'PNCP /v1/contratos — publicação por período; filtros aplicados somente à página consultada. Vencimento não garante nova contratação.'};
 }
-export async function contracts(params,fetchPage=fetchPncpContractPage,onPage=null){
- const f=contractParams(params),data=[],pages=[],failed=[];let totalPages=0,totalRecords=0,archiveSaved=0,archiveOmitted=0,archiveErrors=0;
+export async function contracts(params,fetchPage=null,onPage=null){
+ const f=contractParams(params),data=[],pages=[],failed=[];fetchPage=fetchPage||(f.kind==='ata'?fetchPncpAtaPage:fetchPncpContractPage);let totalPages=0,totalRecords=0,archiveSaved=0,archiveOmitted=0,archiveErrors=0;
  for(let p=f.page;p<Math.min(10001,f.page+f.batch);p++){
   if(p>f.page&&p>totalPages)break;
-  try{const body=await fetchPage({...f,page:p});data.push(...(Array.isArray(body?.data)?body.data:Array.isArray(body)?body:[]));totalPages=Number(body?.totalPaginas)||0;totalRecords=Number(body?.totalRegistros)||0;pages.push(p);if(onPage){try{const normalized=contractView(body,{...f,uf:'',keyword:'',supplier:'',expiry:0,min:null,max:null});const saved=await onPage(normalized.items,{start:f.start,end:f.end,page:p,received:normalized.coverage.received,total_pages:totalPages});archiveSaved+=saved.archived;archiveOmitted+=saved.omitted}catch(e){archiveErrors++;console.error('market archive page:',e.message)}}}
+  try{const body=await fetchPage({...f,page:p});data.push(...(Array.isArray(body?.data)?body.data:Array.isArray(body)?body:[]));totalPages=Number(body?.totalPaginas)||0;totalRecords=Number(body?.totalRegistros)||0;pages.push(p);if(onPage&&f.kind==='contract'){try{const normalized=contractView(body,{...f,uf:'',keyword:'',supplier:'',org:'',validity:'all',expiry:0,min:null,max:null});const saved=await onPage(normalized.items,{start:f.start,end:f.end,page:p,received:normalized.coverage.received,total_pages:totalPages});archiveSaved+=saved.archived;archiveOmitted+=saved.omitted}catch(e){archiveErrors++;console.error('market archive page:',e.message)}}}
   catch(error){if(!pages.length)throw error;failed.push(p);break}
  }
  const result=contractView({data,totalPaginas:totalPages,totalRegistros:totalRecords},f);
  result.archive={saved:archiveSaved,omitted:archiveOmitted,errors:archiveErrors};
  result.coverage={...result.coverage,pages,failed_pages:failed,last_page:pages.at(-1)||f.page,next_page:failed[0]??(pages.at(-1)||f.page)+1,complete:false};
- result.source='PNCP /v1/contratos — filtros aplicados às páginas consultadas; não representa todo o histórico. Vencimento não garante nova contratação.';
+ result.source=(f.kind==='ata'?'PNCP /v1/atas — período de vigência':'PNCP /v1/contratos — período de publicação')+'; filtros aplicados às páginas consultadas. Vigência por datas informadas; confira cancelamento, extinção e aditivos no registro oficial.';
  return result;
 }
