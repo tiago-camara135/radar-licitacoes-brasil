@@ -572,6 +572,18 @@ try{
  assert.ok(csvText.includes('Segundo contrato QA'));
  assert.equal((csvText.match(/fixture-1/g)||[]).length,1,'CSV must deduplicate');
  await page.unroute('**/api/dashboard/contracts?*');
+ // Real UI sends a bounded first lot for a long interval and exposes a separate ata filter.
+ const lots=[];await page.route('**/api/dashboard/contracts?*',async route=>{const p=new URL(route.request().url()).searchParams;lots.push(Object.fromEntries(p));await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({items:[{...contractFixture,id:'lot-'+lots.length,kind:p.get('kind'),validity:'expired',begin:'2024-01-01',end:'2024-12-31'}],coverage:{page:1,last_page:1,next_page:2,total_pages:1},source:'Fixture isolada'})});});
+ await page.locator('#pbContractForm input[name="start"]').fill('2024-01-01');await page.locator('#pbContractForm input[name="end"]').fill('2024-03-31');
+ await page.locator('#pbContractForm select[name="validity"]').selectOption('expired');
+ await page.locator('#pbContractForm button[type="submit"]').click();await page.locator('#pbContractResults .pb-contract').first().waitFor({timeout});
+ assert.equal(lots[0].validity,'expired');assert.equal(lots[0].end,'2024-03-31');assert.equal(lots[0].start,'2024-03-01');
+ await page.locator('#pbNext').click();await until(page,()=>document.querySelectorAll('#pbContractResults .pb-contract').length===2);
+ assert.equal(lots[1].end,'2024-02-29');
+ await page.locator('#pbContractForm select[name="kind"]').selectOption('ata');assert.ok(!(await page.locator('#pbContractForm input[name="supplier"]').isVisible()));await page.locator('#pbContractForm button[type="submit"]').click();await until(page,()=>document.querySelector('#pbContractResults .pb-contract')?.textContent.includes('Prazo encerrado'));assert.equal(lots.at(-1).kind,'ata');
+ await page.unroute('**/api/dashboard/contracts?*');
+ note('Instrument validity filters and long publication intervals passed in Chromium');
+
  note('Intelligence Pro: contract UI failure recovery, retry, deduplication and safe CSV export passed with isolated network fixture');
  await page.locator('[data-pb-tab="archive"]').click();
  await page.locator('#maResults .pb-metrics').waitFor({timeout});
