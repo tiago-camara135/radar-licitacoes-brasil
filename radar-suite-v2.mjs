@@ -25,12 +25,12 @@ export async function importDemand(body){
  if(typeof body?.file!=='string'||body.file.length>2_700_000)throw bad('Arquivo inválido ou muito grande.');
  const buf=Buffer.from(body.file,'base64');safeZip(buf);const w=new ExcelJS.Workbook();try{await w.xlsx.load(buf)}catch{throw bad('Não foi possível ler o XLSX.')}
  const sheet=w.worksheets[0];if(!sheet||sheet.rowCount>101)throw bad('Primeira aba deve conter até 100 linhas, com cabeçalho.');
- const cols={};sheet.getRow(1).eachCell((cell,i)=>{const v=fold(cell.text).trim();if(['descricao','especificacao','item'].includes(v))cols.description=i;if(['unidade','unidade de fornecimento','un'].includes(v))cols.unit=i;if(['quantidade','qtd','qtde'].includes(v))cols.quantity=i;if(['catmat','catser','codigo'].includes(v))cols.catalog=i});
+ const cols={};sheet.getRow(1).eachCell((cell,i)=>{const v=fold(cell.text).trim();if(['descricao','especificacao','item'].includes(v))cols.description=i;if(['unidade','unidade de fornecimento','un'].includes(v))cols.unit=i;if(['quantidade','qtd','qtde'].includes(v))cols.quantity=i;if(['catmat','catser','codigo'].includes(v)){cols.catalog=i;cols.catalogType=v==='catser'?'service':v==='catmat'?'material':null}});
  if(!cols.description||!cols.unit||!cols.quantity)throw bad('Use cabeçalhos Descrição, Unidade, Quantidade; Código é opcional.');
  const rows=[];for(let i=2;i<=sheet.rowCount;i++){const r=sheet.getRow(i),d=r.getCell(cols.description),u=r.getCell(cols.unit),q=r.getCell(cols.quantity);if([d,u,q].every(x=>x.value===null||x.value===''))continue;
  if([d,u,q].some(x=>x.value&&typeof x.value==='object'))throw bad('Use valores simples, sem fórmulas, na linha '+i+'.');
  const description=clean(d.value),unit=clean(u.value,100),quantity=positive(typeof q.value==='string'?q.value.replace(',','.'):q.value),catalog=cols.catalog?clean(r.getCell(cols.catalog).text,20):'';
- if(!description||!unit||!quantity||quantity>1e9||catalog&&!/^\d+$/.test(catalog))throw bad('Confira descrição, unidade, quantidade e código na linha '+i+'.');rows.push({description,unit,quantity,catalog});
+ if(!description||!unit||!quantity||quantity>1e9||catalog&&!/^\d+$/.test(catalog))throw bad('Confira descrição, unidade, quantidade e código na linha '+i+'.');rows.push({description,unit,quantity,catalog,catalogType:cols.catalogType||null});
  }if(!rows.length||rows.length>30)throw bad('Importe de 1 a 30 itens por pesquisa.');return {rows,warning:'Somente dados da demanda importados; nenhum preço foi considerado oficial.'};
 }
 export async function initPriceHistory(pool){await pool.query('CREATE TABLE IF NOT EXISTS radar_price_history(id bigserial PRIMARY KEY,user_id bigint NOT NULL,report jsonb NOT NULL,created_at timestamptz NOT NULL DEFAULT now())');await pool.query('CREATE INDEX IF NOT EXISTS radar_price_history_owner ON radar_price_history(user_id,created_at DESC)')}
