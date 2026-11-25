@@ -62,7 +62,7 @@ let collecting=false,collectorTimer=null;
 export async function collectRecentContractPage(pool){
  if(collecting)return {skipped:'busy'};
  const transport=pncpClientHealth().transport||{};
- if(transport.queued||transport.active||transport.cooldown_until)return {skipped:'pncp_busy'};
+ if(transport.queued||Number(transport.active||0)>=Number(transport.max_concurrent||2)||transport.cooldown_until)return {skipped:'pncp_busy'};
  collecting=true;
  try{
   await initMarketArchive(pool);
@@ -77,6 +77,6 @@ export async function collectRecentContractPage(pool){
 }
 export function startMarketCollector(pool){
  if(!pool||collectorTimer||process.env.NODE_ENV==='test'||process.env.MARKET_COLLECTOR==='0')return;
- const run=async()=>{try{const result=await collectRecentContractPage(pool);if(!result.skipped)console.log('market archive collector:',JSON.stringify(result))}catch(e){console.error('market archive collector:',e.message)}finally{collectorTimer=setTimeout(run,30*60*1000);collectorTimer.unref?.()}};
+ const run=async()=>{let delay=30*60*1000;try{const result=await collectRecentContractPage(pool);if(result.skipped==='pncp_busy'||result.skipped==='busy')delay=2*60*1000;console.log('market archive collector:',JSON.stringify(result))}catch(e){console.error('market archive collector:',e.message)}finally{collectorTimer=setTimeout(run,delay);collectorTimer.unref?.()}};
  collectorTimer=setTimeout(run,60000);collectorTimer.unref?.();
 }
