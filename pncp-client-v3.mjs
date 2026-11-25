@@ -17,6 +17,11 @@ export async function fetchPncpContractPage({start,end,page}){
  // Share the national queue and cache; no automatic historical backfill.
  const {body}=await fetchJsonWithRetry(url.href);return body;
 }
+export async function fetchPncpAtaPage({start,end,page,org}){
+ const url=new URL(PNCP_BASE_URL.replace(/\/$/,'')+'/v1/atas');
+ url.search=new URLSearchParams({dataInicial:start.replaceAll('-',''),dataFinal:end.replaceAll('-',''),pagina:String(page),tamanhoPagina:'50',...(org?{cnpj:org}:{})}).toString();
+ const {body}=await fetchJsonWithRetry(url.href);return body;
+}
 const digits = v => String(v ?? '').replace(/\D/g,'');
 const clean = (v,n=500) => String(v ?? '').trim().slice(0,n);
 export const textNorm = v => String(v ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
