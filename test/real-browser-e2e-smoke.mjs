@@ -660,6 +660,28 @@ try{
  for(const theme of ['light','dark']){await page.setViewportSize({width:390,height:844});await page.evaluate(t=>document.documentElement.dataset.theme=t,theme);const size=await page.evaluate(()=>({w:innerWidth,s:document.documentElement.scrollWidth}));assert.ok(size.s<=size.w+6,'Prices mobile overflow '+theme)}
  await page.setViewportSize({width:1280,height:800});
  note('Radar Preços Públicos: multi-item selection, authenticated report, native PDF/XLSX downloads and responsive themes passed');
+ await page.locator('#pbPrices .rp-import summary').click();
+ await page.locator('#pbPrices .rp-import textarea').fill('Descrição\tUnidade\tQuantidade\nItem importado QA\tKG\t15');
+ await page.locator('#pbPrices button').filter({hasText:/^Importar itens$/}).click();
+ assert.equal(await page.locator('#pbPrices .rp-item').count(),3);
+ const requested=[],purchase='10877412000168-1-000126/2026';
+ await page.route('**/api/dashboard/prices/query?*',route=>{const p=new URL(route.request().url()).searchParams;requested.push(Object.fromEntries(p));const mode=p.get('mode');const d=mode==='object'?{mode,rows:[{kind:'contrato',id:'10877412000168-2-000760/2026',control:purchase,description:'Objeto QA',org:'Órgão QA',uf:'RN',validity:'active',url:'https://pncp.gov.br/app/contratos/10877412000168/2026/760'},{kind:'ata',id:purchase+'-000003',control:purchase+'-000003',description:'Ata QA',org:'Órgão QA',uf:'RN',validity:'active',url:'https://pncp.gov.br/app/atas/10877412000168/2026/126/3'}],has_more:false}:mode==='ata-items'?{mode,control:purchase+'-000003',page:1,rows:[{item:8,description:'Item registrado QA',price:9,unit:null,catalog:'123',type:'material'}]}:mode==='items'?{mode,control:purchase,page:1,rows:[{item:1,description:'Item QA',unit:'KG',catalog:'123',type:'material'}]}:{mode,rows:[]};return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(d)})});
+ await page.locator('#pbPrices button').filter({hasText:/^Usar objeto cadastrado$/}).click();
+ await page.locator('#pbPrices button').filter({hasText:/^Ver itens da compra de origem$/}).waitFor({timeout});
+ assert.equal(requested[0].q,'Pesquisa QA');
+ await page.locator('#pbPrices button').filter({hasText:/^Ver itens da compra de origem$/}).click();
+ await page.locator('#pbPrices button').filter({hasText:/^Comparar preços pelo catálogo 123$/}).waitFor({timeout});
+ await page.locator('#pbPrices input[name="term"]').fill('Item QA');
+ await page.locator('#pbPrices button').filter({hasText:/^Filtrar itens$/}).click();
+ await until(page,()=>document.querySelector('#pbPrices input[name="term"]')?.value==='Item QA');
+ await page.locator('#pbPrices button').filter({hasText:/^Voltar aos resultados$/}).click();
+ await page.locator('#pbPrices button').filter({hasText:/^Ver itens registrados na ata$/}).click();
+ await page.locator('#pbPrices button').filter({hasText:/^Conferir preço registrado$/}).waitFor({timeout});
+ assert.ok(await page.locator('#pbPrices').getByText(/unidade a confirmar/).count());
+ assert.equal(await page.locator('#pbPrices button').filter({hasText:/^Adicionar referência$/}).count(),0);
+ await page.unroute('**/api/dashboard/prices/query?*');
+ note('Guided price discovery: object shortcut, contract origin, registered ata items and imported list passed');
+
 
 
  await gotoSection(page,'home');
