@@ -4,6 +4,8 @@ import { effectivePncpDeadline } from './pncp-operational-date-v1.mjs';
 import {nationalIntelligence,contracts} from './pulse-business-v1.mjs';
 import {archiveReport,saveContractPage,watchlist,startMarketCollector,initMarketArchive} from './market-archive-v1.mjs';
 import {marketSignals,lookupMarket} from './market-pro-v1.mjs';
+import {priceQuery,buildPriceReport} from './radar-prices-v1.mjs';
+import {pricePdf,priceExcel} from './radar-price-export-v1.mjs';
 
 const DATABASE_URL=String(process.env.DATABASE_URL||'');
 const APP_ORIGIN=String(process.env.APP_ORIGIN||'');
@@ -245,6 +247,8 @@ export async function handleUserDashboardRoute(req,res,url){
     const user=await authUser(req);if(!user){json(res,401,{error:'Faça login para acessar seu dashboard.'});return true}
     if(!allowDashboard(user.id)){res.setHeader('Retry-After','60');json(res,429,{error:'Muitas consultas ao dashboard. Tente novamente em instantes.'});return true}
     if(req.method==='GET'&&url.pathname==='/api/dashboard/intelligence'){json(res,200,await nationalIntelligence(pool,url.searchParams));return true}
+    if(req.method==='GET'&&url.pathname==='/api/dashboard/prices/query'){try{json(res,200,await priceQuery(user.id,url.searchParams))}catch(e){json(res,e.status===400?400:503,{error:e.status===400?e.message:'Fonte oficial indisponível ou resposta não reconhecida. Tente novamente.'})}return true}
+    if(req.method==='POST'&&url.pathname==='/api/dashboard/prices/report'){const report=buildPriceReport(user.id,await readJson(req,1500000));const format=url.searchParams.get('format')||'json';if(format==='json'){json(res,200,report);return true}if(!['pdf','xlsx'].includes(format)){json(res,400,{error:'Formato inválido.'});return true}const file=await (format==='pdf'?pricePdf(report):priceExcel(report));res.statusCode=200;res.setHeader('Content-Type',format==='pdf'?'application/pdf':'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');res.setHeader('Content-Disposition','attachment; filename="radar-pesquisa-precos.'+format+'"');res.setHeader('Cache-Control','no-store');res.setHeader('X-Content-Type-Options','nosniff');res.end(file);return true}
     if(req.method==='GET'&&url.pathname==='/api/dashboard/market/signals'){json(res,200,await marketSignals(pool,user.id,url.searchParams));return true}
     if(req.method==='GET'&&url.pathname==='/api/dashboard/market/lookup'){try{json(res,200,await lookupMarket(url.searchParams))}catch(e){json(res,e.status===400?400:503,{error:e.status===400?e.message:'Consulta oficial indisponível. Tente novamente.'})}return true}
     if(req.method==='GET'&&url.pathname==='/api/dashboard/market/archive'){json(res,200,await archiveReport(pool,url.searchParams));return true}

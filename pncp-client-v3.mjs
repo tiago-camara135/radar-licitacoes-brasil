@@ -22,10 +22,11 @@ export async function fetchPncpAtaPage({start,end,page,org}){
  url.search=new URLSearchParams({dataInicial:start.replaceAll('-',''),dataFinal:end.replaceAll('-',''),pagina:String(page),tamanhoPagina:'50',...(org?{cnpj:org}:{})}).toString();
  const {body}=await fetchJsonWithRetry(url.href);return body;
 }
+const detailTransport=createPncpTransport({spacing:650,maxConcurrent:1,maxRetries:0,acceptBody:b=>b&&typeof b==='object'&&!Array.isArray(b)});
 export async function fetchPncpAtaDetail({cnpj,year,purchase,sequence}){
  if(!/^\d{14}$/.test(cnpj)||![year,purchase,sequence].every(x=>Number.isInteger(x)&&x>0))throw new Error('Identificação de ata inválida.');
  const base='https://pncp.gov.br/api/pncp/v1/orgaos/';
- const {body}=await fetchJsonWithRetry(base+cnpj+'/compras/'+year+'/'+purchase+'/atas/'+sequence);return body;
+ const {body}=await detailTransport.get(base+cnpj+'/compras/'+year+'/'+purchase+'/atas/'+sequence);return body;
 }
 const digits = v => String(v ?? '').replace(/\D/g,'');
 const clean = (v,n=500) => String(v ?? '').trim().slice(0,n);

@@ -1,5 +1,5 @@
 // Shared, bounded transport for the official PNCP consultation endpoints.
-export function createPncpTransport({fetcher=(...args)=>fetch(...args),now=Date.now,sleep=ms=>new Promise(r=>setTimeout(r,ms)),spacing=450,maxConcurrent=2,maxRetries=2,timeoutMs=18000,cacheMs=20000,maxQueue=96}={}){
+export function createPncpTransport({fetcher=(...args)=>fetch(...args),now=Date.now,sleep=ms=>new Promise(r=>setTimeout(r,ms)),spacing=450,maxConcurrent=2,maxRetries=2,timeoutMs=18000,cacheMs=20000,maxQueue=96,acceptBody=b=>Array.isArray(b)||Array.isArray(b?.data)}={}){
  const inflight=new Map(),cache=new Map(),queue=[];
  let active=0,gate=Promise.resolve(),nextStart=0,cooldown=0,penalty=0;
  const counters={requests:0,successes:0,failures:0,retries:0,rate_limited:0,deduplicated:0,cache_hits:0};
@@ -40,7 +40,7 @@ export function createPncpTransport({fetcher=(...args)=>fetch(...args),now=Date.
     if(transient){penalty=response.status===429?Math.min(6000,Math.max(1500,penalty+750)):Math.min(6000,penalty+350);cooldown=Math.max(cooldown,now()+retryAfter(response,attempt));}
     throw error('PNCP HTTP '+response.status,response.status,transient);
    }
-   if(!Array.isArray(body)&&!Array.isArray(body?.data))throw error('PNCP retornou resposta sem lista de registros',502,true);
+   if(!acceptBody(body))throw error('PNCP retornou resposta sem lista de registros',502,true);
    counters.successes++;penalty=Math.max(0,penalty-50);
    return {response,body};
   }catch(e){

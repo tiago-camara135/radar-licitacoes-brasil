@@ -626,6 +626,41 @@ try{
  await page.setViewportSize({width:1280,height:800});
  await page.unroute('**/api/dashboard/market/signals?*');await page.unroute('**/api/dashboard/market/lookup?*');
  note('Market clean workspace: focused tools, regional drilldown, lookup and responsive themes passed');
+ await page.locator('[data-pb-tab="prices"]').click();
+ await page.locator('#pbPrices .rp-item').first().waitFor({timeout});assert.ok(!(await page.locator('#pbMarketPro').isVisible()));
+ await page.locator('#pbPrices input[name="agency"]').fill('Órgão QA');
+ await page.locator('#pbPrices input[name="responsible"]').fill('Responsável QA');
+ await page.locator('#pbPrices input[name="object"]').fill('Pesquisa QA');
+ await page.locator('#pbPrices .rp-item input[name="description"]').first().fill('Item QA');
+ await page.locator('#pbPrices .rp-item input[name="unit"]').first().fill('UN');
+ await page.locator('#pbPrices .rp-item input[name="quantity"]').first().fill('10');
+ await page.locator('#pbPrices button').filter({hasText:/^Adicionar item$/}).click();
+ assert.equal(await page.locator('#pbPrices .rp-item').count(),2);
+ const second=page.locator('#pbPrices .rp-item').nth(1);
+ await second.locator('input[name="description"]').fill('Item QA 2');await second.locator('input[name="unit"]').fill('KG');await second.locator('input[name="quantity"]').fill('3');
+ // Only browser CI interception; no synthetic references persist or reach report API.
+ await page.route('**/api/dashboard/prices/query?*',route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({mode:'catalog',rows:[{key:'fixture',process:'fixture',description:'Item QA',source:'Fixture isolada',unit:'KG',price:9,quantity:10,date:'2026-11-24',org:'Órgão QA',uf:'RN',reference:'fixture',url:'https://pncp.gov.br/app/editais/12345678000199/2026/1',token:'fixture-only'}],total:1})}));
+ await page.locator('#pbPrices select[name="mode"]').selectOption('material');
+ await page.locator('#pbPrices input[name="code"]').fill('123');
+ await page.locator('#pbPrices .rp-search button[type="submit"]').click();
+ await page.locator('#pbPrices button').filter({hasText:/^Adicionar referência$/}).waitFor({timeout});
+ await page.locator('#pbPrices button').filter({hasText:/^Adicionar referência$/}).click();
+ assert.equal(await second.locator('.rp-ref-line').count(),1);
+ await second.locator('button').filter({hasText:/^Excluir referência$/}).click();
+ assert.equal(await second.locator('.rp-ref-line').count(),0);
+ await page.unroute('**/api/dashboard/prices/query?*');
+ await page.locator('#pbPrices .rp-confirm input').check();
+ await page.locator('#pbPrices button').filter({hasText:/^Calcular pesquisa$/}).click();
+ await page.locator('#pbPrices .rp-report').getByText('Pesquisa incompleta. Itens insuficientes não têm estimativa.',{exact:true}).waitFor({timeout});
+ for(const [label,ext] of [['Baixar PDF','pdf'],['Baixar Excel (.xlsx)','xlsx']]){
+  const [download]=await Promise.all([page.waitForEvent('download',{timeout}),page.locator('#pbPrices button').filter({hasText:label}).click()]);
+  assert.equal(download.suggestedFilename(),'radar-pesquisa-precos.'+ext);
+  const stream=await download.createReadStream();const chunks=[];for await(const chunk of stream)chunks.push(chunk);const bytes=Buffer.concat(chunks);assert.equal(bytes.subarray(0,ext==='pdf'?5:2).toString(),ext==='pdf'?'%PDF-':'PK');
+ }
+ for(const theme of ['light','dark']){await page.setViewportSize({width:390,height:844});await page.evaluate(t=>document.documentElement.dataset.theme=t,theme);const size=await page.evaluate(()=>({w:innerWidth,s:document.documentElement.scrollWidth}));assert.ok(size.s<=size.w+6,'Prices mobile overflow '+theme)}
+ await page.setViewportSize({width:1280,height:800});
+ note('Radar Preços Públicos: multi-item selection, authenticated report, native PDF/XLSX downloads and responsive themes passed');
+
 
  await gotoSection(page,'home');
  await page.locator('#pbCustomize').click();
