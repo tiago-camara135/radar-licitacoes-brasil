@@ -605,8 +605,11 @@ try{
  await page.locator('#pbMarketPro input[name="cnpj"]').fill('12345678000195');
  await page.locator('#pbMarketPro input[name="sequence"]').fill('1');
  await page.locator('#pbMarketPro input[name="item"]').fill('1');
- await page.locator('#pbMarketPro .mi-lookup button[type="submit"]').click();
- await until(page,()=>document.querySelector('#pbMarketPro .mi-lookup')?.textContent.includes('Mediana'));
+ assert.match(await page.locator('#pbMarketPro input[name="year"]').inputValue(),/^20\d{2}$/,'Current year must survive login form reset');
+ assert.ok(await page.locator('#pbMarketPro .mi-lookup form').evaluate(f=>f.checkValidity()),'Official lookup must be valid before submit');
+ const [lookupResponse]=await Promise.all([page.waitForResponse(r=>r.url().includes('/api/dashboard/market/lookup?')&&r.url().includes('kind=pricing'),{timeout}),page.locator('#pbMarketPro .mi-lookup button[type="submit"]').click()]);
+ assert.equal(lookupResponse.status(),200);
+ await page.locator('#pbMarketPro .mi-lookup .pb-metric').filter({hasText:'Mediana'}).waitFor({timeout});
  for(const width of [390,1280]){await page.setViewportSize({width,height:844});for(const theme of ['light','dark']){await page.evaluate(t=>document.documentElement.dataset.theme=t,theme);assert.ok(await page.locator('#pbMarketPro .mi-lookup').isVisible());const size=await page.evaluate(()=>({width:innerWidth,scroll:document.documentElement.scrollWidth}));assert.ok(size.scroll<=size.width+6,'Market layout overflow '+theme+' '+width)}}
  await page.setViewportSize({width:1280,height:800});
  await page.unroute('**/api/dashboard/market/signals?*');await page.unroute('**/api/dashboard/market/lookup?*');
