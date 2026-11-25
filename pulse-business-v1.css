@@ -103,3 +103,13 @@ html[data-theme] #appShell #view-intelligence .mi-manage{margin:8px 0}
 
 #view-intelligence .mi-rank-more{margin-top:8px;width:100%}
 @media print{html[data-theme] #appShell #view-intelligence .mi-rank-extra[hidden]{display:grid!important;visibility:visible!important}}
+
+/* Public price workspace */
+#view-intelligence #pbPrices .rp-item{padding:14px;border:1px solid var(--pulse-edge);border-radius:10px;margin:10px 0}
+#view-intelligence #pbPrices .rp-active{border-color:var(--rp-accent)}
+#view-intelligence #pbPrices .rp-ref-line{display:flex;align-items:center;gap:9px;flex-wrap:wrap;padding:8px 0;border-top:1px solid var(--pulse-edge);font-size:12px;overflow-wrap:anywhere}
+#view-intelligence #pbPrices .rp-ref-line span{flex:1 1 200px;min-width:0}
+#view-intelligence #pbPrices .rp-confirm{display:flex;gap:10px;align-items:flex-start;line-height:1.5;font-size:13px;margin:14px 0}
+#view-intelligence #pbPrices .rp-confirm input{flex:0 0 auto;margin-top:3px}
+#view-intelligence #pbPrices a{color:var(--rp-info);overflow-wrap:anywhere}
+#view-intelligence #pbPrices .pb-contract .btn{justify-self:start;white-space:normal}
