@@ -1,5 +1,5 @@
 import {effectivePncpDeadline} from './pncp-operational-date-v1.mjs';
-import {fetchPncpContractPage,fetchPncpAtaPage} from './pncp-client-v3.mjs';
+import {fetchPncpContractPage,fetchPncpAtaPage,fetchPncpAtaDetail} from './pncp-client-v3.mjs';
 const UFS=new Set('AC AL AP AM BA CE DF ES GO MA MT MS MG PA PB PR PE PI RJ RN RS RO RR SC SP SE TO'.split(' '));
 const clean=(v,n=180)=>String(v??'').trim().slice(0,n);
 const norm=v=>String(v??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
@@ -71,13 +71,13 @@ export function instrumentValidity(begin,end,reference,cancelled=false){
  return 'active';
 }
 function ataRecord(x){
- const id=clean(x.numeroControlePNCP||x.numeroControlePncpAta||x.numeroControle,100);
+ const id=clean(x.numeroControlePNCP||x.numeroControlePNCPAta||x.numeroControlePncpAta||x.numeroControle,100);
  const m=id.match(/^(\d{14})-1-(\d+)\/(\d{4})-(\d+)$/);
  const purchase=String(x.numeroControlePNCPCompra||x.numeroControlePncpCompra||'').match(/^(\d{14})-1-(\d+)\/(\d{4})$/)||m;
  const org=clean(x.orgaoEntidade?.razaoSocial||x.orgaoEntidadeRazaoSocial||x.nomeOrgao,250);
  const cnpj=String(x.orgaoEntidade?.cnpj||x.orgaoEntidadeCnpj||x.cnpjOrgao||m?.[1]||'');
  const seq=Number(x.sequencialAta||m?.[4]),year=Number(x.anoCompra||purchase?.[3]),buy=Number(x.sequencialCompra||purchase?.[2]);
- return {id,object:clean(x.objetoContratacao||x.objetoCompra||x.objetoAta,1500),org,org_cnpj:/^\d{14}$/.test(cnpj)?cnpj:null,uf:clean(x.unidadeOrgao?.ufSigla||x.unidadeOrgaoUfSigla||x.ufSigla||x.uf,2).toUpperCase(),municipality:clean(x.unidadeOrgao?.municipioNome||x.unidadeOrgaoMunicipioNome||x.municipioNome,120),supplier:null,supplier_name:'Fornecedor não informado nesta consulta',value:null,published:date(x.dataPublicacaoPncp),begin:date(x.dataVigenciaInicio||x.dataInicioVigencia),end:date(x.dataVigenciaFim||x.dataFimVigencia),cancelled:x.cancelado===true,adhesion:x.possibilidadeAdesao===true?true:x.possibilidadeAdesao===false?false:null,kind:'ata',type:'Ata de registro de preços',number:clean(x.numeroAtaRegistroPreco,80),url:/^\d{14}$/.test(cnpj)&&Number.isInteger(year)&&year>=2000&&Number.isInteger(buy)&&buy>0&&Number.isInteger(seq)&&seq>0?'https://pncp.gov.br/app/atas/'+cnpj+'/'+year+'/'+buy+'/'+seq:null};
+ return {id,object:clean(x.objetoContratacao||x.objetoCompra||x.objetoAta,1500),org,org_cnpj:/^\d{14}$/.test(cnpj)?cnpj:null,uf:clean(x.unidadeOrgao?.ufSigla||x.unidadeOrgaoUfSigla||x.ufSigla||x.uf,2).toUpperCase(),municipality:clean(x.unidadeOrgao?.municipioNome||x.unidadeOrgaoMunicipioNome||x.municipioNome,120),supplier:null,supplier_name:'Fornecedor não informado nesta consulta',value:null,published:date(x.dataPublicacaoPncp),begin:date(x.dataVigenciaInicio||x.dataInicioVigencia||x.vigenciaInicio),end:date(x.dataVigenciaFim||x.dataFimVigencia||x.vigenciaFim),cancelled:x.cancelado===true,adhesion:x.possibilidadeAdesao===true?true:x.possibilidadeAdesao===false?false:null,kind:'ata',type:'Ata de registro de preços',number:clean(x.numeroAtaRegistroPreco,80),url:/^\d{14}$/.test(cnpj)&&Number.isInteger(year)&&year>=2000&&Number.isInteger(buy)&&buy>0&&Number.isInteger(seq)&&seq>0?'https://pncp.gov.br/app/atas/'+cnpj+'/'+year+'/'+buy+'/'+seq:null};
 }
 export function contractView(body,f,reference=localDay()){
  const raw=Array.isArray(body?.data)?body.data:Array.isArray(body)?body:[];
@@ -101,15 +101,24 @@ export function contractView(body,f,reference=localDay()){
  const due=days=>items.filter(x=>x.end&&x.end>=reference&&x.end<=new Date(Date.parse(reference)+days*86400000).toISOString().slice(0,10)).length;
  return {items,summary:{count:items.length,known_values:known.length,value:known.length?known.reduce((a,x)=>a+x.value,0):null,due30:due(30),due60:due(60),due90:due(90)},suppliers:[...suppliers.values()].sort((a,b)=>b.count-a.count).slice(0,10),months:[...months.values()].sort((a,b)=>a.month.localeCompare(b.month)),coverage:{page:f.page,page_size:50,received:raw.length,total_pages:Number(body?.totalPaginas)||0,total_records:Number(body?.totalRegistros)||0,local_filters:true,complete:false},generated_at:new Date().toISOString(),source:'PNCP /v1/contratos — publicação por período; filtros aplicados somente à página consultada. Vencimento não garante nova contratação.'};
 }
-export async function contracts(params,fetchPage=null,onPage=null){
- const f=contractParams(params),data=[],pages=[],failed=[];fetchPage=fetchPage||(f.kind==='ata'?fetchPncpAtaPage:fetchPncpContractPage);let totalPages=0,totalRecords=0,archiveSaved=0,archiveOmitted=0,archiveErrors=0;
+export async function contracts(params,fetchPage=null,onPage=null,fetchDetail=null){
+ const f=contractParams(params),data=[],pages=[],failed=[];const customFetcher=Boolean(fetchPage);fetchPage=fetchPage||(f.kind==='ata'?fetchPncpAtaPage:fetchPncpContractPage);fetchDetail=fetchDetail||(!customFetcher?fetchPncpAtaDetail:null);let totalPages=0,totalRecords=0,archiveSaved=0,archiveOmitted=0,archiveErrors=0;
  for(let p=f.page;p<Math.min(10001,f.page+f.batch);p++){
   if(p>f.page&&p>totalPages)break;
-  try{const body=await fetchPage({...f,page:p});data.push(...(Array.isArray(body?.data)?body.data:Array.isArray(body)?body:[]));totalPages=Number(body?.totalPaginas)||0;totalRecords=Number(body?.totalRegistros)||0;pages.push(p);if(onPage&&f.kind==='contract'){try{const normalized=contractView(body,{...f,uf:'',keyword:'',supplier:'',org:'',validity:'all',expiry:0,min:null,max:null});const saved=await onPage(normalized.items,{start:f.start,end:f.end,page:p,received:normalized.coverage.received,total_pages:totalPages});archiveSaved+=saved.archived;archiveOmitted+=saved.omitted}catch(e){archiveErrors++;console.error('market archive page:',e.message)}}}
+  try{const body=await fetchPage({...f,page:p});data.push(...(Array.isArray(body?.data)?body.data:Array.isArray(body)?body:[]));totalPages=Number(body?.totalPaginas)||0;totalRecords=Number(body?.totalRegistros)||0;pages.push(p);if(onPage&&f.kind==='contract'&&!f.org){try{const normalized=contractView(body,{...f,uf:'',keyword:'',supplier:'',org:'',validity:'all',expiry:0,min:null,max:null});const saved=await onPage(normalized.items,{start:f.start,end:f.end,page:p,received:normalized.coverage.received,total_pages:totalPages});archiveSaved+=saved.archived;archiveOmitted+=saved.omitted}catch(e){archiveErrors++;console.error('market archive page:',e.message)}}}
   catch(error){if(!pages.length)throw error;failed.push(p);break}
  }
+ let locationUnverified=0;
+ if(f.kind==='ata'&&f.uf){
+  let budget=4;
+  for(let i=0;i<data.length;i++){const row=data[i],a=ataRecord(row);if(a.uf||f.org&&a.org_cnpj!==f.org||f.keyword&&!instrumentMatch(f.keyword,[a.object,a.org,a.number].join(' '))||f.validity!=='all'&&instrumentValidity(a.begin,a.end,localDay(),a.cancelled)!==f.validity)continue;
+   const match=a.id.match(/^(\d{14})-1-(\d+)\/(\d{4})-(\d+)$/);if(!match||!fetchDetail||budget<=0){locationUnverified++;continue}
+   budget--;try{const detail=await fetchDetail({cnpj:match[1],purchase:Number(match[2]),year:Number(match[3]),sequence:Number(match[4])});if(detail?.numeroControlePNCP===a.id&&detail.unidadeOrgao?.ufSigla)data[i]={...row,...detail};else locationUnverified++}catch{locationUnverified++}
+  }
+ }
  const result=contractView({data,totalPaginas:totalPages,totalRegistros:totalRecords},f);
- result.archive={saved:archiveSaved,omitted:archiveOmitted,errors:archiveErrors};
+ result.coverage.location_unverified=locationUnverified;
+ result.archive={saved:archiveSaved,omitted:archiveOmitted,errors:archiveErrors,scoped:Boolean(f.org)||f.kind==='ata'};
  result.coverage={...result.coverage,pages,failed_pages:failed,last_page:pages.at(-1)||f.page,next_page:failed[0]??(pages.at(-1)||f.page)+1,complete:false};
  result.source=(f.kind==='ata'?'PNCP /v1/atas — período de vigência':'PNCP /v1/contratos — período de publicação')+'; filtros aplicados às páginas consultadas. Vigência por datas informadas; confira cancelamento, extinção e aditivos no registro oficial.';
  return result;
