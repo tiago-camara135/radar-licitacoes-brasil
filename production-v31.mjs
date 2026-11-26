@@ -25,6 +25,13 @@ const documentCache=createPncpDocumentCache(healthPool,{logger:console,maxBytes:
 const uploadContext=new AsyncLocalStorage();
 const uploadSources=new Map();
 const originCache=new Map();
+function cacheOrigin(key,value){
+  const now=Date.now();
+  for(const [id,entry] of originCache)if(entry.expiresAt<=now)originCache.delete(id);
+  originCache.delete(key);
+  originCache.set(key,value);
+  while(originCache.size>256)originCache.delete(originCache.keys().next().value);
+}
 let pncpDocumentCircuitUntil=0;
 const nativeCreateServer=http.createServer.bind(http);
 const sourceJs=fs.readFileSync(new URL('./source-transparency-v1.js',import.meta.url));
@@ -46,7 +53,12 @@ function json(res,status,data){res.statusCode=status;res.setHeader('Content-Type
 function asset(res,type,body){res.statusCode=200;res.setHeader('Content-Type',type);res.setHeader('Cache-Control','no-store, no-cache, must-revalidate, max-age=0');res.setHeader('X-Content-Type-Options','nosniff');res.setHeader('X-RLB-Tender-Intelligence','v2.2');res.setHeader('X-RLB-Tender-Source-Resilience','v2');res.end(body)}
 async function authenticatedUser(req){try{const r=await nativeFetch(`http://127.0.0.1:${PORT}/api/me`,{headers:{cookie:String(req.headers.cookie||'')},signal:AbortSignal.timeout(5000)});if(!r.ok)return null;return(await r.json().catch(()=>({}))).user||null}catch{return null}}
 
-async function databaseHealth(){
+let healthInFlight=null;
+function databaseHealth(){
+  if(!healthInFlight)healthInFlight=probeDatabaseHealth().finally(()=>{healthInFlight=null});
+  return healthInFlight;
+}
+async function probeDatabaseHealth(){
   const started=Date.now();
   if(!healthPool)return{ok:false,latency_ms:0};
   try{await healthPool.query('SELECT 1 AS ok');return{ok:true,latency_ms:Date.now()-started}}
@@ -59,13 +71,13 @@ async function discoverOriginDocuments(ids){
   try{
     const q=await healthPool.query(`SELECT origin_url,raw->>'linkSistemaOrigem' AS link_sistema,raw->>'linkProcessoEletronico' AS link_processo FROM monitored_procurements WHERE org_cnpj=$1 AND year=$2 AND sequence=$3 ORDER BY last_seen_at DESC LIMIT 1`,[ids.cnpj,ids.year,ids.sequence]);
     const row=q.rows[0]||{},origin=[row.origin_url,row.link_sistema,row.link_processo].find(isSafePublicOriginUrl);
-    if(!origin){originCache.set(cacheKey,{docs:[],expiresAt:Date.now()+60000});return[]}
+    if(!origin){cacheOrigin(cacheKey,{docs:[],expiresAt:Date.now()+60000});return[]}
     const r=await nativeFetch(origin,{headers:{accept:'text/html,application/xhtml+xml,*/*','user-agent':'RadarLicitacoesBrasil-TenderSource/2.0'},redirect:'follow',signal:AbortSignal.timeout(18000)});
     if(!r.ok){console.warn(`tender source origin: HTTP ${r.status} ${new URL(origin).hostname}`);return[]}
     const len=Number(r.headers.get('content-length')||0);if(len>5*1024*1024)return[];
     const html=(await r.text()).slice(0,5*1024*1024),urls=extractOriginDocumentUrls(html,r.url||origin).slice(0,10);
     const docs=urls.map((url,i)=>({sequencialDocumento:900001+i,url,tipoDocumentoNome:'Edital / documento oficial do portal de origem',titulo:`Documento oficial do portal de origem ${i+1}`,dataPublicacaoPncp:null}));
-    originCache.set(cacheKey,{docs,expiresAt:Date.now()+10*60*1000});
+    cacheOrigin(cacheKey,{docs,expiresAt:Date.now()+10*60*1000});
     if(docs.length)console.warn(`tender source origin fallback: ${docs.length} arquivo(s) descoberto(s) em ${new URL(origin).hostname}`);
     return docs;
   }catch(error){console.warn('tender source origin fallback:',clean(error?.message,180));return[]}
