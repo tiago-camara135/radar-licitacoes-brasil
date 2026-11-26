@@ -1,3 +1,4 @@
+import { batchedProcurementUpsert } from './procurement-batch-upsert-v1.mjs';
 import { effectivePncpDeadline } from './pncp-operational-date-v1.mjs';
 import { Pool } from 'pg';
 import { fetchPncpOpenSearch, normalizeSearchFilters, applySearchFilters, resultKey, pncpUrl, originUrl, municipalityOf, closingOf, pncpClientHealth, radarSearchTerms, textNorm } from './pncp-client-v3.mjs';
@@ -119,12 +120,9 @@ async function persistRemote(items){
   const client=await pool.connect();
   try{
     await client.query('BEGIN');
-    for(const x of items.slice(0,5000)){
-      const v=dbValues(x,true);
-      await client.query(`INSERT INTO monitored_procurements(pncp_id,org_cnpj,year,sequence,modality_code,modality_name,object_text,org_name,unit_name,municipality,uf,power_id,sphere_id,estimated_value,published_at,closes_at,pncp_url,origin_url,raw,detected_at,last_seen_at)
+    await batchedProcurementUpsert(client,`INSERT INTO monitored_procurements(pncp_id,org_cnpj,year,sequence,modality_code,modality_name,object_text,org_name,unit_name,municipality,uf,power_id,sphere_id,estimated_value,published_at,closes_at,pncp_url,origin_url,raw,detected_at,last_seen_at)
         VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,NOW())
-        ON CONFLICT(pncp_id) DO UPDATE SET modality_code=EXCLUDED.modality_code,modality_name=EXCLUDED.modality_name,object_text=EXCLUDED.object_text,org_name=EXCLUDED.org_name,unit_name=EXCLUDED.unit_name,municipality=EXCLUDED.municipality,uf=EXCLUDED.uf,estimated_value=EXCLUDED.estimated_value,published_at=EXCLUDED.published_at,closes_at=EXCLUDED.closes_at,pncp_url=EXCLUDED.pncp_url,origin_url=EXCLUDED.origin_url,raw=EXCLUDED.raw,last_seen_at=NOW()`,v);
-    }
+        ON CONFLICT(pncp_id) DO UPDATE SET modality_code=EXCLUDED.modality_code,modality_name=EXCLUDED.modality_name,object_text=EXCLUDED.object_text,org_name=EXCLUDED.org_name,unit_name=EXCLUDED.unit_name,municipality=EXCLUDED.municipality,uf=EXCLUDED.uf,estimated_value=EXCLUDED.estimated_value,published_at=EXCLUDED.published_at,closes_at=EXCLUDED.closes_at,pncp_url=EXCLUDED.pncp_url,origin_url=EXCLUDED.origin_url,raw=EXCLUDED.raw,last_seen_at=NOW()`,items.slice(0,5000).map(x=>({values:dbValues(x,true)})));
     await client.query('COMMIT');
   }catch(e){try{await client.query('ROLLBACK')}catch{}throw e}finally{client.release()}
 }
